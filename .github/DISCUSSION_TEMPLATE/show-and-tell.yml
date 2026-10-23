@@ -1,0 +1,29 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show what you built or learned! 🎉 Demos, spikes, learning notes and screenshots are all welcome.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you build or learn?
+    validations:
+      required: true
+
+  - type: textarea
+    id: how
+    attributes:
+      label: How did you do it?
+      description: Stack, key steps, what surprised you, and links to code (branch, gist or sandbox repo).
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or recording
+      description: Use fictional data only.
+
+  - type: textarea
+    id: next
+    attributes:
+      label: What would you do next?

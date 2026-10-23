@@ -1,0 +1,41 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask away! 🙋 Check the [wiki](https://github.com/exceev-technology/rembo/wiki) first; it may already have the answer.
+        When someone answers your question, mark their reply as the answer.
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Setup and installation
+        - Flutter / Dart
+        - Supabase (database, auth, RLS, storage, edge functions)
+        - MCP and AI agents
+        - Git, GitHub and pull requests
+        - Scrum and project organization
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Commands, links you read, error messages…
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Paste the output of `flutter doctor -v` and `supabase --version` if relevant.
+      render: shell

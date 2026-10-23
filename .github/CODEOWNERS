@@ -1,0 +1,12 @@
+# Code owners are automatically requested for review.
+# Later rules take precedence over earlier ones.
+# Docs: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Everything: any member of the Rembo team can review
+*                       @exceev-technology/ecc-team-rembo
+
+# Repository governance, CI/CD and security configuration need a maintainer
+/.github/               @hamza-lem
+/SECURITY.md            @hamza-lem
+/CODE_OF_CONDUCT.md     @hamza-lem
+/LICENSE                @hamza-lem

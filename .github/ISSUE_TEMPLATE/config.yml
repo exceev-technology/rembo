@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Ask a question
+    url: https://github.com/exceev-technology/rembo/discussions/categories/q-a
+    about: Questions about using or developing Rembo belong in Discussions.
+  - name: 💡 Share an idea
+    url: https://github.com/exceev-technology/rembo/discussions/categories/ideas
+    about: Early ideas that are not yet a user story.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/exceev-technology/rembo/security/advisories/new
+    about: Please report vulnerabilities privately, never in a public issue.
+  - name: 📚 Read the wiki
+    url: https://github.com/exceev-technology/rembo/wiki
+    about: Roadmap, architecture, setup, Scrum and Git workflow guides.

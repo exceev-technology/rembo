@@ -1,0 +1,53 @@
+name: PR title
+
+# We squash-merge, so the PR title becomes the commit message on main.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate:
+    # Required status check on main: keep this name in sync with the ruleset.
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check Conventional Commits format
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          scopes: |
+            mobile
+            auth
+            expenses
+            receipts
+            approval
+            export
+            supabase
+            agents
+            ci
+            docs
+            deps
+            release
+            wiki
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" in the pull request title "{title}" must start with a lowercase letter.
+            Example: "feat(receipts): upload receipt to storage"

@@ -46,3 +46,18 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Secrets and local configuration: never commit them (see SECURITY.md)
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+/android/key.properties
+/android/local.properties
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
