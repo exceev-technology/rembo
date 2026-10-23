@@ -7,6 +7,8 @@ Thanks for using or contributing to Rembo! Here is where to go, depending on wha
 | Ask a question about using or developing Rembo | [GitHub Discussions › Q&A](https://github.com/exceev-technology/rembo/discussions/categories/q-a) |
 | Share an early idea or give feedback | [GitHub Discussions › Ideas](https://github.com/exceev-technology/rembo/discussions/categories/ideas) |
 | Show what you built or learned | [GitHub Discussions › Show and tell](https://github.com/exceev-technology/rembo/discussions/categories/show-and-tell) |
+| Follow sprint goals and sprint reviews | [GitHub Discussions › Sprint updates](https://github.com/exceev-technology/rembo/discussions/categories/sprint-updates) |
+| Share user interview findings (anonymised) | [GitHub Discussions › User research](https://github.com/exceev-technology/rembo/discussions/categories/user-research) |
 | Report a reproducible bug | [Open a bug report](https://github.com/exceev-technology/rembo/issues/new?template=bug_report.yml) |
 | Propose a feature (user story) | [Open a feature request](https://github.com/exceev-technology/rembo/issues/new?template=feature_request.yml) |
 | Report a security vulnerability | **Privately**, as described in [SECURITY.md](SECURITY.md), never in public |

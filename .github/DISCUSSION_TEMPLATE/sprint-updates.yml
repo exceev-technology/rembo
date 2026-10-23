@@ -1,0 +1,55 @@
+title: "Sprint N · "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🗓️ **Sprint updates** keep the team and the community in sync.
+        Post the **sprint goal on Monday** (after Sprint Planning) and the **review summary on Friday** (after the Sprint Review).
+        Link issues and PRs, and use fictional data only in screenshots.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Update type
+      options:
+        - Sprint planning (goal and committed items)
+        - Sprint review (results and demo)
+        - Other announcement
+    validations:
+      required: true
+
+  - type: input
+    id: sprint
+    attributes:
+      label: Sprint
+      placeholder: Sprint 1 · Foundations (26 → 30 Oct)
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Sprint goal
+      description: One or two sentences. For a review, say whether it was met, partly met or not met.
+    validations:
+      required: true
+
+  - type: textarea
+    id: items
+    attributes:
+      label: Committed or delivered items
+      description: Links to issues and merged PRs.
+      placeholder: |
+        - #12 Supabase schema and RLS for expenses
+        - #15 Sign in with email
+
+  - type: textarea
+    id: demo
+    attributes:
+      label: Demo
+      description: Screenshots or a short recording on Android and iOS.
+
+  - type: textarea
+    id: next
+    attributes:
+      label: Risks, blockers and next steps

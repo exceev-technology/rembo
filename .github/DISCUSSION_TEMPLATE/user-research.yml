@@ -1,0 +1,67 @@
+title: "[Interview] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🧪 Share what we learn from SMEs, HR staff, managers and accountants, so the backlog follows real needs.
+
+        > [!CAUTION]
+        > **Anonymise everything.** No names, company names, phone numbers, ICE numbers, real receipts or amounts linked to a person. Personal data falls under Moroccan Law 09-08 (CNDP).
+
+  - type: dropdown
+    id: persona
+    attributes:
+      label: Who did you talk to?
+      multiple: true
+      options:
+        - Employee (collaborateur)
+        - Manager (responsable)
+        - Accountant (comptable)
+        - HR / payroll
+        - Company owner
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: profile
+    attributes:
+      label: Company profile (anonymised)
+      placeholder: Logistics SME, about 40 employees, Casablanca
+
+  - type: textarea
+    id: today
+    attributes:
+      label: How they handle expenses today
+      description: Who declares, who approves, who enters the data, and how reimbursement is tracked.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tools
+    attributes:
+      label: Tools and accounting software
+      description: Spreadsheets, ERP, accounting software, and the import formats they accept (CSV columns, separators).
+
+  - type: textarea
+    id: pains
+    attributes:
+      label: Pain points and anonymised quotes
+    validations:
+      required: true
+
+  - type: textarea
+    id: insights
+    attributes:
+      label: Insights for Rembo
+      description: What should change in the backlog? Link or suggest user stories.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed every personal or company-identifying detail.
+          required: true
