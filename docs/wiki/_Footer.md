@@ -1,0 +1,1 @@
+Rembo is open source under the MIT License · [Contributing](https://github.com/exceev-technology/rembo/blob/main/CONTRIBUTING.md) · [Code of Conduct](https://github.com/exceev-technology/rembo/blob/main/CODE_OF_CONDUCT.md) · Edit this wiki through a pull request on `docs/wiki/`
