@@ -57,8 +57,6 @@
           - .github/labeler.yml
           - .github/labels.yml
 
-# `type:` labels come from the PR title (see workflows/pr-labeler.yml), not from paths.
-
-"dependencies":
-  - changed-files:
-      - any-glob-to-any-file: [pubspec.yaml, pubspec.lock]
+# `type:` labels come from the PR title (see workflows/pr-labeler.yml), and Dependabot
+# adds `dependencies` itself: neither belongs here, because sync-labels removes any
+# label listed in this file once the diff stops matching it.
