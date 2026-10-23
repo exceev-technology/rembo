@@ -1,7 +1,7 @@
 name: 🛠️ Task
 description: A technical, documentation, DevOps or learning task (not a user-facing feature).
 type: Task
-labels: ["type: task"]
+labels: ["type: task", "status: needs triage"]
 projects: ["exceev-technology/1"]
 body:
   - type: markdown
