@@ -11,7 +11,7 @@ How we collaborate on Rembo like a real open-source project: short-lived branche
 | Branch name | `<type>/<issue-number>-<short-kebab-description>`, e.g. `feat/24-receipt-upload` |
 | Commit messages | [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/): `<type>(<scope>): <imperative summary>` |
 | PR title | Must be a Conventional Commit too. It becomes the commit message on `main` (checked by **Validate PR title**) |
-| Review | **1 approval** from someone other than the last person who pushed. New pushes dismiss earlier approvals |
+| Review | **1 approval** from someone other than the last person who pushed. New pushes dismiss earlier approvals. Maintainers (repository admins) may merge their own PRs without one; the bypass is logged |
 | Checks | **Analyze & test** and **Validate PR title** must pass. All review conversations must be resolved |
 | Merge | **Squash merge only**, linear history. The branch is deleted automatically after merge |
 

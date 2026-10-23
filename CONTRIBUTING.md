@@ -111,6 +111,11 @@ through a pull request that needs:
 - **all review conversations resolved**
 - a **linear history** (squash merge only); force-pushes and branch deletion are blocked
 
+These rules live in two rulesets. **Protect main** (pull request, checks,
+conversations, history) applies to everyone, with no bypass. **Require review
+on main** (approval, code owners) can be bypassed by repository admins, so a
+maintainer can merge their own PR once it is green. GitHub logs every bypass.
+
 ### Branch names
 
 ```text
