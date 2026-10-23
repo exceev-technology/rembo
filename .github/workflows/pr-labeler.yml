@@ -1,0 +1,67 @@
+name: PR labeler
+
+# pull_request_target lets this workflow label PRs from forks.
+# SECURITY: it must never check out or run code from the pull request.
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Label by changed paths
+        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          sync-labels: false
+
+      - name: Label by size
+        uses: codelytv/pr-size-labeler@19c335e7695ba922de938806dd129f0a9b992644 # v1.12.0
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: "size: XS"
+          xs_max_size: "10"
+          s_label: "size: S"
+          s_max_size: "100"
+          m_label: "size: M"
+          m_max_size: "500"
+          l_label: "size: L"
+          l_max_size: "1000"
+          xl_label: "size: XL"
+          fail_if_xl: "false"
+          message_if_xl: >
+            This PR is very large. Consider splitting it into smaller PRs:
+            they are easier to review and safer to merge.
+          files_to_ignore: |
+            pubspec.lock
+            *.g.dart
+            *.freezed.dart
+
+      - name: Label by Conventional Commit type
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            // The title is read from the event payload as data, never interpolated into the script.
+            const title = context.payload.pull_request.title;
+            const match = /^(\w+)(\([^)]*\))?(!)?:/.exec(title);
+            if (!match) return;
+            const [, type, , breaking] = match;
+            const byType = {
+              feat: 'type: feature',
+              fix: 'type: bug',
+              docs: 'type: docs',
+            };
+            const labels = [byType[type] ?? 'type: chore'];
+            if (breaking) labels.push('breaking change');
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels,
+            });

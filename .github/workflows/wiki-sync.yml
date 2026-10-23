@@ -1,0 +1,54 @@
+name: Publish wiki
+
+# The wiki is written as code in docs/wiki/ and reviewed through pull requests.
+# On merge to main, this workflow mirrors docs/wiki/ to the GitHub wiki.
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/wiki/**
+      - .github/workflows/wiki-sync.yml
+  workflow_dispatch:
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+permissions:
+  contents: write # required to push to the wiki repository
+
+jobs:
+  publish:
+    name: Publish wiki
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Mirror docs/wiki to the GitHub wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          wiki_url="https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.wiki.git"
+          if ! git ls-remote "$wiki_url" >/dev/null 2>&1; then
+            echo "::error::The wiki is not initialized yet. Create the first page once at https://github.com/${REPOSITORY}/wiki/_new, then re-run this workflow."
+            exit 1
+          fi
+          git clone --depth 1 "$wiki_url" wiki
+          rsync -a --delete --exclude '.git' docs/wiki/ wiki/
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "Wiki is already up to date."
+            exit 0
+          fi
+          git commit -m "docs(wiki): sync from ${SOURCE_SHA::7}"
+          git push
