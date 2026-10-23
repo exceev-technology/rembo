@@ -25,4 +25,7 @@ jobs:
         with:
           fail-on-severity: moderate
           deny-licenses: GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
+          # Packages whose license is fine but reported as a non-SPDX id, which fails the check.
+          # Verify the license by hand before adding one. cupertino_icons: MIT, reported as "mit".
+          allow-dependencies-licenses: pkg:pub/cupertino_icons
           comment-summary-in-pr: on-failure
