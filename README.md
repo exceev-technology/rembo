@@ -95,12 +95,14 @@ Secrets such as the `service_role` key and the OCR or AI keys stay in Edge Funct
 git clone https://github.com/exceev-technology/rembo.git
 cd rembo
 flutter pub get
+flutter run
+```
 
-# Local backend (Supabase stack in Docker)
-supabase start
+**Local backend.** The Supabase project (`supabase/`: migrations, seed data, Edge Functions) lands in Sprint 1. Once it is in the repository:
 
-# Configure the app with the URL and anon key printed by `supabase start`
-cp .env.example .env
+```bash
+supabase start                             # Postgres, Auth, Storage and Edge Functions in Docker
+cp .env.example .env                       # paste the API URL and anon key printed by `supabase start`
 flutter run --dart-define-from-file=.env
 ```
 

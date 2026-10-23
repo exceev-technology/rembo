@@ -94,7 +94,7 @@ Follow the suggested order, do the hands-on exercise of each topic, and tick you
 - [Flutter client reference (`supabase_flutter`)](https://supabase.com/docs/reference/dart/introduction)
 - Our [Architecture](Architecture) page
 
-**Exercise:** run `supabase start` locally. Create an `expenses` table with RLS so that a user only sees their own rows. Prove it: sign in as two test users and show that user B cannot read user A's expense. Write down what you did and post it on your learning task.
+**Exercise:** in an empty sandbox folder, run `supabase init` and then `supabase start`. Create an `expenses` table with RLS so that a user only sees their own rows. Prove it: sign in as two test users and show that user B cannot read user A's expense. Write down what you did and post it on your learning task.
 
 ## 6. MCP (Model Context Protocol)
 

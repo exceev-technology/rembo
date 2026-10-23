@@ -57,9 +57,7 @@
           - .github/labeler.yml
           - .github/labels.yml
 
-"type: docs":
-  - changed-files:
-      - any-glob-to-any-file: ["**/*.md", docs/**]
+# `type:` labels come from the PR title (see workflows/pr-labeler.yml), not from paths.
 
 "dependencies":
   - changed-files:
