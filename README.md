@@ -19,6 +19,7 @@
   <a href="https://github.com/exceev-technology/rembo/wiki/Roadmap"><b>Roadmap</b></a> ·
   <a href="https://github.com/orgs/exceev-technology/projects/1"><b>Project board</b></a> ·
   <a href="https://github.com/exceev-technology/rembo/discussions"><b>Discussions</b></a> ·
+  <a href="https://exceev-technology.github.io/rembo/brand/"><b>Brand</b></a> ·
   <a href="CONTRIBUTING.md"><b>Contributing</b></a>
 </p>
 

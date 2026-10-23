@@ -21,3 +21,4 @@
 - [Sprint board](https://github.com/orgs/exceev-technology/projects/1)
 - [Issues](https://github.com/exceev-technology/rembo/issues)
 - [Discussions](https://github.com/exceev-technology/rembo/discussions)
+- [Brand guidelines](https://exceev-technology.github.io/rembo/brand/)

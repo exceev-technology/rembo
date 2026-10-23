@@ -19,6 +19,7 @@ The MVP will be presented on **8 December 2026**.
 | 🗂️ Sprint board | [GitHub Project "Rembo"](https://github.com/orgs/exceev-technology/projects/1) |
 | 🐛 Report a bug / 💡 propose a feature | [New issue](https://github.com/exceev-technology/rembo/issues/new/choose) |
 | 💬 Questions & ideas | [GitHub Discussions](https://github.com/exceev-technology/rembo/discussions) |
+| 🎨 Brand guidelines | [Charte de marque](https://exceev-technology.github.io/rembo/brand/): logo, colors, typography, tone |
 | 🤝 How to contribute | [CONTRIBUTING.md](https://github.com/exceev-technology/rembo/blob/main/CONTRIBUTING.md) |
 | 🔐 Report a vulnerability | [Security policy](https://github.com/exceev-technology/rembo/security/policy) |
 
