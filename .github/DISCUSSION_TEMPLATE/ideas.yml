@@ -1,0 +1,39 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea! 💡 Ideas that gain traction become user stories (Feature issues) in the backlog.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Who struggles today, and how?
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: Describe the solution you have in mind.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: persona
+    attributes:
+      label: Who benefits most?
+      multiple: true
+      options:
+        - Employee (collaborateur)
+        - Manager (responsable)
+        - Accountant (comptable)
+        - Company admin
+        - Contributors / developers
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Mockups, examples from other tools, links…

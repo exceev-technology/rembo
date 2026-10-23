@@ -1,0 +1,54 @@
+name: 🛠️ Task
+description: A technical, documentation, DevOps or learning task (not a user-facing feature).
+type: Task
+labels: ["type: task"]
+projects: ["exceev-technology/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use a **Task** for work that doesn't change what users can do: setup, refactoring, CI, documentation, research or learning spikes.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of task
+      options:
+        - Technical / refactoring
+        - Documentation
+        - DevOps / CI
+        - Learning / spike
+        - Research / interviews
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true once this task is done, and why does it matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Details and scope
+      description: What is in and out of scope? Any constraints or decisions already made?
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist / done when
+      value: |
+        - [ ] …
+        - [ ] …
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Related issues, docs or resources
+      placeholder: "#12, https://github.com/exceev-technology/rembo/wiki/Architecture"

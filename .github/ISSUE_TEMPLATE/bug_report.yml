@@ -1,0 +1,102 @@
+name: 🐛 Bug report
+description: Something in Rembo doesn't work as expected.
+type: Bug
+labels: ["type: bug", "status: needs triage"]
+projects: ["exceev-technology/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! 🙏
+
+        > [!CAUTION]
+        > **Security vulnerability?** Don't report it here. Follow [SECURITY.md](https://github.com/exceev-technology/rembo/blob/main/SECURITY.md) to report it privately.
+        >
+        > **Use fictional data only.** Screenshots and logs must not contain real names, receipts, ICE numbers or amounts.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: When I submit an expense with a receipt, the app shows a blank screen…
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as an employee
+        2. Tap "New expense" and take a photo of a receipt
+        3. Tap "Submit"
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Capture & OCR
+        - Expenses
+        - Approval
+        - CSV export
+        - Auth & roles
+        - Supabase (database, RLS, storage)
+        - AI agents / MCP
+        - Mobile UI / accessibility
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS version
+      placeholder: Pixel 8 emulator, Android 16 / iPhone 17 simulator, iOS 26
+
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      placeholder: v0.1.0 or 85b0c6d
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, recordings or logs
+      description: Drag and drop images or paste logs (e.g. `flutter run` output). Remove any personal data first.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this bug has not been reported yet.
+          required: true
+        - label: My report contains no real personal or financial data.
+          required: true
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/exceev-technology/rembo/blob/main/CODE_OF_CONDUCT.md).
+          required: true

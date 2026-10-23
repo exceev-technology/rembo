@@ -1,0 +1,66 @@
+# Path-based labels for pull requests (actions/labeler).
+# Docs: https://github.com/actions/labeler
+
+"area: mobile-ui":
+  - changed-files:
+      - any-glob-to-any-file:
+          - lib/**/presentation/**
+          - lib/**/widgets/**
+          - lib/**/screens/**
+          - lib/app/**
+          - lib/main.dart
+
+"area: auth":
+  - changed-files:
+      - any-glob-to-any-file: [lib/features/auth/**]
+
+"area: expenses":
+  - changed-files:
+      - any-glob-to-any-file: [lib/features/expenses/**]
+
+"area: receipts-ocr":
+  - changed-files:
+      - any-glob-to-any-file:
+          - lib/features/receipts/**
+          - supabase/functions/ocr*/**
+
+"area: approval":
+  - changed-files:
+      - any-glob-to-any-file: [lib/features/approval*/**]
+
+"area: export-csv":
+  - changed-files:
+      - any-glob-to-any-file:
+          - lib/features/export/**
+          - supabase/functions/export*/**
+
+"area: supabase":
+  - changed-files:
+      - any-glob-to-any-file: [supabase/**]
+
+"area: ai-agents":
+  - changed-files:
+      - any-glob-to-any-file:
+          - lib/features/agents/**
+          - supabase/functions/agent*/**
+          - mcp/**
+
+"area: i18n":
+  - changed-files:
+      - any-glob-to-any-file: [lib/l10n/**, "**/*.arb"]
+
+"area: ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**
+          - .github/dependabot.yml
+          - .github/labeler.yml
+          - .github/labels.yml
+
+"type: docs":
+  - changed-files:
+      - any-glob-to-any-file: ["**/*.md", docs/**]
+
+"dependencies":
+  - changed-files:
+      - any-glob-to-any-file: [pubspec.yaml, pubspec.lock]

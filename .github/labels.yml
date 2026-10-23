@@ -1,0 +1,142 @@
+# Source of truth for repository labels, synced by .github/workflows/labels-sync.yml.
+# Edit labels here through a pull request, not in the GitHub UI.
+# `aliases` renames an existing label in place, keeping it on issues and PRs.
+
+# ── Type ─────────────────────────────────────────────────────────────
+- name: "type: bug"
+  color: d73a4a
+  description: Something isn't working
+  aliases: [bug]
+- name: "type: feature"
+  color: a2eeef
+  description: New feature or user story
+  aliases: [enhancement]
+- name: "type: task"
+  color: c5def5
+  description: Technical, DevOps or organizational task
+- name: "type: docs"
+  color: 0075ca
+  description: Documentation or wiki
+  aliases: [documentation]
+- name: "type: chore"
+  color: fef2c0
+  description: Maintenance, refactoring, build or tooling
+- name: "type: security"
+  color: b60205
+  description: Security fix or hardening
+- name: "type: learning"
+  color: 5319e7
+  description: Discovery, training or spike
+
+# ── Priority ─────────────────────────────────────────────────────────
+- name: "priority: critical"
+  color: b60205
+  description: Blocks the sprint goal or the demo, handle now
+- name: "priority: high"
+  color: d93f0b
+  description: Must be done this sprint
+- name: "priority: medium"
+  color: fbca04
+  description: Should be done soon
+- name: "priority: low"
+  color: 0e8a16
+  description: Nice to have
+
+# ── Area ─────────────────────────────────────────────────────────────
+- name: "area: mobile-ui"
+  color: 1d76db
+  description: Flutter screens, widgets and navigation
+- name: "area: auth"
+  color: 1d76db
+  description: Sign-in, roles and companies
+- name: "area: expenses"
+  color: 1d76db
+  description: Expense entry, categories and allocation
+- name: "area: receipts-ocr"
+  color: 1d76db
+  description: Receipt capture, upload and OCR extraction
+- name: "area: approval"
+  color: 1d76db
+  description: Submission, approval or rejection, and expense policy
+- name: "area: export-csv"
+  color: 1d76db
+  description: CSV accounting export
+- name: "area: supabase"
+  color: 1d76db
+  description: Database, RLS, storage and edge functions
+- name: "area: ai-agents"
+  color: 1d76db
+  description: AI agents and MCP integrations
+- name: "area: ci"
+  color: 1d76db
+  description: GitHub Actions, automation and repository settings
+- name: "area: accessibility"
+  color: f143ab
+  description: Barrier affecting people with disabilities
+  aliases: [accessibility]
+- name: "area: i18n"
+  color: 1d76db
+  description: Translations and localization (French, Arabic)
+
+# ── Status ───────────────────────────────────────────────────────────
+- name: "status: needs triage"
+  color: ededed
+  description: New, waiting for the team to review
+- name: "status: needs info"
+  color: d876e3
+  description: Waiting for more information from the author
+- name: "status: blocked"
+  color: e11d21
+  description: Blocked by another issue or an external dependency
+- name: "status: stale"
+  color: cfd3d7
+  description: No activity for a while
+
+# ── Size (added automatically on pull requests) ──────────────────────
+- name: "size: XS"
+  color: 3cbf00
+  description: "Pull request: under 10 changed lines"
+- name: "size: S"
+  color: 5d9801
+  description: "Pull request: under 100 changed lines"
+- name: "size: M"
+  color: 7f7203
+  description: "Pull request: under 500 changed lines"
+- name: "size: L"
+  color: a14c05
+  description: "Pull request: under 1,000 changed lines"
+- name: "size: XL"
+  color: c32607
+  description: "Pull request: 1,000 or more changed lines, consider splitting"
+
+# ── Community and process ────────────────────────────────────────────
+- name: epic
+  color: 3e4b9e
+  description: Groups several user stories (use sub-issues)
+- name: good first issue
+  color: 7057ff
+  description: Good for newcomers
+- name: help wanted
+  color: "008672"
+  description: Extra attention is needed
+- name: question
+  color: d876e3
+  description: Further information is requested
+- name: duplicate
+  color: cfd3d7
+  description: This issue or pull request already exists
+- name: invalid
+  color: e4e669
+  description: This doesn't seem right
+- name: wontfix
+  color: ffffff
+  description: This will not be worked on
+- name: dependencies
+  color: "0366d6"
+  description: Dependency updates
+- name: breaking change
+  color: b60205
+  description: Introduces a breaking change
+- name: skip changelog
+  color: ededed
+  description: Exclude from release notes

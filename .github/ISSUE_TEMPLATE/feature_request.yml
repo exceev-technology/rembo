@@ -1,0 +1,90 @@
+name: ✨ Feature / user story
+description: Propose a new capability, written as a user story with acceptance criteria.
+type: Feature
+labels: ["type: feature", "status: needs triage"]
+projects: ["exceev-technology/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape Rembo! ✨
+
+        Write the request as a **user story** with **acceptance criteria**, so the team can estimate it in Sprint Planning.
+        Still a rough idea? Start a thread in [Discussions › Ideas](https://github.com/exceev-technology/rembo/discussions/categories/ideas) first.
+
+  - type: dropdown
+    id: persona
+    attributes:
+      label: Who is it for?
+      options:
+        - Employee (collaborateur), declares expenses
+        - Manager (responsable), approves or rejects
+        - Accountant (comptable), checks and exports
+        - Company admin, configures policies and users
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: story
+    attributes:
+      label: User story
+      description: "As a <persona>, I want <action> so that <benefit>."
+      placeholder: As an employee, I want to photograph a receipt so that I don't have to type the amount, date and supplier.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Problem and context
+      description: What problem does this solve? How is it handled today?
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Testable conditions, ideally in Given / When / Then form.
+      value: |
+        - [ ] Given …, when …, then …
+        - [ ] Given …, when …, then …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Capture & OCR
+        - Expenses
+        - Approval
+        - CSV export
+        - Auth & roles
+        - Supabase (database, RLS, storage)
+        - AI agents / MCP
+        - Mobile UI / accessibility
+        - Other
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Mockups and design notes
+      description: Link or drop mockups, screen flows or examples.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and discussions for a similar request.
+          required: true
+        - label: It fits the MVP scope (mobile app, Supabase backend, CSV export), or I flagged it as post-MVP.
+          required: false
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/exceev-technology/rembo/blob/main/CODE_OF_CONDUCT.md).
+          required: true
