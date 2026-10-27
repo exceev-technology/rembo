@@ -7,8 +7,8 @@ Rembo is built by students of **École Centrale Casablanca** as Project 02 of th
 | Name | Role | GitHub |
 |---|---|---|
 | Marius | Product Owner | [@Mavens06](https://github.com/Mavens06) |
-| Hafssa | Developer | *pending* |
-| Mohamed | Developer | *pending* |
+| Hafssa | Developer | [@Hafssa250](https://github.com/Hafssa250) |
+| Mohamed | Developer | [@Mohamed-CHAKIR](https://github.com/Mohamed-CHAKIR) |
 | Mohamoudou | Developer | [@MohamoudouSanogo](https://github.com/MohamoudouSanogo) |
 | Daouda | Developer | *pending* |
 | Hamza Lemrani | Mentor (Exceev), maintainer | [@hamza-lem](https://github.com/hamza-lem) |
