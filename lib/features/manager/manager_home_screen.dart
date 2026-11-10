@@ -115,7 +115,7 @@ class _ManagerHomeScreenState extends State<ManagerHomeScreen> {
                   status: r.status,
                   subtitle: r.alerts.isEmpty
                       ? r.employee
-                      : '${r.employee} · ⚠ ${r.alerts.length} alerte${r.alerts.length > 1 ? 's' : ''}',
+                      : '${r.employee} · ${r.alerts.length} alerte${r.alerts.length > 1 ? 's' : ''}',
                   onTap: () => _open(r),
                 ),
                 const SizedBox(height: RemboSpace.md),
