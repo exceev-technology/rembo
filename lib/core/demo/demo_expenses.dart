@@ -40,7 +40,7 @@ final demoExpenses = List<DemoExpense>.unmodifiable([
   ),
   DemoExpense(
     id: 'demo-004',
-    supplier: 'Papeterie Al Andalous',
+    supplier: 'Librairie Al Kitab',
     date: DateTime(2026, 10, 28),
     amountCentimes: 12000,
     status: DemoExpenseStatus.rejected,
