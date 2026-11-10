@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/theme/rembo_theme.dart';
 import 'app_router.dart';
@@ -13,6 +14,9 @@ class RemboApp extends StatelessWidget {
     title: 'REMBO',
     debugShowCheckedModeBanner: false,
     theme: RemboTheme.light(),
+    locale: const Locale('fr'),
+    supportedLocales: const [Locale('fr')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
     initialRoute: initialRoute,
     onGenerateInitialRoutes: (route) => [
       AppRouter.onGenerateRoute(RouteSettings(name: route)),

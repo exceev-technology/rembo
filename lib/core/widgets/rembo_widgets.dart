@@ -6,6 +6,7 @@ export '../theme/rembo_theme.dart';
 export '../theme/rembo_tokens.dart';
 export 'expense_card.dart';
 export 'rembo_buttons.dart';
+export 'rembo_illustration.dart';
 export 'rembo_logo.dart';
 export 'rembo_message.dart';
 export 'rembo_text_field.dart';

@@ -79,6 +79,26 @@ void main() {
     expect(find.text('Votre adresse professionnelle'), findsNothing);
   });
 
+  testWidgets('Logo and illustration assets are bundled', (tester) async {
+    await tester.pumpWidget(
+      host(
+        const Column(
+          children: [
+            RemboLogo(),
+            RemboLogo(showWordmark: false),
+            RemboIllustration(),
+          ],
+        ),
+      ),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.bySemanticsLabel('REMBO'), findsNWidgets(2));
+  });
+
   testWidgets('Components fit a narrow phone with enlarged text', (
     tester,
   ) async {

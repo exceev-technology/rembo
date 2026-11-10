@@ -16,7 +16,7 @@ Le thème est appliqué dans `RemboApp` (`theme: RemboTheme.light()`). Dans un t
 | `RemboSpace` | `xs 4`, `sm 8`, `md 12`, `lg 16`, `xl 24`, `xxl 32`. |
 | `RemboRadius` | `sm 10`, `md 14`, `lg 20`, `pill`. |
 | `RemboElevation` | Ombres `card` et `floating`. |
-| `RemboFonts` | Archivo (titres), Instrument Sans (texte), JetBrains Mono (montants). Les fichiers ne sont pas encore embarqués : les polices de repli s’appliquent. |
+| `RemboFonts` | Archivo (titres), Instrument Sans (texte), JetBrains Mono (montants), embarquées en polices variables dans `assets/fonts/` (licence SIL OFL). Chaque style gras fixe aussi l’axe `wght`. |
 | `RemboText` | `display`, `title`, `subtitle`, `body`, `caption`, `label`, `amount` (chiffres tabulaires). |
 
 Formatage — `lib/core/format/formatters.dart` : `formatMad(16500)` → `165,00 MAD` ; `formatDate(DateTime(2026, 10, 27))` → `27 oct. 2026`. Les montants restent des centimes entiers.
@@ -33,7 +33,10 @@ Formatage — `lib/core/format/formatters.dart` : `formatMad(16500)` → `165,00
 | `ExpenseCard` | `supplier`, `date`, `amountCentimes`, `status`, `subtitle?`, `onTap?`, `trailing?` | `ExpenseCard.fromDemo(demoExpenses.first, onTap: open)` |
 | `RemboMessage` | `tone` (`info`, `success`, `warning`, `error`), `title`, `message?`, `action?` | `RemboMessage(tone: MessageTone.error, title: 'Reçu illisible')` |
 | `showRemboSnackBar` | `context`, `text`, `tone` | `showRemboSnackBar(context, 'Dépense envoyée')` |
-| `RemboLogo` | `size`, `showWordmark` | `RemboLogo(size: 48)` |
+| `RemboLogo` | `size` (hauteur), `showWordmark` | `RemboLogo(size: 32)` — logo du pitch, pour fond clair |
+| `RemboIllustration` | `height` | `RemboIllustration(height: 140)` — reçu 3D décoratif, un par écran au plus |
+
+L’application est en français (`flutter_localizations`, locale `fr`) : textes Material, sélecteurs de date et infobulles.
 
 Libellés de statut partagés : Brouillon, Soumise, Approuvée, Rejetée.
 

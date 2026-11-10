@@ -114,6 +114,19 @@ abstract final class RemboTheme {
           side: const BorderSide(color: RemboColors.border),
         ),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: RemboColors.card,
+        indicatorColor: RemboColors.surface,
+        height: 72,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => RemboText.caption.copyWith(
+            fontSize: 12,
+            color: states.contains(WidgetState.selected)
+                ? RemboColors.indigo
+                : RemboColors.muted,
+          ),
+        ),
+      ),
       chipTheme: ChipThemeData(
         backgroundColor: RemboColors.card,
         selectedColor: RemboColors.surface,

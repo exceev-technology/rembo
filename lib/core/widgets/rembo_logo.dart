@@ -1,64 +1,39 @@
 import 'package:flutter/material.dart';
 
-import '../theme/rembo_tokens.dart';
-
-/// The REMBO mark (indigo tile) followed by the wordmark.
+/// The REMBO logo from the pitch, for light backgrounds. [size] is the
+/// height of the « r » mark; [showWordmark] false keeps only the mark.
 class RemboLogo extends StatelessWidget {
   const RemboLogo({super.key, this.size = 40, this.showWordmark = true});
   final double size;
   final bool showWordmark;
 
+  static const asset = 'assets/images/rembo_logo.png';
+
+  /// Share of the image width taken by the « r » mark.
+  static const _markWidth = 0.245;
+
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'REMBO',
-    child: ExcludeSemantics(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [RemboColors.indigo, RemboColors.night],
-              ),
-              borderRadius: BorderRadius.circular(size * 0.3),
-              boxShadow: RemboElevation.card,
-            ),
-            child: Text(
-              'r',
-              style: RemboText.display.copyWith(
-                color: Colors.white,
-                fontSize: size * 0.6,
-                height: 1,
-              ),
-            ),
-          ),
-          if (showWordmark) ...[
-            SizedBox(width: size * 0.3),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(text: 'rembo'),
-                      TextSpan(
-                        text: '.',
-                        style: TextStyle(color: RemboColors.indigo),
-                      ),
-                    ],
-                  ),
-                  style: RemboText.display.copyWith(fontSize: size * 0.7),
+  Widget build(BuildContext context) {
+    final logo = Image.asset(
+      asset,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+    );
+    return Semantics(
+      label: 'REMBO',
+      image: true,
+      child: ExcludeSemantics(
+        child: showWordmark
+            ? logo
+            : ClipRect(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: _markWidth,
+                  child: logo,
                 ),
               ),
-            ),
-          ],
-        ],
       ),
-    ),
-  );
+    );
+  }
 }
