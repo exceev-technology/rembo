@@ -19,28 +19,28 @@ class DemoExpense {
 final demoExpenses = List<DemoExpense>.unmodifiable([
   DemoExpense(
     id: 'demo-001',
-    supplier: 'Café Atlas — fictif',
+    supplier: 'Café Atlas',
     date: DateTime(2026, 10, 26),
     amountCentimes: 16500,
     status: DemoExpenseStatus.draft,
   ),
   DemoExpense(
     id: 'demo-002',
-    supplier: 'Transport Horizon — fictif',
+    supplier: 'Transport Horizon',
     date: DateTime(2026, 10, 27),
     amountCentimes: 4500,
     status: DemoExpenseStatus.submitted,
   ),
   DemoExpense(
     id: 'demo-003',
-    supplier: 'Hôtel Exemple — fictif',
+    supplier: 'Hôtel Mogador',
     date: DateTime(2026, 10, 27),
     amountCentimes: 76000,
     status: DemoExpenseStatus.approved,
   ),
   DemoExpense(
     id: 'demo-004',
-    supplier: 'Fournitures Démo — fictif',
+    supplier: 'Papeterie Al Andalous',
     date: DateTime(2026, 10, 28),
     amountCentimes: 12000,
     status: DemoExpenseStatus.rejected,
