@@ -4,41 +4,48 @@ import 'package:rembo/app/app_router.dart';
 import 'package:rembo/app/app_routes.dart';
 import 'package:rembo/app/rembo_app.dart';
 
-final placeholders = AppRoutes.destinations
-    .where((d) => !AppRouter.screens.containsKey(d.route))
-    .toList();
+/// Some screens animate forever (welcome) or simulate a short loading
+/// (receipt reading), so pumpAndSettle is not usable everywhere.
+Future<void> settle(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 1500));
+  await tester.pump(const Duration(milliseconds: 600));
+}
+
+const title = ValueKey('destination-title');
 
 void main() {
-  testWidgets('Every menu destination opens a placeholder and returns safely', (
+  test('Every destination is wired to its real screen', () {
+    expect(
+      AppRouter.screens.keys.toSet(),
+      AppRoutes.destinations.map((d) => d.route).toSet(),
+    );
+  });
+
+  testWidgets('Every destination opens from the menu and returns', (
     tester,
   ) async {
     await tester.pumpWidget(const RemboApp());
-    for (final destination in placeholders) {
+    for (final destination in AppRoutes.destinations) {
       final card = find.byKey(ValueKey('destination-${destination.route}'));
       await tester.ensureVisible(card);
       await tester.tap(card);
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('destination-title')), findsOneWidget);
-      expect(find.text(destination.title), findsOneWidget);
-      expect(find.text('Écran provisoire'), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const ValueKey('back-to-menu')));
-      await tester.tap(find.byKey(const ValueKey('back-to-menu')));
-      await tester.pumpAndSettle();
+      await settle(tester);
+      expect(find.byKey(title), findsOneWidget, reason: destination.route);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
       expect(find.byKey(const ValueKey('navigation-menu')), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
   });
 
-  testWidgets('System back returns to the menu', (tester) async {
-    await tester.pumpWidget(const RemboApp());
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('destination-/connexion')),
-    );
-    await tester.tap(find.byKey(const ValueKey('destination-/connexion')));
-    await tester.pumpAndSettle();
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('navigation-menu')), findsOneWidget);
+  testWidgets('Welcome leads to the real login screen', (tester) async {
+    await tester.pumpWidget(const RemboApp(initialRoute: AppRoutes.welcome));
+    await settle(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('welcome-start')));
+    await tester.tap(find.byKey(const ValueKey('welcome-start')));
+    await settle(tester);
+    expect(find.byKey(const ValueKey('login-submit')), findsOneWidget);
   });
 
   testWidgets('Unknown destination offers recovery', (tester) async {
@@ -51,12 +58,12 @@ void main() {
   });
 
   testWidgets('All destinations also support direct entry', (tester) async {
-    for (final destination in placeholders) {
+    for (final destination in AppRoutes.destinations) {
       await tester.pumpWidget(
         RemboApp(key: UniqueKey(), initialRoute: destination.route),
       );
-      await tester.pumpAndSettle();
-      expect(find.text(destination.title), findsOneWidget);
+      await settle(tester);
+      expect(find.byKey(title), findsOneWidget, reason: destination.route);
       expect(tester.takeException(), isNull);
     }
   });
@@ -77,9 +84,8 @@ void main() {
       await tester.pumpWidget(
         RemboApp(key: UniqueKey(), initialRoute: destination.route),
       );
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const ValueKey('back-to-menu')));
-      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(tester.takeException(), isNull, reason: destination.route);
     }
   });
 }

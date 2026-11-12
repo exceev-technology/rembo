@@ -2,16 +2,17 @@
 Issue #15 — Sprint 1, octobre 2026. Ce contrat décrit le socle commun de l’interface V1 : routes, dossiers et conventions à respecter par les tickets #16 à #25.
 
 ## Points d’entrée
-| Constante AppRoutes | Route | Destination actuelle | Futur ticket |
+| Constante AppRoutes | Route | Écran raccordé | Ticket |
 |---|---|---|---|
 | menu | / | NavigationMenuScreen, menu de revue | #15 |
-| login | /connexion | PlaceholderScreen : Connexion | #18 |
-| collaborator | /collaborateur | PlaceholderScreen : Espace collaborateur | #19 |
-| capture | /depenses/capture | PlaceholderScreen : Capture du justificatif | #20 |
-| review | /depenses/verification | PlaceholderScreen : Vérification des informations | #20 |
-| manager | /responsable | PlaceholderScreen : Espace responsable | #21 |
-| accountant | /comptable | PlaceholderScreen : Espace comptable | #22 (fermé, à replanifier) |
-| settings | /parametres | PlaceholderScreen : Paramètres | #23 |
+| welcome | /bienvenue | WelcomeScreen : scène d’accueil animée (réelle) | #17 |
+| login | /connexion | LoginScreen (+ ForgotPasswordScreen) | #18 |
+| collaborator | /collaborateur | CollaboratorHomeScreen (+ liste, détail) | #19 |
+| capture | /depenses/capture | CaptureScreen | #20 |
+| review | /depenses/verification | ReviewScreen (+ récapitulatif, confirmation) | #20 |
+| manager | /responsable | ManagerHomeScreen (+ détail, historique) | #21 |
+| accountant | /comptable | AccountantHomeScreen (+ prévisualisation, historique) | #22 |
+| settings | /parametres | SettingsScreen (+ profil, notifications) | #23 |
 
 Une seule liste de destinations alimente le menu et le routeur. Un écran réel s’enregistre dans `AppRouter.screens` ; toute autre destination affiche PlaceholderScreen. Une destination inconnue affiche une page de récupération. L’accès direct crée une seule route initiale : aucun écran intermédiaire inexistant n’est ajouté. Le retour visible revient à l’écran précédent, ou au menu si l’écran est entré directement. « Revenir aux espaces » réinitialise la pile au menu.
 
@@ -25,10 +26,12 @@ Une seule liste de destinations alimente le menu et le routeur. Un écran réel 
 - app/skeleton_widgets.dart : éléments de présentation propres à ce socle, pas un design system complet.
 - core/theme/skeleton_colors.dart : palette provisoire, importable par les modules.
 - core/demo/demo_expenses.dart : données fictives immuables.
+- features/onboarding/welcome_screen.dart : premier écran réel, scène 3D flottante.
 - features/ : modules futurs.
+- assets/images/ : rendus 3D (arche, reçu) déclarés dans pubspec.yaml.
 
 ## Contrat avec les modules
-Chaque module peut être développé isolément avec ses propres données fictives. L’intégrateur #24 remplace la destination provisoire seulement lorsque le module est disponible. Ne jamais importer un écran absent. Les noms de route restent stables ; une extension doit être coordonnée avec #17/#24. Le profil, la récupération de mot de passe et les historiques recevront leurs destinations dans leurs tickets respectifs.
+Chaque module peut être développé isolément avec ses propres données fictives. L’intégrateur #24 remplace la destination provisoire seulement lorsque le module est disponible. Ne jamais importer un écran absent. Les noms de route restent stables ; une extension doit être coordonnée avec #17/#24. Parcours, carte et inventaire : `user-journeys.md`, `navigation-map.md`, `screen-inventory.md`. Le profil, la récupération de mot de passe et les historiques recevront leurs destinations dans leurs tickets respectifs.
 
 Les montants des fixtures sont des centimes entiers de MAD, les dates sont civiles, les statuts disponibles sont draft, submitted, approved et rejected. Le jeu est fictif et non affiché comme un compte réel dans cette ébauche. Aucun calcul fiscal ou règle métier ajouté.
 
@@ -45,3 +48,6 @@ Tout écran métier est provisoire. Aucun effet réseau métier ou stockage. Nav
 - Les clés de test stables sont `navigation-menu`, `destination-<route>`, `destination-title` et `back-to-menu`.
 - `dart format`, `flutter analyze` et `flutter test` doivent passer avant toute PR (voir la CI).
 
+
+## État de l’intégration (#24)
+Toutes les destinations sont raccordées à leur écran réel dans `AppRouter.screens` ; `PlaceholderScreen` ne sert plus qu’aux routes inconnues. `test/widget_test.dart` vérifie que chaque destination a un écran, s’ouvre depuis le menu, en accès direct et sur un téléphone étroit avec texte agrandi ; `test/journeys_test.dart` parcourt les trois profils de bout en bout. Un module livré en retard se débranche en retirant sa ligne de `AppRouter.screens` : sa destination redevient provisoire sans autre modification.
