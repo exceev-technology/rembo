@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/models.dart';
 import '../theme/rembo_tokens.dart';
+import '../l10n/l10n.dart';
 
 enum BadgeTone { neutral, info, success, warning, danger }
 
@@ -88,7 +89,7 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => RemboBadge(
-    label: byAgent ? 'Validée par l’agent' : status.label,
+    label: byAgent ? tr('Validée par l’agent') : status.label,
     tone: toneOf(status),
     icon: iconOf(status),
   );

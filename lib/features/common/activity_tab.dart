@@ -19,34 +19,39 @@ class ActivityTab extends StatelessWidget {
       ExpenseStatus.needsReview =>
         own
             ? (
-                'Transmise au responsable',
-                'Un point est à examiner sur « ${e.title} ».',
+                tr('Transmise au responsable'),
+                tr('Un point est à examiner sur « {title} ».', {
+                  'title': e.title,
+                }),
                 Icons.visibility_outlined,
                 BadgeTone.warning,
               )
             : (
-                'Décision demandée',
-                '${e.employeeName} · ${e.title}',
+                tr('Décision demandée'),
+                '${isolate(e.employeeName)} · ${e.title}',
                 Icons.warning_amber_rounded,
                 BadgeTone.warning,
               ),
       ExpenseStatus.approved => (
-        'Dépense validée',
+        tr('Dépense validée'),
         ev.byAgent
-            ? '« ${e.title} » est conforme aux règles.'
-            : '« ${e.title} » validée par ${ev.actorName}.',
+            ? tr('« {title} » est conforme aux règles.', {'title': e.title})
+            : tr('« {title} » validée par {actorName}.', {
+                'title': e.title,
+                'actorName': trData(ev.actorName),
+              }),
         Icons.check_rounded,
         BadgeTone.success,
       ),
       ExpenseStatus.rejected => (
-        'Correction demandée',
-        ev.reason ?? 'Des informations sont à ajuster.',
+        tr('Correction demandée'),
+        ev.reason ?? tr('Des informations sont à ajuster.'),
         Icons.edit_note_rounded,
         BadgeTone.danger,
       ),
       ExpenseStatus.exported => (
-        'Dépense exportée',
-        '« ${e.title} » est partie en comptabilité.',
+        tr('Dépense exportée'),
+        tr('« {title} » est partie en comptabilité.', {'title': e.title}),
         Icons.cloud_done_outlined,
         BadgeTone.info,
       ),
@@ -70,7 +75,9 @@ class ActivityTab extends StatelessWidget {
         now.month,
         now.day,
       ).difference(DateTime(at.year, at.month, at.day)).inDays;
-      return days <= 0 ? 'Aujourd’hui' : (days == 1 ? 'Hier' : 'Plus tôt');
+      return days <= 0
+          ? tr('Aujourd’hui')
+          : (days == 1 ? tr('Hier') : tr('Plus tôt'));
     }
 
     final children = <Widget>[];
@@ -130,15 +137,23 @@ class ActivityTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: RemboSpace.sm),
-                Text(
-                  g == 'Plus tôt'
-                      ? formatDayShort(item.event.at)
-                      : formatTime(item.event.at),
-                  style: RemboText.caption,
+                // Month names are longer in Arabic: the date may wrap
+                // instead of pushing the row out of the screen.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.sizeOf(context).width * .26,
+                  ),
+                  child: Text(
+                    g == tr('Plus tôt')
+                        ? formatDayShort(item.event.at)
+                        : formatTime(item.event.at),
+                    style: RemboText.caption,
+                    textAlign: TextAlign.end,
+                  ),
                 ),
                 if (unread)
                   const Padding(
-                    padding: EdgeInsets.only(left: 6, top: 5),
+                    padding: EdgeInsetsDirectional.only(start: 6, top: 5),
                     child: CircleAvatar(
                       radius: 4,
                       backgroundColor: RemboColors.indigo,
@@ -156,16 +171,18 @@ class ActivityTab extends StatelessWidget {
       showBack: false,
       onRefresh: state.refresh,
       children: [
-        const RemboHero(title: 'Activité'),
+        RemboHero(title: tr('Activité')),
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: RemboSpace.xl),
             child: Column(
               key: const ValueKey('activity-empty'),
               children: [
-                Text('Aucune activité', style: RemboText.subtitle),
+                Text(tr('Aucune activité'), style: RemboText.subtitle),
                 Text(
-                  'Vous serez prévenu ici quand une dépense change de statut.',
+                  tr(
+                    'Vous serez prévenu ici quand une dépense change de statut.',
+                  ),
                   style: RemboText.caption,
                   textAlign: TextAlign.center,
                 ),
@@ -174,11 +191,11 @@ class ActivityTab extends StatelessWidget {
           )
         else
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton.icon(
               key: const ValueKey('activity-read-all'),
               icon: const Icon(Icons.done_all_rounded, size: 18),
-              label: const Text('Tout marquer comme lues'),
+              label: Text(tr('Tout marquer comme lues')),
               onPressed: state.unreadCount == 0 ? null : state.markAllRead,
             ),
           ),

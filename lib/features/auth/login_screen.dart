@@ -32,10 +32,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _failure = null;
       _emailError = _email.text.trim().isEmpty
-          ? 'Saisissez votre adresse e-mail.'
-          : (isValidEmail(_email.text) ? null : 'Adresse e-mail invalide.');
+          ? tr('Saisissez votre adresse e-mail.')
+          : (isValidEmail(_email.text) ? null : tr('Adresse e-mail invalide.'));
       _passwordError = _password.text.isEmpty
-          ? 'Saisissez votre mot de passe.'
+          ? tr('Saisissez votre mot de passe.')
           : null;
     });
     if (_emailError != null || _passwordError != null) return;
@@ -63,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return RemboPage(
       logo: true,
       showBack: false,
+      trailing: const LanguageButton(),
       children: [
         const SizedBox(height: RemboSpace.sm),
         const Center(child: HeroArt(height: 140)),
@@ -70,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Semantics(
           header: true,
           child: Text(
-            'Vos frais,\nsimplement.',
+            tr('Vos frais,\nsimplement.'),
             style: RemboText.display.copyWith(fontSize: 34),
             textAlign: TextAlign.center,
           ),
@@ -85,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               RemboTextField(
                 fieldKey: const ValueKey('login-email'),
-                label: 'Adresse e-mail',
+                label: tr('Adresse e-mail'),
                 hint: 'votre@email.com',
                 icon: Icons.mail_outline_rounded,
                 controller: _email,
@@ -97,8 +98,8 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: RemboSpace.lg),
               RemboTextField(
                 fieldKey: const ValueKey('login-password'),
-                label: 'Mot de passe',
-                hint: 'Votre mot de passe',
+                label: tr('Mot de passe'),
+                hint: tr('Votre mot de passe'),
                 icon: Icons.lock_outline_rounded,
                 controller: _password,
                 errorText: _passwordError,
@@ -109,8 +110,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 suffix: IconButton(
                   key: const ValueKey('login-toggle-password'),
                   tooltip: _obscure
-                      ? 'Afficher le mot de passe'
-                      : 'Masquer le mot de passe',
+                      ? tr('Afficher le mot de passe')
+                      : tr('Masquer le mot de passe'),
                   icon: Icon(
                     _obscure
                         ? Icons.visibility_outlined
@@ -123,18 +124,18 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         Align(
-          alignment: Alignment.centerRight,
+          alignment: AlignmentDirectional.centerEnd,
           child: TextButton(
             key: const ValueKey('login-forgot'),
             onPressed: () =>
                 Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
-            child: const Text('Mot de passe oublié ?'),
+            child: Text(tr('Mot de passe oublié ?')),
           ),
         ),
         const SizedBox(height: RemboSpace.sm),
         RemboPrimaryButton(
           key: const ValueKey('login-submit'),
-          label: 'Se connecter',
+          label: tr('Se connecter'),
           loading: _loading,
           onPressed: _submit,
         ),
@@ -143,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: TextButton(
             key: const ValueKey('login-signup'),
             onPressed: () => Navigator.of(context).pushNamed(AppRoutes.signup),
-            child: const Text('Pas encore de compte ? Créer un compte'),
+            child: Text(tr('Pas encore de compte ? Créer un compte')),
           ),
         ),
         if (demo) ...[
@@ -153,11 +154,13 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mode démonstration', style: RemboText.subtitle),
+                Text(tr('Mode démonstration'), style: RemboText.subtitle),
                 const SizedBox(height: RemboSpace.xs),
                 Text(
-                  'Aucun serveur n’est configuré : les comptes et les '
-                  'dépenses sont fictifs et rien n’est enregistré.',
+                  tr(
+                    'Aucun serveur n’est configuré : les comptes et les dépenses '
+                    'sont fictifs et rien n’est enregistré.',
+                  ),
                   style: RemboText.caption,
                 ),
                 const SizedBox(height: RemboSpace.md),
@@ -199,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  'Données personnelles traitées selon la loi 09-08.',
+                  tr('Données personnelles traitées selon la loi 09-08.'),
                   maxLines: 1,
                   softWrap: false,
                   style: RemboText.caption.copyWith(fontSize: 11.5),

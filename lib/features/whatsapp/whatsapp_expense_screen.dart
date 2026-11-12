@@ -75,7 +75,7 @@ class _WhatsAppExpenseScreenState extends State<WhatsAppExpenseScreen> {
               children: [
                 RemboPrimaryButton(
                   key: const ValueKey('whatsapp-confirm'),
-                  label: 'Confirmer et envoyer',
+                  label: tr('Confirmer et envoyer'),
                   icon: Icons.arrow_forward_rounded,
                   loading: _loading,
                   onPressed: missing.isEmpty ? () => _confirm(e) : null,
@@ -85,16 +85,18 @@ class _WhatsAppExpenseScreenState extends State<WhatsAppExpenseScreen> {
                   onPressed: _loading
                       ? null
                       : () => ExpenseFormScreen.open(context, expense: e),
-                  child: Text(missing.isEmpty ? 'Modifier' : 'Compléter'),
+                  child: Text(
+                    missing.isEmpty ? tr('Modifier') : tr('Compléter'),
+                  ),
                 ),
               ],
             ),
       children: [
         RemboHero(
-          title: 'Dépense reçue via WhatsApp',
+          title: tr('Dépense reçue via WhatsApp'),
           subtitle: e.hasVoice
-              ? 'Votre message vocal a été converti en dépense.'
-              : 'Votre message a été converti en dépense.',
+              ? tr('Votre message vocal a été converti en dépense.')
+              : tr('Votre message a été converti en dépense.'),
           below: open ? null : StatusBadge.of(e),
         ),
         RemboCard(
@@ -136,7 +138,7 @@ class _WhatsAppExpenseScreenState extends State<WhatsAppExpenseScreen> {
                   child: OutlinedButton.icon(
                     key: const ValueKey('whatsapp-play'),
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Écouter le message vocal'),
+                    label: Text(tr('Écouter le message vocal')),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
                     ),
@@ -154,9 +156,11 @@ class _WhatsAppExpenseScreenState extends State<WhatsAppExpenseScreen> {
             icon: e.hasVoice ? Icons.translate_rounded : Icons.notes_rounded,
           )
         else
-          const InfoStrip(
-            'Le message n’a pas pu être transcrit : écoutez-le puis '
-            'complétez la dépense.',
+          InfoStrip(
+            tr(
+              'Le message n’a pas pu être transcrit : écoutez-le puis '
+              'complétez la dépense.',
+            ),
             icon: Icons.hearing_outlined,
             color: RemboColors.warningText,
             background: RemboColors.warningTint,
@@ -178,13 +182,13 @@ class _WhatsAppExpenseScreenState extends State<WhatsAppExpenseScreen> {
                   Expanded(
                     child: DetailRow(
                       categoryIcon(e.category),
-                      'Catégorie',
-                      e.category,
+                      tr('Catégorie'),
+                      tr(e.category),
                     ),
                   ),
                   if (open && e.category.isNotEmpty)
-                    const RemboBadge(
-                      label: 'Proposé',
+                    RemboBadge(
+                      label: tr('Proposé'),
                       tone: BadgeTone.info,
                       icon: Icons.auto_awesome_outlined,
                     ),
@@ -192,25 +196,35 @@ class _WhatsAppExpenseScreenState extends State<WhatsAppExpenseScreen> {
               ),
               DetailRow(
                 Icons.payments_outlined,
-                'Montant',
+                tr('Montant'),
                 e.amountCents > 0 ? formatMad(e.amountCents) : '',
                 mono: true,
               ),
-              DetailRow(Icons.storefront_outlined, 'Fournisseur', e.supplier),
-              DetailRow(Icons.groups_outlined, 'Client ou projet', e.project),
+              DetailRow(
+                Icons.storefront_outlined,
+                tr('Fournisseur'),
+                e.supplier,
+              ),
+              DetailRow(
+                Icons.groups_outlined,
+                tr('Client ou projet'),
+                e.project,
+              ),
               DetailRow(
                 Icons.calendar_today_outlined,
-                'Date',
+                tr('Date'),
                 e.date == null ? '' : formatDateLong(e.date!),
               ),
-              DetailRow(Icons.notes_rounded, 'Motif', e.reason),
+              DetailRow(Icons.notes_rounded, tr('Motif'), e.reason),
             ],
           ),
         ),
         if (open && missing.isNotEmpty) ...[
           const SizedBox(height: RemboSpace.md),
           InfoStrip(
-            'À compléter avant l’envoi : ${missing.join(', ')}.',
+            tr('À compléter avant l’envoi : {join}.', {
+              'join': missing.join(', '),
+            }),
             key: const ValueKey('whatsapp-missing'),
             icon: Icons.edit_note_rounded,
             color: RemboColors.warningText,

@@ -35,7 +35,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         if (!mounted) return;
         showRemboSnackBar(
           context,
-          'Démonstration : un reçu d’exemple est utilisé.',
+          tr('Démonstration : un reçu d’exemple est utilisé.'),
           tone: MessageTone.info,
         );
       } else {
@@ -79,15 +79,15 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final demo = AppScope.of(context).isDemo;
     return RemboPage(
       children: [
-        const RemboHero(title: 'Nouvelle dépense'),
+        RemboHero(title: tr('Nouvelle dépense')),
         if (_busy)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: RemboSpace.xxl),
             child: Column(
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: RemboSpace.md),
-                Text('Lecture du justificatif…'),
+                Text(tr('Lecture du justificatif…')),
               ],
             ),
           )
@@ -95,30 +95,30 @@ class _CaptureScreenState extends State<CaptureScreen> {
           // Four ways in, each said in one line. The photo comes first.
           _Way(
             key: const ValueKey('capture-photo'),
-            title: 'Prendre une photo',
-            hint: 'Ticket entier, photo nette.',
+            title: tr('Prendre une photo'),
+            hint: tr('Ticket entier, photo nette.'),
             icon: Icons.photo_camera_outlined,
             primary: true,
             onTap: () => _pick(camera: true),
           ),
           _Way(
             key: const ValueKey('capture-import'),
-            title: 'Importer une image',
-            hint: 'Depuis la galerie ou vos fichiers.',
+            title: tr('Importer une image'),
+            hint: tr('Depuis la galerie ou vos fichiers.'),
             icon: Icons.image_outlined,
             onTap: () => _pick(camera: false),
           ),
           _Way(
             key: const ValueKey('capture-whatsapp'),
-            title: 'Envoyer par WhatsApp',
-            hint: 'Un message vocal ou une photo suffit.',
+            title: tr('Envoyer par WhatsApp'),
+            hint: tr('Un message vocal ou une photo suffit.'),
             icon: Icons.chat_outlined,
             onTap: () => showWhatsAppSheet(context),
           ),
           _Way(
             key: const ValueKey('capture-manual'),
-            title: 'Saisir sans photo',
-            hint: 'Vous remplissez les champs vous-même.',
+            title: tr('Saisir sans photo'),
+            hint: tr('Vous remplissez les champs vous-même.'),
             icon: Icons.edit_note_rounded,
             onTap: () => ExpenseFormScreen.open(context),
           ),
@@ -127,7 +127,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
               child: TextButton(
                 key: const ValueKey('capture-unreadable'),
                 onPressed: () => _pick(camera: true, unreadable: true),
-                child: const Text('Démo : tester un reçu illisible'),
+                child: Text(tr('Démo : tester un reçu illisible')),
               ),
             ),
         ],

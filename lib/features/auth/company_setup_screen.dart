@@ -33,11 +33,11 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
     setState(() {
       _failure = null;
       _nameError = _name.text.trim().length < 2
-          ? 'Saisissez le nom de l’entreprise.'
+          ? tr('Saisissez le nom de l’entreprise.')
           : null;
       _iceError = ice.isEmpty || RegExp(r'^\d{15}$').hasMatch(ice)
           ? null
-          : 'L’ICE compte 15 chiffres.';
+          : tr('L’ICE compte 15 chiffres.');
     });
     if (_nameError != null || _iceError != null) return;
     setState(() => _loading = true);
@@ -56,17 +56,17 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
     showBack: false,
     trailing: TextButton(
       onPressed: () => AppScope.read(context).signOut(),
-      child: const Text('Se déconnecter'),
+      child: Text(tr('Se déconnecter')),
     ),
     bottom: RemboPrimaryButton(
       key: const ValueKey('company-submit'),
-      label: 'Créer l’entreprise',
+      label: tr('Créer l’entreprise'),
       loading: _loading,
       onPressed: _submit,
     ),
     children: [
-      const RemboHero(title: 'Votre entreprise'),
-      const InfoStrip('Aucune invitation : créez votre entreprise.'),
+      RemboHero(title: tr('Votre entreprise')),
+      InfoStrip(tr('Aucune invitation : créez votre entreprise.')),
       const SizedBox(height: RemboSpace.lg),
       if (_failure != null) ...[
         RemboMessage(tone: MessageTone.error, title: _failure!),
@@ -74,7 +74,7 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
       ],
       RemboTextField(
         fieldKey: const ValueKey('company-name'),
-        label: 'Nom de l’entreprise',
+        label: tr('Nom de l’entreprise'),
         hint: 'Atlas Conseil',
         icon: Icons.storefront_outlined,
         controller: _name,
@@ -84,8 +84,8 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
       const SizedBox(height: RemboSpace.lg),
       RemboTextField(
         fieldKey: const ValueKey('company-ice'),
-        label: 'ICE (facultatif)',
-        hint: '15 chiffres',
+        label: tr('ICE (facultatif)'),
+        hint: tr('15 chiffres'),
         icon: Icons.description_outlined,
         controller: _ice,
         errorText: _iceError,
@@ -94,8 +94,8 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
       ),
       const SizedBox(height: RemboSpace.lg),
       RemboTextField(
-        label: 'Ville',
-        hint: 'Casablanca',
+        label: tr('Ville'),
+        hint: tr('Casablanca'),
         icon: Icons.place_outlined,
         controller: _city,
       ),

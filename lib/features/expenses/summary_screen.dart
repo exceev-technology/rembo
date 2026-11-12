@@ -65,20 +65,20 @@ class _SummaryScreenState extends State<SummaryScreen> {
         children: [
           RemboPrimaryButton(
             key: const ValueKey('summary-submit'),
-            label: 'Soumettre la dépense',
+            label: tr('Soumettre la dépense'),
             loading: _loading,
             onPressed: () => _submit(e),
           ),
           TextButton(
             key: const ValueKey('summary-edit'),
             onPressed: _loading ? null : () => Navigator.of(context).pop(),
-            child: const Text('Modifier'),
+            child: Text(tr('Modifier')),
           ),
         ],
       ),
       children: [
-        const RemboHero(
-          title: 'Tout est correct ?',
+        RemboHero(
+          title: tr('Tout est correct ?'),
           illustration: RemboArt.approved,
         ),
         if (_failure != null) ...[
@@ -134,26 +134,34 @@ class _SummaryScreenState extends State<SummaryScreen> {
               const Divider(height: RemboSpace.xl),
               DetailRow(
                 Icons.calendar_today_outlined,
-                'Date',
+                tr('Date'),
                 e.date == null ? '' : formatDateLong(e.date!),
               ),
               if (e.vatCents > 0)
                 DetailRow(
                   Icons.percent_rounded,
-                  'TVA incluse',
+                  tr('TVA incluse'),
                   formatMad(e.vatCents),
                   mono: true,
                 ),
-              DetailRow(categoryIcon(e.category), 'Catégorie', e.category),
+              DetailRow(
+                categoryIcon(e.category),
+                tr('Catégorie'),
+                tr(e.category),
+              ),
               if (e.project.isNotEmpty)
-                DetailRow(Icons.layers_outlined, 'Projet', e.project),
-              DetailRow(Icons.chat_bubble_outline_rounded, 'Motif', e.reason),
+                DetailRow(Icons.layers_outlined, tr('Projet'), e.project),
+              DetailRow(
+                Icons.chat_bubble_outline_rounded,
+                tr('Motif'),
+                e.reason,
+              ),
             ],
           ),
         ),
         const SizedBox(height: RemboSpace.md),
-        const InfoStrip(
-          'Hors règles, votre responsable décide.',
+        InfoStrip(
+          tr('Hors règles, votre responsable décide.'),
           icon: Icons.groups_2_outlined,
         ),
       ],
@@ -178,7 +186,7 @@ class SubmissionResultScreen extends StatelessWidget {
         children: [
           RemboPrimaryButton(
             key: const ValueKey('result-home'),
-            label: 'Retour à l’accueil',
+            label: tr('Retour à l’accueil'),
             onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
           ),
           TextButton(
@@ -188,16 +196,18 @@ class SubmissionResultScreen extends StatelessWidget {
                 builder: (_) => ExpenseDetailScreen(expenseId: e.id),
               ),
             ),
-            child: const Text('Voir le suivi'),
+            child: Text(tr('Voir le suivi')),
           ),
         ],
       ),
       children: [
         RemboMoment(
-          title: approved ? 'Dépense validée' : 'Transmise à votre responsable',
+          title: approved
+              ? tr('Dépense validée')
+              : tr('Transmise à votre responsable'),
           message: approved
-              ? 'Conforme aux règles de votre entreprise.'
-              : 'Un point est à examiner : votre responsable décide.',
+              ? tr('Conforme aux règles de votre entreprise.')
+              : tr('Un point est à examiner : votre responsable décide.'),
           illustration: approved ? RemboArt.approved : RemboArt.search,
         ),
         Center(
@@ -223,7 +233,7 @@ class SubmissionResultScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: RemboSpace.sm),
             child: InfoStrip(
-              '${f.kind.label} : ${f.message}',
+              '${f.kind.label} : ${trData(f.message)}',
               icon: Icons.warning_amber_rounded,
               color: RemboColors.warningText,
               background: RemboColors.warningTint,

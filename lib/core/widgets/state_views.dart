@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/rembo_tokens.dart';
 import 'rembo_buttons.dart';
+import '../l10n/l10n.dart';
 
 /// Nothing to show yet: icon, explanation and an optional way forward.
 class EmptyState extends StatelessWidget {
@@ -50,13 +51,13 @@ class EmptyState extends StatelessWidget {
         child: Icon(icon, size: 40, color: RemboColors.indigo),
       ),
       const SizedBox(height: RemboSpace.lg),
-      Text(title, style: RemboText.title, textAlign: TextAlign.center),
+      Text(tr(title), style: RemboText.title, textAlign: TextAlign.center),
       const SizedBox(height: RemboSpace.sm),
-      Text(message, style: RemboText.caption, textAlign: TextAlign.center),
+      Text(tr(message), style: RemboText.caption, textAlign: TextAlign.center),
       if (actionLabel != null && onAction != null) ...[
         const SizedBox(height: RemboSpace.xl),
         RemboPrimaryButton(
-          label: actionLabel!,
+          label: tr(actionLabel!),
           expand: false,
           onPressed: onAction,
         ),
@@ -74,7 +75,7 @@ class LoadingState extends StatelessWidget {
     children: [
       const CircularProgressIndicator(),
       const SizedBox(height: RemboSpace.lg),
-      Text(message, style: RemboText.caption, textAlign: TextAlign.center),
+      Text(tr(message), style: RemboText.caption, textAlign: TextAlign.center),
     ],
   );
 }
@@ -106,14 +107,14 @@ class ErrorState extends StatelessWidget {
         ),
       ),
       const SizedBox(height: RemboSpace.lg),
-      Text(title, style: RemboText.title, textAlign: TextAlign.center),
+      Text(tr(title), style: RemboText.title, textAlign: TextAlign.center),
       const SizedBox(height: RemboSpace.sm),
-      Text(message, style: RemboText.caption, textAlign: TextAlign.center),
+      Text(tr(message), style: RemboText.caption, textAlign: TextAlign.center),
       if (onRetry != null) ...[
         const SizedBox(height: RemboSpace.xl),
         RemboSecondaryButton(
           key: const ValueKey('retry'),
-          label: 'Réessayer',
+          label: tr('Réessayer'),
           icon: Icons.refresh_rounded,
           expand: false,
           onPressed: onRetry,
@@ -137,14 +138,15 @@ class OfflineBanner extends StatelessWidget {
         vertical: RemboSpace.md,
       ),
       color: RemboColors.ink,
-      child: const Row(
+      child: Row(
         children: [
           Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
           SizedBox(width: RemboSpace.md),
           Expanded(
             child: Text(
-              'Pas de connexion internet. Vos saisies restent sur '
-              'le téléphone.',
+              tr(
+                'Pas de connexion internet. Vos saisies restent sur le téléphone.',
+              ),
               style: TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),

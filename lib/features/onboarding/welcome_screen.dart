@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import '../../app/app_routes.dart';
 import '../../core/motion/rembo_motion.dart';
 import '../../core/theme/rembo_tokens.dart';
+import '../../core/widgets/language.dart';
 import '../../core/widgets/rembo_logo.dart';
+import '../../core/l10n/l10n.dart';
 
 /// First screen of a person who is not signed in: what REMBO is for, then
 /// « Commencer » (create an account) or « Se connecter ».
@@ -186,7 +188,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   Semantics(
                                     key: const ValueKey('welcome-title'),
                                     header: true,
-                                    label: 'Vos frais, l’esprit libre.',
+                                    label: tr('Vos frais, l’esprit libre.'),
                                     child: ExcludeSemantics(
                                       child: Column(
                                         crossAxisAlignment:
@@ -195,13 +197,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                           _line(
                                             .5,
                                             .76,
-                                            Text('Vos frais,', style: headline),
+                                            Text(
+                                              tr('Vos frais,'),
+                                              style: headline,
+                                            ),
                                           ),
                                           _line(
                                             .57,
                                             .83,
                                             Text(
-                                              'l’esprit libre.',
+                                              tr('l’esprit libre.'),
                                               style: headline,
                                             ),
                                           ),
@@ -213,9 +218,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   _fade(
                                     .7,
                                     .92,
-                                    const Text(
-                                      'Moins de paperasse.\n'
-                                      'Plus de temps pour l’essentiel.',
+                                    Text(
+                                      tr(
+                                        'Moins de paperasse.\nPlus de temps pour l’essentiel.',
+                                      ),
                                       style: TextStyle(
                                         fontSize: 18,
                                         height: 1.4,
@@ -247,6 +253,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               },
             ),
           ),
+          // Above the page, so that it can be reached at any time.
+          const SafeArea(
+            child: Align(
+              alignment: AlignmentDirectional.topEnd,
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: LanguageButton(),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -272,13 +288,13 @@ class _Actions extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: const StadiumBorder(),
           ),
-          child: const Wrap(
+          child: Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 12,
             children: [
               Text(
-                'Commencer',
+                tr('Commencer'),
                 style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
               ),
               Icon(Icons.arrow_forward_rounded, size: 24),
@@ -291,8 +307,8 @@ class _Actions extends StatelessWidget {
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          const Text(
-            'Déjà un compte ?',
+          Text(
+            tr('Déjà un compte ?'),
             style: TextStyle(fontSize: 15, color: RemboColors.ink),
           ),
           TextButton(
@@ -302,8 +318,8 @@ class _Actions extends StatelessWidget {
               foregroundColor: RemboColors.indigo,
               minimumSize: const Size(48, 48),
             ),
-            child: const Text(
-              'Se connecter',
+            child: Text(
+              tr('Se connecter'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ),
@@ -534,7 +550,7 @@ class _ReceiptPainter extends CustomPainter {
     if (shown > 0) {
       _text(
         canvas,
-        'Total',
+        tr('Total'),
         const Offset(-70, 62),
         size: 13,
         weight: 600,
@@ -555,7 +571,7 @@ class _ReceiptPainter extends CustomPainter {
       );
       _text(
         canvas,
-        'MAD',
+        tr('MAD'),
         const Offset(70, 86),
         size: 10,
         weight: 600,

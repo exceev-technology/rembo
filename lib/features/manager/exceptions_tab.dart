@@ -30,7 +30,7 @@ class ExceptionsTab extends StatelessWidget {
       children: [
         RemboHero(
           overline: formatWeekday(DateTime.now()),
-          title: 'À examiner',
+          title: tr('À examiner'),
           illustration: RemboArt.search,
         ),
         Row(
@@ -38,7 +38,7 @@ class ExceptionsTab extends StatelessWidget {
             Expanded(
               child: _Count(
                 Icons.warning_amber_rounded,
-                'Écarts aux règles · $policy',
+                tr('Écarts aux règles · {policy}', {'policy': policy}),
                 RemboColors.warningText,
                 RemboColors.warningTint,
               ),
@@ -47,7 +47,7 @@ class ExceptionsTab extends StatelessWidget {
             Expanded(
               child: _Count(
                 Icons.help_outline_rounded,
-                'Ambiguïtés · $ambiguous',
+                tr('Ambiguïtés · {ambiguous}', {'ambiguous': ambiguous}),
                 RemboColors.infoText,
                 RemboColors.surface,
               ),
@@ -58,11 +58,11 @@ class ExceptionsTab extends StatelessWidget {
         if (state.loadError != null)
           RemboMessage(
             tone: MessageTone.error,
-            title: 'Chargement impossible',
+            title: tr('Chargement impossible'),
             message: state.loadError!.message,
             action: TextButton(
               onPressed: state.refresh,
-              child: const Text('Réessayer'),
+              child: Text(tr('Réessayer')),
             ),
           )
         else if (pending.isEmpty)
@@ -73,9 +73,9 @@ class ExceptionsTab extends StatelessWidget {
               children: [
                 const HeroArt(height: 120, art: RemboArt.approved),
                 const SizedBox(height: RemboSpace.lg),
-                Text('Rien à examiner', style: RemboText.subtitle),
+                Text(tr('Rien à examiner'), style: RemboText.subtitle),
                 Text(
-                  'Aucune dépense n’attend votre décision.',
+                  tr('Aucune dépense n’attend votre décision.'),
                   style: RemboText.caption,
                 ),
               ],
@@ -90,7 +90,7 @@ class ExceptionsTab extends StatelessWidget {
             badge: e.flags.isEmpty
                 ? null
                 : RemboBadge(
-                    label: e.flags.first.message,
+                    label: trData(e.flags.first.message),
                     tone: _look(e.flags.first.kind).$2,
                     icon: _look(e.flags.first.kind).$1,
                   ),
@@ -101,7 +101,7 @@ class ExceptionsTab extends StatelessWidget {
             ),
           ),
         const SizedBox(height: RemboSpace.sm),
-        const InfoStrip('Le reste est validé automatiquement.'),
+        InfoStrip(tr('Le reste est validé automatiquement.')),
       ],
     );
   }

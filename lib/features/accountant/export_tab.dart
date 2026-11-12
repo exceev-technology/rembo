@@ -30,7 +30,7 @@ class _ExportTabState extends State<ExportTab> {
       onRefresh: state.refresh,
       bottom: RemboPrimaryButton(
         key: const ValueKey('export-prepare'),
-        label: 'Préparer l’export',
+        label: tr('Préparer l’export'),
         onPressed: chosen.isEmpty
             ? null
             : () => Navigator.of(context).push(
@@ -42,15 +42,15 @@ class _ExportTabState extends State<ExportTab> {
               ),
       ),
       children: [
-        const RemboHero(title: 'À exporter', illustration: RemboArt.folder),
+        RemboHero(title: tr('À exporter'), illustration: RemboArt.folder),
         if (state.loadError != null)
           RemboMessage(
             tone: MessageTone.error,
-            title: 'Chargement impossible',
+            title: tr('Chargement impossible'),
             message: state.loadError!.message,
             action: TextButton(
               onPressed: state.refresh,
-              child: const Text('Réessayer'),
+              child: Text(tr('Réessayer')),
             ),
           )
         else if (ready.isEmpty)
@@ -59,9 +59,9 @@ class _ExportTabState extends State<ExportTab> {
             child: Column(
               key: const ValueKey('export-empty'),
               children: [
-                Text('Rien à exporter', style: RemboText.subtitle),
+                Text(tr('Rien à exporter'), style: RemboText.subtitle),
                 Text(
-                  'Les dépenses validées apparaîtront ici.',
+                  tr('Les dépenses validées apparaîtront ici.'),
                   style: RemboText.caption,
                 ),
               ],
@@ -75,8 +75,10 @@ class _ExportTabState extends State<ExportTab> {
             children: [
               Text(
                 chosen.length == 1
-                    ? '1 dépense sélectionnée'
-                    : '${chosen.length} dépenses sélectionnées',
+                    ? tr('1 dépense sélectionnée')
+                    : tr('{chosen} dépenses sélectionnées', {
+                        'chosen': chosen.length,
+                      }),
                 key: const ValueKey('export-count'),
                 style: RemboText.subtitle,
               ),
@@ -86,7 +88,9 @@ class _ExportTabState extends State<ExportTab> {
                   _excluded.clear();
                   if (all) _excluded.addAll(ready.map((e) => e.id));
                 }),
-                child: Text(all ? 'Tout désélectionner' : 'Tout sélectionner'),
+                child: Text(
+                  all ? tr('Tout désélectionner') : tr('Tout sélectionner'),
+                ),
               ),
             ],
           ),
@@ -95,7 +99,7 @@ class _ExportTabState extends State<ExportTab> {
               e,
               key: ValueKey('export-${e.id}'),
               subtitle:
-                  '${e.employeeName} · '
+                  '${isolate(e.employeeName)} · '
                   '${e.date == null ? '' : formatDayShort(e.date!)}',
               leading: Checkbox(
                 value: !_excluded.contains(e.id),
@@ -106,8 +110,8 @@ class _ExportTabState extends State<ExportTab> {
               ),
               badge: RemboBadge(
                 label: e.approvedByAgent
-                    ? 'Validée par l’agent'
-                    : 'Par responsable',
+                    ? tr('Validée par l’agent')
+                    : tr('Par responsable'),
                 tone: e.approvedByAgent ? BadgeTone.success : BadgeTone.warning,
                 icon: e.approvedByAgent
                     ? Icons.check_circle_outline_rounded
@@ -129,7 +133,7 @@ class _ExportTabState extends State<ExportTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Total sélection', style: RemboText.body),
+                      Text(tr('Total sélection'), style: RemboText.body),
                       Text(
                         formatMad(total),
                         key: const ValueKey('export-total'),
@@ -144,7 +148,7 @@ class _ExportTabState extends State<ExportTab> {
           ),
         ],
         if (state.exports.isNotEmpty) ...[
-          const SectionTitle('Exports récents'),
+          SectionTitle(tr('Exports récents')),
           for (final b in state.exports.take(5)) ExportBatchTile(b),
         ],
       ],
@@ -176,7 +180,7 @@ class ExportBatchTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${batch.count} dépense${batch.count > 1 ? 's' : ''} · '
+                  '${expenseCount(batch.count)} · '
                   '${formatDateLong(batch.createdAt)}',
                   style: RemboText.caption,
                 ),

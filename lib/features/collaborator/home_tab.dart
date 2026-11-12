@@ -36,7 +36,7 @@ class HomeTab extends StatelessWidget {
       onRefresh: state.refresh,
       trailing: IconButton(
         key: const ValueKey('home-bell'),
-        tooltip: 'Activité',
+        tooltip: tr('Activité'),
         icon: Badge(
           isLabelVisible: state.unreadCount > 0,
           backgroundColor: RemboColors.indigo,
@@ -49,12 +49,12 @@ class HomeTab extends StatelessWidget {
         if (state.loadError != null) ...[
           RemboMessage(
             tone: MessageTone.error,
-            title: 'Chargement impossible',
+            title: tr('Chargement impossible'),
             message: state.loadError!.message,
             action: TextButton(
               key: const ValueKey('retry'),
               onPressed: state.refresh,
-              child: const Text('Réessayer'),
+              child: Text(tr('Réessayer')),
             ),
           ),
           const SizedBox(height: RemboSpace.lg),
@@ -62,14 +62,18 @@ class HomeTab extends StatelessWidget {
         if (mine.isEmpty && !state.loading && state.loadError == null)
           ..._firstExpense(context, user, add)
         else ...[
-          RemboHero(title: 'Bonjour ${user.firstName}'),
+          RemboHero(
+            title: tr('Bonjour {firstName}', {'firstName': user.firstName}),
+          ),
           if (toDecide > 0 && state.role == UserRole.manager) ...[
             _Callout(
               key: const ValueKey('home-to-review'),
               icon: Icons.layers_outlined,
               text: toDecide == 1
-                  ? '1 dépense attend votre décision'
-                  : '$toDecide dépenses attendent votre décision',
+                  ? tr('1 dépense attend votre décision')
+                  : tr('{toDecide} dépenses attendent votre décision', {
+                      'toDecide': toDecide,
+                    }),
               onTap: () => ShellTabs.goTo(context, ShellTab.exceptions),
             ),
             const SizedBox(height: RemboSpace.sm),
@@ -79,8 +83,10 @@ class HomeTab extends StatelessWidget {
               key: const ValueKey('home-to-export'),
               icon: Icons.cloud_upload_outlined,
               text: toExport == 1
-                  ? '1 dépense validée à exporter'
-                  : '$toExport dépenses validées à exporter',
+                  ? tr('1 dépense validée à exporter')
+                  : tr('{toExport} dépenses validées à exporter', {
+                      'toExport': toExport,
+                    }),
               onTap: () => ShellTabs.goTo(context, ShellTab.exports),
             ),
             const SizedBox(height: RemboSpace.sm),
@@ -90,9 +96,11 @@ class HomeTab extends StatelessWidget {
               key: const ValueKey('home-whatsapp'),
               icon: Icons.chat_outlined,
               text: state.whatsappToConfirm.length == 1
-                  ? '1 dépense reçue par WhatsApp à confirmer'
-                  : '${state.whatsappToConfirm.length} dépenses reçues par '
-                        'WhatsApp à confirmer',
+                  ? tr('1 dépense reçue par WhatsApp à confirmer')
+                  : tr(
+                      '{whatsappToConfirm} dépenses reçues par WhatsApp à confirmer',
+                      {'whatsappToConfirm': state.whatsappToConfirm.length},
+                    ),
               onTap: () => WhatsAppExpenseScreen.open(context, w.id),
             ),
             const SizedBox(height: RemboSpace.sm),
@@ -103,8 +111,10 @@ class HomeTab extends StatelessWidget {
               icon: Icons.edit_note_rounded,
               warning: true,
               text: rejected == 1
-                  ? '1 dépense rejetée à corriger'
-                  : '$rejected dépenses rejetées à corriger',
+                  ? tr('1 dépense rejetée à corriger')
+                  : tr('{rejected} dépenses rejetées à corriger', {
+                      'rejected': rejected,
+                    }),
               onTap: () => _openList(context, state),
             ),
             const SizedBox(height: RemboSpace.sm),
@@ -112,7 +122,7 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: RemboSpace.sm),
           RemboPrimaryButton(
             key: const ValueKey('home-add'),
-            label: 'Nouvelle dépense',
+            label: tr('Nouvelle dépense'),
             icon: Icons.photo_camera_outlined,
             onPressed: add,
           ),
@@ -120,17 +130,21 @@ class HomeTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _Stat(Icons.layers_outlined, drafts, 'Brouillons'),
+                child: _Stat(Icons.layers_outlined, drafts, tr('Brouillons')),
               ),
               const SizedBox(width: RemboSpace.md),
               Expanded(
-                child: _Stat(Icons.visibility_outlined, review, 'À examiner'),
+                child: _Stat(
+                  Icons.visibility_outlined,
+                  review,
+                  tr('À examiner'),
+                ),
               ),
             ],
           ),
           SectionTitle(
-            'Dépenses récentes',
-            action: 'Voir tout',
+            tr('Dépenses récentes'),
+            action: tr('Voir tout'),
             onAction: () => _openList(context, state),
           ),
           if (state.loading && mine.isEmpty)
@@ -165,31 +179,34 @@ class HomeTab extends StatelessWidget {
     VoidCallback add,
   ) => [
     const SizedBox(height: RemboSpace.sm),
-    Text('Bienvenue ${user.firstName}.', style: RemboText.title),
+    Text(
+      tr('Bienvenue {firstName}.', {'firstName': user.firstName}),
+      style: RemboText.title,
+    ),
     const SizedBox(height: RemboSpace.lg),
     const Center(child: HeroArt(height: 170)),
     const SizedBox(height: RemboSpace.xl),
     Semantics(
       header: true,
       child: Text(
-        'Votre première dépense commence ici.',
+        tr('Votre première dépense commence ici.'),
         style: RemboText.display,
         textAlign: TextAlign.center,
       ),
     ),
     const SizedBox(height: RemboSpace.xl),
-    const Row(
+    Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _Step(Icons.photo_camera_outlined, 'Photo'),
-        _Step(Icons.verified_user_outlined, 'Vérification'),
-        _Step(Icons.layers_outlined, 'Suivi'),
+        _Step(Icons.photo_camera_outlined, tr('Photo')),
+        _Step(Icons.verified_user_outlined, tr('Vérification')),
+        _Step(Icons.layers_outlined, tr('Suivi')),
       ],
     ),
     const SizedBox(height: RemboSpace.xl),
     RemboPrimaryButton(
       key: const ValueKey('home-add'),
-      label: 'Ajouter une dépense',
+      label: tr('Ajouter une dépense'),
       icon: Icons.photo_camera_outlined,
       onPressed: add,
     ),
@@ -206,7 +223,7 @@ class MyExpensesScreen extends StatelessWidget {
     return RemboPage(
       logo: true,
       children: [
-        const RemboHero(title: 'Mes dépenses'),
+        RemboHero(title: tr('Mes dépenses')),
         for (final e in state.mine)
           ExpenseTile(e, onTap: () => ExpenseDetailScreen.open(context, e.id)),
       ],

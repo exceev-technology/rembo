@@ -45,17 +45,17 @@ class OverviewTab extends StatelessWidget {
       children: [
         RemboHero(
           overline: formatMonth(now),
-          title: 'Le mois, d’un coup d’œil',
+          title: tr('Le mois, d’un coup d’œil'),
           art: false,
         ),
         if (state.loadError != null) ...[
           RemboMessage(
             tone: MessageTone.error,
-            title: 'Chargement impossible',
+            title: tr('Chargement impossible'),
             message: state.loadError!.message,
             action: TextButton(
               onPressed: state.refresh,
-              child: const Text('Réessayer'),
+              child: Text(tr('Réessayer')),
             ),
           ),
           const SizedBox(height: RemboSpace.lg),
@@ -64,18 +64,18 @@ class OverviewTab extends StatelessWidget {
           children: [
             Expanded(
               child: _Figure(
-                'Dépenses validées',
+                tr('Dépenses validées'),
                 formatMad(total),
-                '${month.length} ce mois-ci',
+                tr('{month} ce mois-ci', {'month': month.length}),
                 key: const ValueKey('overview-total'),
               ),
             ),
             const SizedBox(width: RemboSpace.md),
             Expanded(
               child: _Figure(
-                'Validées par l’agent',
+                tr('Validées par l’agent'),
                 '$byAgent / ${month.length}',
-                'sans intervention humaine',
+                tr('sans intervention humaine'),
                 key: const ValueKey('overview-agent'),
               ),
             ),
@@ -86,15 +86,15 @@ class OverviewTab extends StatelessWidget {
           children: [
             Expanded(
               child: _Figure(
-                'TVA déclarée',
+                tr('TVA déclarée'),
                 formatMad(vat),
-                'sur les justificatifs',
+                tr('sur les justificatifs'),
               ),
             ),
             const SizedBox(width: RemboSpace.md),
             Expanded(
               child: _Figure(
-                'À exporter',
+                tr('À exporter'),
                 '${toExport.length}',
                 formatMad(sum(toExport)),
                 key: const ValueKey('overview-to-export'),
@@ -102,9 +102,12 @@ class OverviewTab extends StatelessWidget {
             ),
           ],
         ),
-        const SectionTitle('Dépenses par catégorie'),
+        SectionTitle(tr('Dépenses par catégorie')),
         if (ranked.isEmpty)
-          Text('Aucune dépense validée ce mois-ci.', style: RemboText.caption)
+          Text(
+            tr('Aucune dépense validée ce mois-ci.'),
+            style: RemboText.caption,
+          )
         else
           RemboCard(
             child: Column(
@@ -124,7 +127,9 @@ class OverviewTab extends StatelessWidget {
                               color: RemboColors.night,
                             ),
                             const SizedBox(width: RemboSpace.sm),
-                            Expanded(child: Text(c.key, style: RemboText.body)),
+                            Expanded(
+                              child: Text(tr(c.key), style: RemboText.body),
+                            ),
                             Text(formatMad(c.value), style: RemboText.amount),
                           ],
                         ),
@@ -147,19 +152,19 @@ class OverviewTab extends StatelessWidget {
         const SizedBox(height: RemboSpace.lg),
         RemboPrimaryButton(
           key: const ValueKey('overview-export'),
-          label: 'Préparer un export',
+          label: tr('Préparer un export'),
           icon: Icons.cloud_upload_outlined,
           onPressed: toExport.isEmpty
               ? null
               : () => ShellTabs.goTo(context, ShellTab.exports),
         ),
-        const SectionTitle('Mes propres dépenses'),
+        SectionTitle(tr('Mes propres dépenses')),
         Row(
           children: [
             Expanded(
               child: RemboSecondaryButton(
                 key: const ValueKey('home-add'),
-                label: 'Nouvelle',
+                label: tr('Nouvelle'),
                 icon: Icons.photo_camera_outlined,
                 onPressed: () =>
                     Navigator.of(context).pushNamed(AppRoutes.capture),
@@ -168,7 +173,7 @@ class OverviewTab extends StatelessWidget {
             const SizedBox(width: RemboSpace.md),
             Expanded(
               child: RemboSecondaryButton(
-                label: 'Voir (${state.mine.length})',
+                label: tr('Voir ({mine})', {'mine': state.mine.length}),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const MyExpensesScreen(),
@@ -199,7 +204,7 @@ class _Figure extends StatelessWidget {
         const SizedBox(height: RemboSpace.xs),
         FittedBox(
           fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           child: Text(value, style: RemboText.amount.copyWith(fontSize: 20)),
         ),
         Text(note, style: RemboText.caption),
