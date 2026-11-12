@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-import '../core/theme/skeleton_colors.dart';
+import '../core/theme/rembo_theme.dart';
 import 'app_router.dart';
 import 'app_routes.dart';
 
@@ -10,34 +11,12 @@ class RemboApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'REMBO · Première ébauche',
+    title: 'REMBO',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: SkeletonColors.primary,
-        primary: SkeletonColors.primary,
-        onPrimary: Colors.white,
-        surface: Colors.white,
-        onSurface: SkeletonColors.ink,
-      ),
-      scaffoldBackgroundColor: SkeletonColors.background,
-      fontFamily: 'Roboto',
-      appBarTheme: const AppBarTheme(
-        backgroundColor: SkeletonColors.background,
-        foregroundColor: SkeletonColors.ink,
-        surfaceTintColor: Colors.transparent,
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-    ),
+    theme: RemboTheme.light(),
+    locale: const Locale('fr'),
+    supportedLocales: const [Locale('fr')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
     initialRoute: initialRoute,
     onGenerateInitialRoutes: (route) => [
       AppRouter.onGenerateRoute(RouteSettings(name: route)),
