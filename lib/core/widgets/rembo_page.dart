@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion/rembo_motion.dart';
 import '../theme/rembo_tokens.dart';
 import 'rembo_illustration.dart';
 import 'rembo_logo.dart';
@@ -53,6 +54,7 @@ class RemboPage extends StatelessWidget {
     this.bottom,
     this.trailing,
     this.showBack,
+    this.logo = false,
     this.embedded = false,
     this.onRefresh,
     this.floatingActionButton,
@@ -65,9 +67,15 @@ class RemboPage extends StatelessWidget {
 
   /// Defaults to « there is a screen to go back to ».
   final bool? showBack;
+
+  /// The REMBO logo, kept for the entry pages and each role's home.
+  final bool logo;
   final bool embedded;
   final Future<void> Function()? onRefresh;
   final Widget? floatingActionButton;
+
+  /// How many of the first elements arrive one after the other.
+  static const _staggered = 7;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +88,13 @@ class RemboPage extends StatelessWidget {
         RemboSpace.xl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
-      children: children,
+      children: [
+        for (final (i, child) in children.indexed)
+          // What is below the fold is not delayed: it is not seen arriving.
+          i < _staggered
+              ? Entrance(key: ValueKey('arrive-$i'), order: i, child: child)
+              : child,
+      ],
     );
     if (onRefresh != null) {
       list = RefreshIndicator(onRefresh: onRefresh!, child: list);
@@ -89,7 +103,7 @@ class RemboPage extends StatelessWidget {
       bottom: !embedded,
       child: Column(
         children: [
-          _Header(back: back, trailing: trailing),
+          _Header(back: back, logo: logo, trailing: trailing),
           Expanded(child: list),
           if (bottom != null)
             Padding(
@@ -126,25 +140,28 @@ class RemboPage extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.back, this.trailing});
+  const _Header({required this.back, required this.logo, this.trailing});
   final bool back;
+  final bool logo;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: RemboSpace.sm),
     child: SizedBox(
-      height: 56,
+      // Nothing to show: only a little air above the title.
+      height: back || logo || trailing != null ? 56 : RemboSpace.md,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Align(
-            alignment: back ? Alignment.center : Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(left: RemboSpace.md),
-              child: RemboLogo(size: back ? 26 : 24),
+          if (logo)
+            Align(
+              alignment: back ? Alignment.center : Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: RemboSpace.md),
+                child: RemboLogo(size: back ? 26 : 24),
+              ),
             ),
-          ),
           if (back)
             Align(
               alignment: Alignment.centerLeft,
@@ -253,15 +270,12 @@ class RemboHero extends StatelessWidget {
                   header: true,
                   child: Text(
                     title,
-                    style: RemboText.display.copyWith(fontSize: 28),
+                    style: RemboText.display.copyWith(fontSize: 26),
                   ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: RemboSpace.sm),
-                  Text(
-                    subtitle!,
-                    style: RemboText.body.copyWith(color: RemboColors.muted),
-                  ),
+                  Text(subtitle!, style: RemboText.note.copyWith(fontSize: 14)),
                 ],
                 if (below != null) ...[
                   const SizedBox(height: RemboSpace.md),
@@ -271,12 +285,15 @@ class RemboHero extends StatelessWidget {
             ),
           ),
           // A long word would be cut in two beside the picture.
+          // The plain receipt said nothing about the page: only a picture
+          // chosen for the page is shown.
           if (art &&
+              illustration != RemboArt.receipt &&
               roomy &&
               !title.split(RegExp(r'\s+')).any((w) => w.length > 11)) ...[
             const SizedBox(width: RemboSpace.sm),
             HeroArt(
-              height: illustration == RemboArt.receipt ? 96 : 108,
+              height: 96,
               badge: badge,
               badgeColor: badgeColor,
               art: illustration,
@@ -308,26 +325,37 @@ class RemboMoment extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       const SizedBox(height: RemboSpace.sm),
-      HeroArt(
-        height: illustration == RemboArt.receipt ? 150 : 180,
-        badge: badge,
-        badgeColor: badgeColor,
-        art: illustration,
+      Entrance(
+        rise: 0,
+        scaleFrom: .78,
+        curve: Curves.easeOutBack,
+        child: HeroArt(
+          height: illustration == RemboArt.receipt ? 150 : 180,
+          badge: badge,
+          badgeColor: badgeColor,
+          art: illustration,
+        ),
       ),
       const SizedBox(height: RemboSpace.xl),
-      Semantics(
-        header: true,
-        child: Text(
-          title,
-          style: RemboText.display,
-          textAlign: TextAlign.center,
+      Entrance(
+        order: 2,
+        child: Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: RemboText.display,
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       const SizedBox(height: RemboSpace.sm),
-      Text(
-        message,
-        style: RemboText.body.copyWith(color: RemboColors.muted),
-        textAlign: TextAlign.center,
+      Entrance(
+        order: 3,
+        child: Text(
+          message,
+          style: RemboText.note.copyWith(fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
       ),
       const SizedBox(height: RemboSpace.xl),
     ],
@@ -409,8 +437,8 @@ class InfoStrip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: const EdgeInsets.symmetric(
-      horizontal: RemboSpace.lg,
-      vertical: RemboSpace.md,
+      horizontal: RemboSpace.md,
+      vertical: RemboSpace.sm + 2,
     ),
     decoration: BoxDecoration(
       color: background,
@@ -418,10 +446,10 @@ class InfoStrip extends StatelessWidget {
     ),
     child: Row(
       children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: RemboSpace.md),
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: RemboSpace.sm),
         Expanded(
-          child: Text(text, style: RemboText.body.copyWith(color: color)),
+          child: Text(text, style: RemboText.note.copyWith(color: color)),
         ),
       ],
     ),
