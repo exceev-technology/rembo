@@ -41,9 +41,7 @@ class ExpenseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = expense.date;
-    final when = date == null
-        ? 'Date à compléter'
-        : '${formatRelativeDay(date)} · ${formatDate(date)}';
+    final when = date == null ? 'Date à compléter' : formatDayShort(date);
     return Padding(
       padding: const EdgeInsets.only(bottom: RemboSpace.sm),
       child: RemboCard(
@@ -61,22 +59,35 @@ class ExpenseTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title ?? expense.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: RemboText.subtitle.copyWith(fontSize: 16),
+                  LayoutBuilder(
+                    builder: (context, box) => Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title ?? expense.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: RemboText.subtitle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: RemboSpace.sm),
-                      Text(
-                        formatMad(expense.amountCents),
-                        style: RemboText.amount,
-                      ),
-                    ],
+                        const SizedBox(width: RemboSpace.sm),
+                        // With very large text the amount shrinks to stay
+                        // whole rather than push out of the card.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: box.maxWidth * .62,
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              formatMad(expense.amountCents),
+                              style: RemboText.amount,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: RemboSpace.xs),
                   SizedBox(

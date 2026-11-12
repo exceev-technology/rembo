@@ -56,9 +56,7 @@ class ExportReadyScreen extends StatelessWidget {
       children: [
         const RemboMoment(
           title: 'Export prêt',
-          message:
-              'Vos dépenses sont marquées « Exportée ». Enregistrez le '
-              'fichier pour votre logiciel comptable.',
+          message: 'Enregistrez le fichier pour votre logiciel comptable.',
           illustration: RemboArt.approved,
         ),
         RemboCard(

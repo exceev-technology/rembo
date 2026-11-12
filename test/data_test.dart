@@ -38,6 +38,17 @@ Future<void> _expectRefused(Future<Object?> call, String part) async {
 }
 
 void main() {
+  test('lists show one short date', () {
+    final today = DateTime(2026, 11, 12);
+    expect(formatDayShort(DateTime(2026, 11, 12), today: today), 'Aujourd’hui');
+    expect(formatDayShort(DateTime(2026, 11, 11), today: today), 'Hier');
+    expect(formatDayShort(DateTime(2026, 11, 3), today: today), '3 nov.');
+    expect(
+      formatDayShort(DateTime(2025, 12, 30), today: today),
+      '30 déc. 2025',
+    );
+  });
+
   group('Parsers', () {
     test('amounts are read as centimes without floating point', () {
       expect(parseAmount('240'), 24000);
@@ -67,7 +78,7 @@ void main() {
     });
 
     test('amounts are displayed the French way', () {
-      expect(formatMad(123456), '1\u202F234,56\u202FMAD');
+      expect(formatMad(123456), '1\u00A0234,56\u00A0MAD');
       expect(amountInput(24000), '240,00');
     });
   });

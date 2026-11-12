@@ -26,8 +26,7 @@ class RulesScreen extends StatelessWidget {
             ),
         const SizedBox(height: RemboSpace.sm),
         const InfoStrip(
-          'Les écarts sont transmis au responsable. La catégorie « Autre » '
-          'lui est toujours soumise.',
+          'Tout écart, et la catégorie « Autre », va au responsable.',
         ),
       ],
     );

@@ -42,13 +42,7 @@ class _ExportTabState extends State<ExportTab> {
               ),
       ),
       children: [
-        const RemboHero(
-          title: 'À exporter',
-          subtitle:
-              'Sélectionnez les dépenses validées à envoyer en '
-              'comptabilité.',
-          illustration: RemboArt.folder,
-        ),
+        const RemboHero(title: 'À exporter', illustration: RemboArt.folder),
         if (state.loadError != null)
           RemboMessage(
             tone: MessageTone.error,
@@ -74,16 +68,17 @@ class _ExportTabState extends State<ExportTab> {
             ),
           )
         else ...[
-          Row(
+          // A Wrap: with large text the action goes under the count.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  chosen.length == 1
-                      ? '1 dépense sélectionnée'
-                      : '${chosen.length} dépenses sélectionnées',
-                  key: const ValueKey('export-count'),
-                  style: RemboText.subtitle.copyWith(fontSize: 15),
-                ),
+              Text(
+                chosen.length == 1
+                    ? '1 dépense sélectionnée'
+                    : '${chosen.length} dépenses sélectionnées',
+                key: const ValueKey('export-count'),
+                style: RemboText.subtitle,
               ),
               TextButton(
                 key: const ValueKey('export-toggle-all'),
@@ -101,7 +96,7 @@ class _ExportTabState extends State<ExportTab> {
               key: ValueKey('export-${e.id}'),
               subtitle:
                   '${e.employeeName} · '
-                  '${e.date == null ? '' : formatDate(e.date!)}',
+                  '${e.date == null ? '' : formatDayShort(e.date!)}',
               leading: Checkbox(
                 value: !_excluded.contains(e.id),
                 onChanged: (v) => setState(
