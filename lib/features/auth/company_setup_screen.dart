@@ -1,0 +1,119 @@
+import 'package:flutter/material.dart';
+
+import '../../core/data/app_state.dart';
+import '../../core/widgets/rembo_widgets.dart';
+
+/// First step of an account that belongs to no company yet.
+class CompanySetupScreen extends StatefulWidget {
+  const CompanySetupScreen({super.key});
+
+  @override
+  State<CompanySetupScreen> createState() => _CompanySetupScreenState();
+}
+
+class _CompanySetupScreenState extends State<CompanySetupScreen> {
+  final _name = TextEditingController();
+  final _ice = TextEditingController();
+  final _city = TextEditingController();
+  String? _nameError;
+  String? _iceError;
+  String? _failure;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    for (final c in [_name, _ice, _city]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final ice = _ice.text.trim();
+    setState(() {
+      _failure = null;
+      _nameError = _name.text.trim().length < 2
+          ? 'Saisissez le nom de l’entreprise.'
+          : null;
+      _iceError = ice.isEmpty || RegExp(r'^\d{15}$').hasMatch(ice)
+          ? null
+          : 'L’ICE compte 15 chiffres.';
+    });
+    if (_nameError != null || _iceError != null) return;
+    setState(() => _loading = true);
+    try {
+      await AppScope.read(context)
+          .createCompany(name: _name.text, ice: ice, city: _city.text.trim());
+    } on RemboException catch (e) {
+      if (mounted) setState(() => _failure = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => RemboPage(
+    showBack: false,
+    trailing: TextButton(
+      onPressed: () => AppScope.read(context).signOut(),
+      child: const Text('Se déconnecter'),
+    ),
+    bottom: RemboPrimaryButton(
+      key: const ValueKey('company-submit'),
+      label: 'Créer l’entreprise',
+      loading: _loading,
+      onPressed: _submit,
+    ),
+    children: [
+      const RemboHero(
+        overline: 'Configuration initiale',
+        title: 'Votre entreprise',
+        subtitle: 'Quelques informations pour configurer votre espace REMBO.',
+      ),
+      const InfoStrip(
+        'Aucune invitation ne correspond à votre adresse. Créez votre '
+        'entreprise : vous en serez le premier responsable.',
+      ),
+      const SizedBox(height: RemboSpace.lg),
+      if (_failure != null) ...[
+        RemboMessage(tone: MessageTone.error, title: _failure!),
+        const SizedBox(height: RemboSpace.lg),
+      ],
+      RemboTextField(
+        fieldKey: const ValueKey('company-name'),
+        label: 'Nom de l’entreprise',
+        hint: 'Atlas Conseil',
+        icon: Icons.storefront_outlined,
+        controller: _name,
+        errorText: _nameError,
+        textInputAction: TextInputAction.next,
+      ),
+      const SizedBox(height: RemboSpace.lg),
+      RemboTextField(
+        fieldKey: const ValueKey('company-ice'),
+        label: 'ICE (facultatif)',
+        hint: '15 chiffres',
+        icon: Icons.description_outlined,
+        controller: _ice,
+        errorText: _iceError,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.next,
+      ),
+      const SizedBox(height: RemboSpace.lg),
+      RemboTextField(
+        label: 'Ville',
+        hint: 'Casablanca',
+        icon: Icons.place_outlined,
+        controller: _city,
+      ),
+      const SizedBox(height: RemboSpace.lg),
+      const RemboTextField(
+        label: 'Devise',
+        hint: 'MAD · dirham marocain',
+        icon: Icons.payments_outlined,
+        enabled: false,
+        helper: 'REMBO gère les dépenses en dirhams.',
+      ),
+    ],
+  );
+}
