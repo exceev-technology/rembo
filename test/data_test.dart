@@ -6,6 +6,7 @@ import 'package:rembo/core/data/demo_backend.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/format/formatters.dart';
 import 'package:rembo/core/format/parsers.dart';
+import 'package:rembo/core/format/phone_countries.dart';
 
 final _now = DateTime(2026, 11, 10, 15);
 
@@ -75,6 +76,37 @@ void main() {
       expect(parsePhone('00212612345678'), '+212612345678');
       expect(parsePhone('12'), isNull);
       expect(parsePhone('abc'), isNull);
+    });
+
+    test('a number is read with the rules of the country chosen', () {
+      PhoneCountry of(String iso) =>
+          phoneCountries.firstWhere((c) => c.iso == iso);
+      expect(parsePhone('612345678'), '+212612345678');
+      expect(parsePhone('06 12 34 56 78', country: of('FR')), '+33612345678');
+      expect(parsePhone('77 123 45 67', country: of('SN')), '+221771234567');
+      // Côte d'Ivoire keeps its leading zero abroad.
+      expect(parsePhone('07 12 34 56 78', country: of('CI')), '+2250712345678');
+      expect(parsePhone('202 555 0123', country: of('US')), '+12025550123');
+      // Too short for the country, or not a mobile prefix in Morocco.
+      expect(parsePhone('06 12 34', country: of('FR')), isNull);
+      expect(parsePhone('01 12 34 56 78'), isNull);
+      // A full number wins over the country chosen, listed or not.
+      expect(parsePhone('+33 6 12 34 56 78'), '+33612345678');
+      expect(parsePhone('+81 90 1234 5678'), '+819012345678');
+      expect(parsePhone('+212 12'), isNull);
+    });
+
+    test('a linked number is shown the way its country writes it', () {
+      expect(countryOf('+212612345678')!.iso, 'MA');
+      expect(countryOf('+12025550123')!.iso, 'US');
+      expect(countryOf('+819012345678'), isNull);
+      expect(morocco.toNational('+212612345678'), '0612345678');
+      for (final c in phoneCountries) {
+        final number = parsePhone(c.example, country: c);
+        expect(number, isNotNull, reason: 'example of ${c.name}');
+        expect(countryOf(number!)!.iso, c.iso, reason: c.name);
+        expect(parsePhone(c.toNational(number), country: c), number);
+      }
     });
 
     test('amounts are displayed the French way', () {

@@ -1,6 +1,8 @@
 /// Strict readers for what people type. No floating point for money.
 library;
 
+import 'phone_countries.dart';
+
 /// Up to 9 digits and 2 decimals → centimes. Null when missing, malformed
 /// or not strictly positive.
 int? parseAmount(String text) {
@@ -38,15 +40,18 @@ DateTime? parseDay(String text, {DateTime? today}) {
 String amountInput(int cents) =>
     '${cents ~/ 100},${(cents % 100).toString().padLeft(2, '0')}';
 
-/// Moroccan or international mobile number → +212600000000, else null.
-String? parsePhone(String text) {
+/// Mobile number → +212600000000, else null. A number typed without a
+/// calling code is read as a number of [country]; one starting with + or 00
+/// is international whatever the country chosen.
+String? parsePhone(String text, {PhoneCountry country = morocco}) {
   var digits = text.replaceAll(RegExp(r'[\s().-]'), '');
-  if (RegExp(r'^0[5-7]\d{8}$').hasMatch(digits)) {
-    digits = '+212${digits.substring(1)}';
-  } else if (digits.startsWith('00')) {
-    digits = '+${digits.substring(2)}';
-  }
-  return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(digits) ? digits : null;
+  if (digits.startsWith('00')) digits = '+${digits.substring(2)}';
+  if (!digits.startsWith('+')) return country.toInternational(digits);
+  if (!RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(digits)) return null;
+  // A listed country keeps its own rules: +212 12 is not a number.
+  final known = countryOf(digits);
+  if (known == null) return digits;
+  return known.toInternational(digits.substring(known.dial.length + 1));
 }
 
 final _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$');
