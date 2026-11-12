@@ -154,6 +154,13 @@ class ExpenseDetailScreen extends StatelessWidget {
                 e.date == null ? '' : formatWeekday(e.date!),
               ),
               DetailRow(Icons.storefront_outlined, 'Fournisseur', e.supplier),
+              if (e.vatCents > 0)
+                DetailRow(
+                  Icons.percent_rounded,
+                  'TVA incluse',
+                  formatMad(e.vatCents),
+                  mono: true,
+                ),
               DetailRow(categoryIcon(e.category), 'Catégorie', e.category),
               if (e.project.isNotEmpty)
                 DetailRow(Icons.layers_outlined, 'Projet', e.project),
