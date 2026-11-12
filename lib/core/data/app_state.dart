@@ -35,14 +35,19 @@ class AppState extends ChangeNotifier {
   bool get isLocal => backend.isLocal;
   UserRole get role => user?.role ?? UserRole.employee;
 
-  Future<void> restore() async {
+  /// Finds the session again. With [wait] false it returns as soon as the
+  /// person is known and loads their data behind: the opening of the app
+  /// must not hang on a slow network.
+  Future<void> restore({bool wait = true}) async {
     try {
       user = await backend.restoreSession();
     } on RemboException {
       user = null;
     }
     notifyListeners();
-    if (user?.companyId != null) await refresh();
+    if (user?.companyId == null) return;
+    final loaded = refresh();
+    if (wait) await loaded;
   }
 
   Future<void> signIn(String email, String password) async {

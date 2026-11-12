@@ -1,11 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rembo/features/expenses/receipt_picker.dart';
 import 'package:rembo/app/app_routes.dart';
 import 'package:rembo/app/rembo_app.dart';
 import 'package:rembo/core/data/app_state.dart';
 import 'package:rembo/core/data/demo_backend.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/format/formatters.dart';
+import 'package:rembo/features/auth/login_screen.dart';
 
 late DemoBackend backend;
 late AppState state;
@@ -13,13 +17,16 @@ late AppState state;
 /// Tall screen: every part of a page is laid out and can be tapped.
 Future<void> _start(
   WidgetTester tester, {
-  String route = AppRoutes.home,
+  String route = AppRoutes.login,
   Size size = const Size(420, 2600),
   double textScale = 1,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  // The welcome page floats for ever: tests ask for reduced motion.
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   backend = DemoBackend(latency: Duration.zero);
@@ -38,8 +45,13 @@ Future<void> _type(WidgetTester tester, String key, String text) async {
   await tester.pump();
 }
 
-Future<void> _signInAs(WidgetTester tester, UserRole role) =>
-    _tap(tester, 'demo-${role.name}');
+Future<void> _signInAs(WidgetTester tester, UserRole role) async {
+  // After signing out the app is back on the welcome page.
+  if (find.byKey(const ValueKey('welcome-login')).evaluate().isNotEmpty) {
+    await _tap(tester, 'welcome-login');
+  }
+  await _tap(tester, 'demo-${role.name}');
+}
 
 /// Without the login screen, whose demo buttons may be scrolled away.
 Future<void> _signInDirectly(WidgetTester tester, UserRole role) async {
@@ -92,7 +104,7 @@ void main() {
 
     await _type(tester, 'login-email', DemoBackend.marius.email);
     await _tap(tester, 'login-submit');
-    expect(find.text('Bonjour\nMarius,'), findsOneWidget);
+    expect(find.text('Bonjour Marius'), findsOneWidget);
   });
 
   testWidgets('Password reset never claims an e-mail was sent in demo', (
@@ -164,18 +176,6 @@ void main() {
       tester.widget<Text>(find.byKey(const ValueKey('summary-amount'))).data,
       contains('45,50'),
     );
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.descendant(
-              of: find.byKey(const ValueKey('summary-submit')),
-              matching: find.byType(FilledButton),
-            ),
-          )
-          .onPressed,
-      isNull,
-    );
-    await _tap(tester, 'summary-check');
     await _tap(tester, 'summary-submit');
     expect(find.text('Dépense validée'), findsOneWidget);
     expect(find.text('Validée par l’agent'), findsWidgets);
@@ -195,7 +195,6 @@ void main() {
       await _signInAs(tester, UserRole.employee);
       // A meal without a receipt: the control sends it to a manager.
       await _declare(tester, amount: '120', category: 'Repas');
-      await _tap(tester, 'summary-check');
       await _tap(tester, 'summary-submit');
       expect(find.text('Transmise à votre responsable'), findsOneWidget);
       expect(find.textContaining('Justificatif manquant'), findsOneWidget);
@@ -229,7 +228,6 @@ void main() {
       await tester.tap(find.text('Fournitures').last);
       await tester.pumpAndSettle();
       await _tap(tester, 'form-continue');
-      await _tap(tester, 'summary-check');
       await _tap(tester, 'summary-submit');
       expect(find.text('Dépense validée'), findsOneWidget);
       expect(state.byId(id)!.status, ExpenseStatus.approved);
@@ -240,7 +238,6 @@ void main() {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);
     await _declare(tester, amount: '900');
-    await _tap(tester, 'summary-check');
     await _tap(tester, 'summary-submit');
     await _tap(tester, 'result-home');
     final own = state.mine.first;
@@ -445,7 +442,7 @@ void main() {
     expect(find.text('Accès réservé'), findsOneWidget);
     expect(find.text('Votre rôle : Collaborateur'), findsOneWidget);
     await _tap(tester, 'back-to-my-space');
-    expect(find.text('Bonjour\nMarius,'), findsOneWidget);
+    expect(find.text('Bonjour Marius'), findsOneWidget);
 
     navigator.pushNamed('/inconnue');
     await tester.pumpAndSettle();
@@ -468,7 +465,12 @@ void main() {
     testWidgets('${role.label}: every tab fits a narrow phone, large text', (
       tester,
     ) async {
-      await _start(tester, size: const Size(320, 640), textScale: 2);
+      await _start(
+        tester,
+        route: AppRoutes.home,
+        size: const Size(320, 640),
+        textScale: 2,
+      );
       await _signInDirectly(tester, role);
       for (final tab in [
         role == UserRole.accountant ? 'tab-overview' : 'tab-home',
@@ -483,6 +485,43 @@ void main() {
       }
     });
   }
+
+  testWidgets('Signed out, the app opens on the welcome page', (tester) async {
+    await _start(tester, route: AppRoutes.home);
+    expect(find.byKey(const ValueKey('welcome-title')), findsOneWidget);
+    expect(find.byKey(const ValueKey('login-submit')), findsNothing);
+
+    await _tap(tester, 'welcome-start');
+    expect(find.byKey(const ValueKey('signup-email')), findsOneWidget);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pumpAndSettle();
+
+    await _tap(tester, 'welcome-login');
+    expect(find.byKey(const ValueKey('login-submit')), findsOneWidget);
+    await _signInAs(tester, UserRole.employee);
+    expect(find.byKey(const ValueKey('tab-profile')), findsOneWidget);
+
+    // Signing out leads back to the welcome page.
+    await _signOut(tester);
+    expect(find.byKey(const ValueKey('welcome-start')), findsOneWidget);
+  });
+
+  testWidgets('The welcome page fits a narrow phone, large text', (
+    tester,
+  ) async {
+    await _start(
+      tester,
+      route: AppRoutes.home,
+      size: const Size(320, 568),
+      textScale: 2,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.byKey(const ValueKey('welcome-login')));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'welcome-login');
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Entry and form screens fit a narrow phone, large text', (
     tester,
@@ -500,7 +539,12 @@ void main() {
       );
       expect(tester.takeException(), isNull, reason: route);
     }
-    await _start(tester, size: const Size(320, 640), textScale: 2);
+    await _start(
+      tester,
+      route: AppRoutes.home,
+      size: const Size(320, 640),
+      textScale: 2,
+    );
     await _signInDirectly(tester, UserRole.manager);
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     for (final route in [
@@ -516,4 +560,57 @@ void main() {
       await tester.pumpAndSettle();
     }
   });
+
+  testWidgets(
+    'Receipt read: the values are proposed, the VAT can be corrected',
+    (tester) async {
+      await _start(tester);
+      await _signInAs(tester, UserRole.employee);
+      await _tap(tester, 'home-add');
+      // No camera in tests: a picture is handed over in its place.
+      receiptPicker = ({required bool camera}) async =>
+          PickedReceipt(Uint8List.fromList([1, 2, 3]), 'ticket.jpg');
+      addTearDown(() => receiptPicker = pickWithDevice);
+      await _tap(tester, 'capture-photo');
+      await tester.pumpAndSettle();
+      expect(find.text('Vérifier les informations'), findsOneWidget);
+      String field(String key) => tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(ValueKey(key)),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .controller
+          .text;
+      expect(field('form-supplier'), 'Café Atlas');
+      expect(field('form-amount'), '240,00');
+      expect(field('form-vat'), '21,82');
+
+      // A VAT above the amount is refused, with the reason.
+      await _tap(tester, 'form-category');
+      await tester.tap(find.text('Repas').last);
+      await tester.pumpAndSettle();
+      await _type(tester, 'form-reason', 'Déjeuner client');
+      await _type(tester, 'form-vat', '300');
+      await _tap(tester, 'form-continue');
+      expect(
+        find.text('La TVA doit être inférieure au montant TTC.'),
+        findsOneWidget,
+      );
+
+      // Corrected, it is what gets saved and shown.
+      await _type(tester, 'form-vat', '40,00');
+      await _tap(tester, 'form-continue');
+      if (find
+          .byKey(const ValueKey('duplicate-continue'))
+          .evaluate()
+          .isNotEmpty) {
+        await _tap(tester, 'duplicate-continue');
+      }
+      expect(find.text('Tout est correct ?'), findsOneWidget);
+      expect(find.text('TVA incluse'), findsOneWidget);
+      expect(state.mine.first.vatCents, 4000);
+    },
+  );
 }
