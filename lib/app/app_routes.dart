@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 /// Stable entry points for the future feature modules.
 abstract final class AppRoutes {
   static const menu = '/';
+  static const welcome = '/bienvenue';
   static const login = '/connexion';
   static const collaborator = '/collaborateur';
   static const capture = '/depenses/capture';
@@ -12,6 +13,14 @@ abstract final class AppRoutes {
   static const settings = '/parametres';
 
   static const destinations = <RemboDestination>[
+    RemboDestination(
+      welcome,
+      'Bienvenue',
+      'Découvrir REMBO',
+      'La scène d’accueil animée qui présente REMBO au premier lancement.',
+      Icons.auto_awesome_outlined,
+      '00',
+    ),
     RemboDestination(
       login,
       'Connexion',
