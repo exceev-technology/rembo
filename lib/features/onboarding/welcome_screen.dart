@@ -672,8 +672,8 @@ class _Pitch extends StatelessWidget {
             key: const ValueKey('back-to-menu'),
             onPressed: () =>
                 Navigator.of(context)
-                    .pushNamedAndRemoveUntil(AppRoutes.menu, (_) => false),
-            child: const Text('Revenir aux espaces'),
+                    .pushNamedAndRemoveUntil(AppRoutes.home, (_) => false),
+            child: const Text('Passer'),
           ),
         ),
       ],
