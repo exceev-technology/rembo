@@ -1,30 +1,85 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rembo/app/app_router.dart';
+import 'package:rembo/app/app_routes.dart';
+import 'package:rembo/app/rembo_app.dart';
 
-import 'package:rembo/main.dart';
+final placeholders = AppRoutes.destinations
+    .where((d) => !AppRouter.screens.containsKey(d.route))
+    .toList();
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Every menu destination opens a placeholder and returns safely', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const RemboApp());
+    for (final destination in placeholders) {
+      final card = find.byKey(ValueKey('destination-${destination.route}'));
+      await tester.ensureVisible(card);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('destination-title')), findsOneWidget);
+      expect(find.text(destination.title), findsOneWidget);
+      expect(find.text('Écran provisoire'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('back-to-menu')));
+      await tester.tap(find.byKey(const ValueKey('back-to-menu')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('navigation-menu')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('System back returns to the menu', (tester) async {
+    await tester.pumpWidget(const RemboApp());
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('destination-/connexion')),
+    );
+    await tester.tap(find.byKey(const ValueKey('destination-/connexion')));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('navigation-menu')), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('Unknown destination offers recovery', (tester) async {
+    await tester.pumpWidget(const RemboApp(initialRoute: '/inconnue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cet espace est introuvable'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('back-to-menu')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('navigation-menu')), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('All destinations also support direct entry', (tester) async {
+    for (final destination in placeholders) {
+      await tester.pumpWidget(
+        RemboApp(key: UniqueKey(), initialRoute: destination.route),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(destination.title), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('Narrow mobile and enlarged text do not overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(const RemboApp());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    for (final destination in AppRoutes.destinations) {
+      await tester.pumpWidget(
+        RemboApp(key: UniqueKey(), initialRoute: destination.route),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('back-to-menu')));
+      expect(tester.takeException(), isNull);
+    }
   });
 }
