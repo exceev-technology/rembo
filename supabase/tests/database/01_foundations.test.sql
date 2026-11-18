@@ -7,7 +7,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(42);
 
 -- People -------------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at,
@@ -68,6 +68,8 @@ select throws_ok('select * from public.expenses', '42501', null,
   'a visitor cannot read expenses');
 select throws_ok('select * from public.companies', '42501', null,
   'a visitor cannot read companies');
+select throws_ok('select * from public.receipt_readings', '42501', null,
+  'the count of AI readings is not readable by the app');
 select throws_ok($$select public.create_company('X SARL', '', '')$$, '42501',
   null, 'a visitor cannot create a company');
 reset role;
