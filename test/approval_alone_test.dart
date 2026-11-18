@@ -17,7 +17,9 @@ Future<void> _start(WidgetTester tester, AppUser who) async {
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   state = AppState(DemoBackend(latency: Duration.zero));
-  await tester.pumpWidget(RemboApp(state: state, initialRoute: AppRoutes.login));
+  await tester.pumpWidget(
+    RemboApp(state: state, initialRoute: AppRoutes.login),
+  );
   await tester.pumpAndSettle();
   final done = state.signIn(who.email, 'x');
   await tester.pumpAndSettle();
@@ -52,9 +54,7 @@ Future<void> _openDetail(WidgetTester tester, String id) async {
 }
 
 void main() {
-  testWidgets('The only manager is told to invite another one', (
-    tester,
-  ) async {
+  testWidgets('The only manager is told to invite another one', (tester) async {
     await _start(tester, DemoBackend.salma);
     final own = await _flagged();
     expect(own.status, ExpenseStatus.needsReview);

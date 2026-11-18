@@ -17,7 +17,9 @@ Future<void> _start(WidgetTester tester) async {
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   state = AppState(DemoBackend(latency: Duration.zero));
-  await tester.pumpWidget(RemboApp(state: state, initialRoute: AppRoutes.login));
+  await tester.pumpWidget(
+    RemboApp(state: state, initialRoute: AppRoutes.login),
+  );
   await tester.pumpAndSettle();
 }
 
