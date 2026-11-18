@@ -87,7 +87,9 @@ async function reply(to: string, body: string) {
   if (!res.ok) console.error("reply failed", res.status, await res.text());
 }
 
-async function downloadMedia(id: string): Promise<{ bytes: Uint8Array; type: string } | null> {
+async function downloadMedia(
+  id: string,
+): Promise<{ bytes: Uint8Array<ArrayBuffer>; type: string } | null> {
   const auth = { Authorization: `Bearer ${env("WHATSAPP_TOKEN")}` };
   const meta = await fetch(`${GRAPH}/${id}`, { headers: auth });
   if (!meta.ok) return null;
@@ -99,7 +101,7 @@ async function downloadMedia(id: string): Promise<{ bytes: Uint8Array; type: str
   return { bytes, type: String(mime_type ?? "application/octet-stream").split(";")[0] };
 }
 
-async function transcribe(audio: Uint8Array, type: string): Promise<string> {
+async function transcribe(audio: Uint8Array<ArrayBuffer>, type: string): Promise<string> {
   if (!env("TRANSCRIBE_URL")) return "";
   try {
     const res = await fetch(env("TRANSCRIBE_URL"), {
