@@ -16,10 +16,10 @@
 //   RECEIPT_DAILY_LIMIT optional, readings per person per day (default 40)
 // Deploy: supabase functions deploy read-receipt
 
-import Anthropic from "npm:@anthropic-ai/sdk";
-import { zodOutputFormat } from "npm:@anthropic-ai/sdk/helpers/zod";
+import Anthropic from "npm:@anthropic-ai/sdk@1";
+import { zodOutputFormat } from "npm:@anthropic-ai/sdk@1/helpers/zod";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { z } from "npm:zod";
+import { z } from "npm:zod@4";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
 const MODEL = env("RECEIPT_MODEL") || "claude-opus-5-5";
