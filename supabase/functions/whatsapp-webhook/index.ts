@@ -75,19 +75,27 @@ const today = () =>
 
 // --- WhatsApp Cloud API -----------------------------------------------------
 
+// Best effort: a reply that cannot be sent is logged and never fails the
+// handling, whose writes in the database are already done.
 async function reply(to: string, body: string) {
-  const res = await fetch(`${GRAPH}/${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
-  });
-  if (!res.ok) console.error("reply failed", res.status, await res.text());
+  try {
+    const res = await fetch(`${GRAPH}/${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
+    });
+    if (!res.ok) console.error("reply failed", res.status, await res.text());
+  } catch (e) {
+    console.error("reply failed", e);
+  }
 }
 
-async function downloadMedia(id: string): Promise<{ bytes: Uint8Array; type: string } | null> {
+async function downloadMedia(
+  id: string,
+): Promise<{ bytes: Uint8Array<ArrayBuffer>; type: string } | null> {
   const auth = { Authorization: `Bearer ${env("WHATSAPP_TOKEN")}` };
   const meta = await fetch(`${GRAPH}/${id}`, { headers: auth });
   if (!meta.ok) return null;
@@ -99,7 +107,7 @@ async function downloadMedia(id: string): Promise<{ bytes: Uint8Array; type: str
   return { bytes, type: String(mime_type ?? "application/octet-stream").split(";")[0] };
 }
 
-async function transcribe(audio: Uint8Array, type: string): Promise<string> {
+async function transcribe(audio: Uint8Array<ArrayBuffer>, type: string): Promise<string> {
   if (!env("TRANSCRIBE_URL")) return "";
   try {
     const res = await fetch(env("TRANSCRIBE_URL"), {
@@ -137,12 +145,16 @@ async function validSignature(raw: string, header: string | null): Promise<boole
 
 type Owner = { profile_id: string; company_id: string };
 
+// A database failure is thrown, never read as « no account »: the person
+// would be told their number is not linked when it is.
 async function ownerOf(phone: string): Promise<Owner | null> {
-  const { data: link } = await db.from("whatsapp_links").select("profile_id")
-    .eq("phone", phone).maybeSingle();
+  const { data: link, error: linkError } = await db.from("whatsapp_links")
+    .select("profile_id").eq("phone", phone).maybeSingle();
+  if (linkError) throw linkError;
   if (!link) return null;
-  const { data: member } = await db.from("memberships").select("company_id")
-    .eq("profile_id", link.profile_id).maybeSingle();
+  const { data: member, error: memberError } = await db.from("memberships")
+    .select("company_id").eq("profile_id", link.profile_id).maybeSingle();
+  if (memberError) throw memberError;
   return member ? { profile_id: link.profile_id, company_id: member.company_id } : null;
 }
 
@@ -173,11 +185,31 @@ const summary = (p: Parsed) =>
 
 // deno-lint-ignore no-explicit-any
 async function handle(message: any) {
-  const from = `+${message.from}`;
-  // First writer wins: a message delivered twice is handled once.
+  // First writer wins: a message delivered twice is handled once. Only a
+  // duplicate id (23505) means « already seen »; any other error is thrown.
   const { error: seen } = await db.from("whatsapp_messages").insert({ id: message.id });
-  if (seen) return;
+  if (seen?.code === "23505") return;
+  if (seen) throw seen;
+  const state: Handling = { wrote: false };
+  try {
+    await answer(message, state);
+  } catch (e) {
+    // Forgotten only when nothing was written, so that the next delivery
+    // retries it. Once an expense is created or submitted, handling the
+    // message again would create or submit a second one.
+    if (!state.wrote) {
+      await db.from("whatsapp_messages").delete().eq("id", message.id);
+    }
+    throw e;
+  }
+}
 
+/** Set once the handling of a message has written an expense. */
+type Handling = { wrote: boolean };
+
+// deno-lint-ignore no-explicit-any
+async function answer(message: any, state: Handling) {
+  const from = `+${message.from}`;
   const owner = await ownerOf(from);
   if (!owner) {
     await reply(
@@ -190,9 +222,10 @@ async function handle(message: any) {
 
   if (message.type === "text") {
     const text = String(message.text?.body ?? "");
-    if (isYes(text)) return confirmLatest(owner, message.from);
+    if (isYes(text)) return confirmLatest(owner, message.from, state);
     const parsed = parseMessage(text);
     await createDraft(owner, parsed, { transcript: text.slice(0, 500) });
+    state.wrote = true;
     await reply(
       message.from,
       `${summary(parsed)}\nRépondez « oui » pour confirmer, ou complétez dans l’application.`,
@@ -211,14 +244,25 @@ async function handle(message: any) {
     const text = voice ? await transcribe(media.bytes, media.type) : "";
     const parsed = parseMessage(text || String(message.image?.caption ?? ""));
     const id = await createDraft(owner, parsed, { transcript: text || null });
+    state.wrote = true;
     const path = `${owner.profile_id}/${id}${voice ? "-voice" : ""}`;
-    const { error } = await db.storage.from(BUCKET).upload(path, media.bytes, {
+    // The draft exists from here on: a file that cannot be kept (refused
+    // type, storage down) is said to the person instead of being dropped.
+    const upload = await db.storage.from(BUCKET).upload(path, media.bytes, {
       contentType: media.type,
       upsert: true,
     });
-    if (!error) {
-      await db.from("expenses").update(voice ? { voice_path: path } : { receipt_path: path })
-        .eq("id", id);
+    const link = upload.error ? null : await db.from("expenses")
+      .update(voice ? { voice_path: path } : { receipt_path: path })
+      .eq("id", id);
+    const failure = upload.error ?? link?.error;
+    if (failure) {
+      console.error("media not stored", message.id, failure.message);
+      await reply(
+        message.from,
+        "La dépense est créée, mais le fichier n’a pas pu être enregistré. Ajoutez-le dans l’application.",
+      );
+      return;
     }
     await reply(
       message.from,
@@ -234,10 +278,11 @@ async function handle(message: any) {
   await reply(message.from, "Envoyez un message, une note vocale ou la photo d’un ticket.");
 }
 
-async function confirmLatest(owner: Owner, to: string) {
-  const { data: draft } = await db.from("expenses").select("id")
+async function confirmLatest(owner: Owner, to: string, state: Handling) {
+  const { data: draft, error: draftError } = await db.from("expenses").select("id")
     .eq("employee_id", owner.profile_id).eq("source", "whatsapp").eq("status", "draft")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (draftError) throw draftError;
   if (!draft) {
     await reply(to, "Aucune dépense en attente de confirmation.");
     return;
@@ -251,6 +296,7 @@ async function confirmLatest(owner: Owner, to: string) {
     await reply(to, `${error.message}\nComplétez la dépense dans l’application.`);
     return;
   }
+  state.wrote = true;
   await reply(
     to,
     data.status === "approved"
@@ -279,19 +325,30 @@ if (import.meta.main) {
     if (!(await validSignature(raw, req.headers.get("x-hub-signature-256")))) {
       return new Response("bad signature", { status: 401 });
     }
+    let payload;
     try {
-      const payload = JSON.parse(raw);
-      for (const entry of payload.entry ?? []) {
-        for (const change of entry.changes ?? []) {
-          for (const message of change.value?.messages ?? []) {
+      payload = JSON.parse(raw);
+    } catch (e) {
+      // Sending it again would not make it readable: no retry.
+      console.error("webhook payload", e);
+      return new Response("ok");
+    }
+    // One message that fails does not stop the others. Meta then delivers
+    // the payload again: the messages already handled are skipped (see
+    // handle) and the failed one is tried again.
+    let failed = false;
+    for (const entry of payload.entry ?? []) {
+      for (const change of entry.changes ?? []) {
+        for (const message of change.value?.messages ?? []) {
+          try {
             await handle(message);
+          } catch (e) {
+            console.error("webhook error", message?.id, e);
+            failed = true;
           }
         }
       }
-    } catch (e) {
-      console.error("webhook error", e);
     }
-    // Always 200 once the signature is valid, or Meta retries for days.
-    return new Response("ok");
+    return failed ? new Response("retry", { status: 500 }) : new Response("ok");
   });
 }

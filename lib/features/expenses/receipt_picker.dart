@@ -44,7 +44,7 @@ Future<PickedReceipt?> pickWithDevice({required bool camera}) async {
 
 /// Bundled picture used by the demo when no camera is available.
 Future<PickedReceipt> sampleReceipt({bool unreadable = false}) async {
-  final data = await rootBundle.load('assets/images/receipt-art.webp');
+  final data = await rootBundle.load('assets/images/receipt_art.webp');
   return PickedReceipt(
     data.buffer.asUint8List(),
     unreadable ? 'exemple-illisible.webp' : 'exemple.webp',

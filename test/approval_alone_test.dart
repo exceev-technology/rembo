@@ -9,14 +9,27 @@ import 'package:rembo/features/collaborator/expense_detail_screen.dart';
 
 late AppState state;
 
-Future<void> _start(WidgetTester tester, AppUser who) async {
+/// The team cannot be read: everything else loads.
+class _TeamUnavailable extends DemoBackend {
+  _TeamUnavailable() : super(latency: Duration.zero);
+
+  @override
+  Future<List<Member>> fetchMembers() async =>
+      throw const RemboException('Connexion impossible.', network: true);
+}
+
+Future<void> _start(
+  WidgetTester tester,
+  AppUser who, {
+  DemoBackend? backend,
+}) async {
   tester.view.physicalSize = const Size(420, 2600);
   tester.view.devicePixelRatio = 1;
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  state = AppState(DemoBackend(latency: Duration.zero));
+  state = AppState(backend ?? DemoBackend(latency: Duration.zero));
   await tester.pumpWidget(
     RemboApp(state: state, initialRoute: AppRoutes.login),
   );
@@ -73,6 +86,19 @@ void main() {
     await _start(tester, DemoBackend.marius);
     final own = await _flagged();
     expect(own.status, ExpenseStatus.needsReview);
+    await tester.pumpAndSettle();
+
+    await _openDetail(tester, own.id);
+    expect(find.byKey(const ValueKey('detail-alone-manager')), findsNothing);
+  });
+
+  testWidgets('Nothing is said while the team could not be loaded', (
+    tester,
+  ) async {
+    await _start(tester, DemoBackend.salma, backend: _TeamUnavailable());
+    final own = await _flagged();
+    expect(own.status, ExpenseStatus.needsReview);
+    expect(state.membersLoaded, isFalse);
     await tester.pumpAndSettle();
 
     await _openDetail(tester, own.id);
