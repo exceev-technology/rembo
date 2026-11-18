@@ -222,10 +222,10 @@ class SupabaseBackend extends RemboBackend {
         // 23505: this id already exists, the first attempt reached the
         // server. Carry on as an update.
         if (e.code != '23505') rethrow;
-        await _client.from('expenses').update(values).eq('id', id);
+        await _updateEditable(id, values);
       }
     } else {
-      await _client.from('expenses').update(values).eq('id', id);
+      await _updateEditable(id, values);
     }
     if (receiptBytes != null) {
       final ext = (receiptName ?? '').toLowerCase().split('.').last;
@@ -244,13 +244,24 @@ class SupabaseBackend extends RemboBackend {
             receiptBytes,
             fileOptions: FileOptions(upsert: true, contentType: type),
           );
-      await _client
-          .from('expenses')
-          .update({'receipt_path': path})
-          .eq('id', id);
+      await _updateEditable(id, {'receipt_path': path});
     }
     return _one(id);
   });
+
+  /// Writes [values] on an expense its owner may still edit. Row level
+  /// security skips any other row without an error: an empty answer means
+  /// nothing was written.
+  Future<void> _updateEditable(String id, Map<String, dynamic> values) async {
+    final rows = await _client
+        .from('expenses')
+        .update(values)
+        .eq('id', id)
+        .select('id');
+    if (rows.isEmpty) {
+      throw RemboException(tr('Cette dépense ne peut plus être modifiée.'));
+    }
+  }
 
   @override
   Future<void> deleteDraft(String id) => _guard(() async {
