@@ -4,6 +4,7 @@ import '../../app/app_routes.dart';
 import '../../core/data/app_state.dart';
 import '../../core/data/demo_backend.dart';
 import '../../core/widgets/rembo_widgets.dart';
+import '../../core/data/demo_build.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -59,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final demo = AppScope.of(context).isDemo;
+    final demo = demoAllowed && AppScope.of(context).isDemo;
     return RemboPage(
       logo: true,
       showBack: false,

@@ -10,6 +10,7 @@ import 'interrupted_screen.dart';
 import 'receipt_picker.dart';
 import 'receipt_view.dart';
 import 'summary_screen.dart';
+import '../../core/data/demo_build.dart';
 
 /// The one expense form: check what was read on a receipt, type an expense
 /// by hand, resume a draft or correct a rejected expense.
@@ -364,7 +365,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       });
     } on RemboException catch (e) {
       if (!mounted) return;
-      if (state.isDemo) {
+      if (demoAllowed && state.isDemo) {
         final sample = await sampleReceipt();
         if (!mounted) return;
         setState(() {
