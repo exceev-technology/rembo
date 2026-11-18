@@ -23,11 +23,12 @@ class _CaptureScreenState extends State<CaptureScreen> {
     if (_busy) return;
     final state = AppScope.read(context);
     final navigator = Navigator.of(context);
+    final picker = ReceiptPickerScope.read(context);
     PickedReceipt? picked;
     try {
       picked = unreadable
           ? await sampleReceipt(unreadable: true)
-          : await receiptPicker(camera: camera);
+          : await picker(camera: camera);
     } on RemboException catch (e) {
       if (!mounted) return;
       if (state.isDemo) {

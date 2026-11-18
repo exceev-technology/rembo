@@ -353,8 +353,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     );
     if (camera == null || !mounted) return;
     final state = AppScope.read(context);
+    final picker = ReceiptPickerScope.read(context);
     try {
-      final picked = await receiptPicker(camera: camera);
+      final picked = await picker(camera: camera);
       if (picked == null || !mounted) return;
       setState(() {
         _receiptBytes = picked.bytes;
