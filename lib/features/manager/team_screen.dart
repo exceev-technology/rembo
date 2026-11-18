@@ -30,11 +30,7 @@ class TeamScreen extends StatelessWidget {
         ),
       ),
       children: [
-        const RemboHero(
-          title: 'Équipe',
-          subtitle: 'Gérez les membres et leurs rôles dans REMBO.',
-          illustration: RemboArt.team,
-        ),
+        const RemboHero(title: 'Équipe', illustration: RemboArt.team),
         for (final m in state.members)
           Padding(
             padding: const EdgeInsets.only(bottom: RemboSpace.sm),
@@ -167,7 +163,7 @@ class _InviteFormState extends State<_InviteForm> {
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: RemboSpace.lg),
-        Text('Rôle', style: RemboText.subtitle.copyWith(fontSize: 15)),
+        Text('Rôle', style: RemboText.subtitle),
         const SizedBox(height: RemboSpace.sm),
         DropdownButtonFormField<UserRole>(
           key: const ValueKey('invite-role'),

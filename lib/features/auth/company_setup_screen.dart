@@ -65,15 +65,8 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
       onPressed: _submit,
     ),
     children: [
-      const RemboHero(
-        overline: 'Configuration initiale',
-        title: 'Votre entreprise',
-        subtitle: 'Quelques informations pour configurer votre espace REMBO.',
-      ),
-      const InfoStrip(
-        'Aucune invitation ne correspond à votre adresse. Créez votre '
-        'entreprise : vous en serez le premier responsable.',
-      ),
+      const RemboHero(title: 'Votre entreprise'),
+      const InfoStrip('Aucune invitation : créez votre entreprise.'),
       const SizedBox(height: RemboSpace.lg),
       if (_failure != null) ...[
         RemboMessage(tone: MessageTone.error, title: _failure!),
@@ -105,14 +98,6 @@ class _CompanySetupScreenState extends State<CompanySetupScreen> {
         hint: 'Casablanca',
         icon: Icons.place_outlined,
         controller: _city,
-      ),
-      const SizedBox(height: RemboSpace.lg),
-      const RemboTextField(
-        label: 'Devise',
-        hint: 'MAD · dirham marocain',
-        icon: Icons.payments_outlined,
-        enabled: false,
-        helper: 'REMBO gère les dépenses en dirhams.',
       ),
     ],
   );

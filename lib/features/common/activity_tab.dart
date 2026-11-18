@@ -109,10 +109,7 @@ class ActivityTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: RemboText.subtitle.copyWith(fontSize: 16),
-                      ),
+                      Text(title, style: RemboText.subtitle),
                       Text(message, style: RemboText.caption),
                       const SizedBox(height: RemboSpace.sm),
                       Container(
@@ -133,7 +130,12 @@ class ActivityTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: RemboSpace.sm),
-                Text(formatTime(item.event.at), style: RemboText.caption),
+                Text(
+                  g == 'Plus tôt'
+                      ? formatDayShort(item.event.at)
+                      : formatTime(item.event.at),
+                  style: RemboText.caption,
+                ),
                 if (unread)
                   const Padding(
                     padding: EdgeInsets.only(left: 6, top: 5),
@@ -154,10 +156,7 @@ class ActivityTab extends StatelessWidget {
       showBack: false,
       onRefresh: state.refresh,
       children: [
-        const RemboHero(
-          title: 'Activité',
-          subtitle: 'Suivez l’avancement de vos dépenses.',
-        ),
+        const RemboHero(title: 'Activité'),
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: RemboSpace.xl),

@@ -55,8 +55,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: RemboSpace.sm),
         Text(
-          'Recevez un lien par e-mail pour réinitialiser votre mot de passe.',
-          style: RemboText.body.copyWith(color: RemboColors.muted),
+          'Recevez un lien de réinitialisation par e-mail.',
+          style: RemboText.note.copyWith(fontSize: 14),
         ),
         const SizedBox(height: RemboSpace.xl),
         if (_sent)

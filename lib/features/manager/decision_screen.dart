@@ -97,8 +97,7 @@ class _DecisionScreenState extends State<DecisionScreen> {
         RemboMoment(
           title: open ? 'Décision nécessaire' : 'Dépense traitée',
           message: open
-              ? 'Cette dépense nécessite votre décision : le contrôle '
-                    'automatique a relevé un point.'
+              ? 'Le contrôle automatique a relevé un point.'
               : 'Statut actuel : ${e.status.label}.',
           illustration: RemboArt.warning,
         ),
@@ -134,7 +133,7 @@ class _DecisionScreenState extends State<DecisionScreen> {
                     Text(
                       e.date == null
                           ? e.supplier
-                          : '${e.supplier} · ${formatDate(e.date!)}',
+                          : '${e.supplier} · ${formatDayShort(e.date!)}',
                       style: RemboText.caption,
                     ),
                   ],
