@@ -534,4 +534,10 @@ const arabic = <String, String>{
   'La date de la dépense est dans le futur.': 'تاريخ المصروف في المستقبل.',
   'Complétez le fournisseur, la date, le montant, la catégorie et le motif.':
       'أكمل المورد والتاريخ والمبلغ والفئة والسبب.',
+  // Sprint 4 · Approval workflow
+  'Motif : {text}': 'السبب: {text}',
+  'Commentaire : {text}': 'تعليق: {text}',
+  'Vous êtes le seul responsable': 'أنت المسؤول الوحيد',
+  'Personne ne décide de sa propre dépense. Invitez un autre responsable : il pourra approuver ou rejeter celle-ci.': 'لا أحد يقرّر في مصروفه الخاص. ادعُ مسؤولاً آخر ليتمكّن من قبول هذا المصروف أو رفضه.',
+  'Inviter un responsable': 'دعوة مسؤول',
 };

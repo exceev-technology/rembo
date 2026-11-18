@@ -276,8 +276,8 @@ class _Timeline extends StatelessWidget {
     final text = ev.reason?.trim() ?? '';
     if (text.isEmpty || ev.byAgent) return null;
     return switch (ev.status) {
-      ExpenseStatus.rejected => 'Motif : $text',
-      ExpenseStatus.approved => 'Commentaire : $text',
+      ExpenseStatus.rejected => tr('Motif : {text}', {'text': text}),
+      ExpenseStatus.approved => tr('Commentaire : {text}', {'text': text}),
       _ => null,
     };
   }
