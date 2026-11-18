@@ -237,13 +237,23 @@ class SupabaseBackend extends RemboBackend {
       };
       // One object per expense, in the owner's folder (see storage rules).
       final path = '$_uid/$id';
-      await _client.storage
-          .from(_bucket)
-          .uploadBinary(
-            path,
-            receiptBytes,
-            fileOptions: FileOptions(upsert: true, contentType: type),
+      try {
+        await _client.storage
+            .from(_bucket)
+            .uploadBinary(
+              path,
+              receiptBytes,
+              fileOptions: FileOptions(upsert: true, contentType: type),
+            );
+      } on StorageException catch (e) {
+        // The storage rules lock the receipt of a submitted expense.
+        if (isLockedReceipt(e)) {
+          throw RemboException(
+            tr('Ce justificatif est verrouillé : la dépense a été soumise.'),
           );
+        }
+        rethrow;
+      }
       await _updateEditable(id, {'receipt_path': path});
     }
     return _one(id);
@@ -475,3 +485,9 @@ class SupabaseBackend extends RemboBackend {
     return [for (final r in rows) ExportBatch.fromJson(r)];
   });
 }
+
+/// True when Storage refused a write by its row level security rules. For a
+/// receipt in its owner's folder, that means its expense was submitted.
+bool isLockedReceipt(StorageException e) =>
+    e.statusCode == '403' ||
+    e.message.toLowerCase().contains('row-level security');

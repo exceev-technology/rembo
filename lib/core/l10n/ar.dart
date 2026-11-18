@@ -21,6 +21,8 @@ const arabic = <String, String>{
       'أنشئ شركة أو انضم إلى شركة أولا.',
   'Cette dépense ne peut plus être modifiée.':
       'لم يعد ممكنا تعديل هذا المصروف.',
+  'Ce justificatif est verrouillé : la dépense a été soumise.':
+      'هذا الإثبات مقفل: تم إرسال المصروف.',
   'Seul un brouillon peut être supprimé.': 'لا يمكن حذف إلا المسودات.',
   'Vous ne pouvez soumettre que vos dépenses.': 'لا يمكنك إرسال إلا مصاريفك.',
   'Complétez d’abord : {join}.': 'أكمل أولا: {join}.',
