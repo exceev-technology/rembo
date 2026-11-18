@@ -569,10 +569,22 @@ class LocalBackend extends RemboBackend {
     return _store.readBlob(expense.id);
   }
 
+  /// No server receives WhatsApp messages here: nothing can be linked.
   @override
-  Future<AppUser> linkWhatsApp(String? phone) async {
+  Future<WhatsAppLinkCode> requestWhatsAppCode() async {
     await _latency();
-    _replaceMe(_me.withWhatsApp(phone));
+    throw RemboException(
+      tr(
+        'WhatsApp demande un serveur : il sera disponible quand votre '
+        'entreprise sera connectée à REMBO en ligne.',
+      ),
+    );
+  }
+
+  @override
+  Future<AppUser> unlinkWhatsApp() async {
+    await _latency();
+    _replaceMe(_me.withWhatsApp(null));
     await _save();
     return _user!;
   }
@@ -754,6 +766,18 @@ class DemoBackend extends LocalBackend {
 
   @override
   bool _passwordMatches(AppUser user, String password) => password.isNotEmpty;
+
+  /// A code shown as in the real app; no message is received in the demo,
+  /// so it never links a number.
+  @override
+  Future<WhatsAppLinkCode> requestWhatsAppCode() async {
+    await _latency();
+    final code = Random.secure().nextInt(1000000).toString().padLeft(6, '0');
+    return WhatsAppLinkCode(
+      code: code,
+      expiresAt: _now.add(const Duration(minutes: 10)),
+    );
+  }
 
   @override
   Future<void> sendPasswordReset(String email) => _latency();

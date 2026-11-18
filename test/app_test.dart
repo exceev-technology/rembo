@@ -384,32 +384,24 @@ void main() {
     expect(find.byKey(const ValueKey('home-whatsapp')), findsNothing);
   });
 
-  testWidgets('WhatsApp: a person links and removes their number', (
+  testWidgets('WhatsApp: the demo shows a code but links nothing', (
     tester,
   ) async {
     await _start(tester);
     await _signInAs(tester, UserRole.employee);
     await _tap(tester, 'tab-profile');
     await _tap(tester, 'profile-whatsapp');
-    await _type(tester, 'whatsapp-phone', '12');
-    await _tap(tester, 'whatsapp-save');
-    expect(find.textContaining('Numéro invalide'), findsOneWidget);
-    await _type(tester, 'whatsapp-phone', '06 12 34 56 78');
-    await _tap(tester, 'whatsapp-save');
-    expect(state.user!.whatsappPhone, '+212612345678');
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
-    await _tap(tester, 'whatsapp-unlink');
+    // No number is typed in the app any more.
+    expect(find.byKey(const ValueKey('whatsapp-phone')), findsNothing);
+    await _tap(tester, 'whatsapp-request');
+    final code = tester.widget<Text>(
+      find.byKey(const ValueKey('whatsapp-code')),
+    );
+    expect(code.data, matches(RegExp(r'^LIER \d{6}$')));
+    // The demo receives no message: the number stays unlinked.
+    await _tap(tester, 'whatsapp-check');
+    expect(find.byKey(const ValueKey('whatsapp-error')), findsOneWidget);
     expect(state.user!.whatsappPhone, isNull);
-    // Another country: the same digits become a French number.
-    await _tap(tester, 'whatsapp-country');
-    await _type(tester, 'country-search', 'fran');
-    expect(find.byKey(const ValueKey('country-MA')), findsNothing);
-    await _tap(tester, 'country-FR');
-    expect(find.text('France (+33)'), findsOneWidget);
-    await _type(tester, 'whatsapp-phone', '06 12 34 56 78');
-    await _tap(tester, 'whatsapp-save');
-    expect(state.user!.whatsappPhone, '+33612345678');
   });
 
   testWidgets('Accountant overview adds up the validated expenses', (
