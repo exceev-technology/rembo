@@ -38,6 +38,7 @@ class OverviewTab extends StatelessWidget {
     final top = ranked.isEmpty ? 1 : ranked.first.value;
 
     return RemboPage(
+      logo: true,
       embedded: true,
       showBack: false,
       onRefresh: state.refresh,
@@ -201,7 +202,7 @@ class _Figure extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(value, style: RemboText.amount.copyWith(fontSize: 20)),
         ),
-        Text(note, style: RemboText.caption.copyWith(fontSize: 12)),
+        Text(note, style: RemboText.caption),
       ],
     ),
   );

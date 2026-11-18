@@ -31,7 +31,6 @@ class ExceptionsTab extends StatelessWidget {
         RemboHero(
           overline: formatWeekday(DateTime.now()),
           title: 'À examiner',
-          subtitle: 'Traitez les notes qui nécessitent votre décision.',
           illustration: RemboArt.search,
         ),
         Row(
@@ -102,9 +101,7 @@ class ExceptionsTab extends StatelessWidget {
             ),
           ),
         const SizedBox(height: RemboSpace.sm),
-        const InfoStrip(
-          'Les notes conformes sont validées par le contrôle automatique.',
-        ),
+        const InfoStrip('Le reste est validé automatiquement.'),
       ],
     );
   }

@@ -61,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final demo = AppScope.of(context).isDemo;
     return RemboPage(
+      logo: true,
       showBack: false,
       children: [
         const SizedBox(height: RemboSpace.sm),
@@ -142,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: TextButton(
             key: const ValueKey('login-signup'),
             onPressed: () => Navigator.of(context).pushNamed(AppRoutes.signup),
-            child: const Text('Rejoindre mon entreprise'),
+            child: const Text('Pas encore de compte ? Créer un compte'),
           ),
         ),
         if (demo) ...[
@@ -193,10 +194,16 @@ class _LoginScreenState extends State<LoginScreen> {
               color: RemboColors.muted,
             ),
             const SizedBox(width: RemboSpace.xs),
+            // Always on one line: it shrinks rather than wraps.
             Flexible(
-              child: Text(
-                'Données personnelles traitées selon la loi 09-08.',
-                style: RemboText.caption,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Données personnelles traitées selon la loi 09-08.',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: RemboText.caption.copyWith(fontSize: 11.5),
+                ),
               ),
             ),
           ],

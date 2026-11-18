@@ -45,130 +45,146 @@ class ProfileTab extends StatelessWidget {
       embedded: embedded,
       showBack: embedded ? false : null,
       children: [
-        const RemboHero(title: 'Mon\nprofil'),
-        RemboCard(
-          color: RemboColors.surface,
-          borderColor: Colors.transparent,
-          child: Row(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: RemboColors.indigo,
-                  borderRadius: BorderRadius.circular(RemboRadius.md),
-                ),
-                child: Text(
-                  user.initial,
-                  style: RemboText.display.copyWith(color: Colors.white),
-                ),
+        const RemboHero(title: 'Mon profil'),
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: RemboColors.indigo,
+              child: Text(
+                user.initial,
+                style: RemboText.title.copyWith(color: Colors.white),
               ),
-              const SizedBox(width: RemboSpace.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.fullName,
-                      key: const ValueKey('profile-name'),
-                      style: RemboText.title,
-                    ),
-                    Text(
-                      user.role.label,
-                      key: const ValueKey('profile-role'),
-                      style: RemboText.body.copyWith(color: RemboColors.muted),
-                    ),
-                    Text(
-                      user.companyName,
-                      style: RemboText.body.copyWith(color: RemboColors.muted),
-                    ),
-                  ],
+            ),
+            const SizedBox(width: RemboSpace.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // A Wrap: with large text the role goes under the name.
+                  Wrap(
+                    spacing: RemboSpace.sm,
+                    runSpacing: RemboSpace.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        user.fullName,
+                        key: const ValueKey('profile-name'),
+                        style: RemboText.subtitle.copyWith(fontSize: 17),
+                      ),
+                      RemboBadge(
+                        key: const ValueKey('profile-role'),
+                        label: user.role.label,
+                        tone: BadgeTone.info,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.email,
+                    style: RemboText.caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: RemboSpace.xl),
+        RemboCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              if (manager) ...[
+                _Entry(
+                  key: const ValueKey('profile-team'),
+                  Icons.groups_outlined,
+                  'Équipe',
+                  value: user.companyName,
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.team),
                 ),
+                _Entry(
+                  key: const ValueKey('profile-rules'),
+                  Icons.checklist_rounded,
+                  'Règles de remboursement',
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.rules),
+                ),
+              ],
+              _Entry(
+                key: const ValueKey('profile-whatsapp'),
+                Icons.chat_outlined,
+                'WhatsApp',
+                value: user.whatsappPhone ?? 'Non relié',
+                onTap: () => showWhatsAppSheet(context),
+              ),
+              _Entry(
+                key: const ValueKey('profile-password'),
+                Icons.lock_outline_rounded,
+                'Mot de passe',
+                last: true,
+                onTap: () => _resetPassword(context, state),
               ),
             ],
           ),
         ),
-        const SizedBox(height: RemboSpace.lg),
-        _Entry(Icons.mail_outline_rounded, 'Adresse e-mail', value: user.email),
-        if (manager) ...[
-          _Entry(
-            key: const ValueKey('profile-team'),
-            Icons.groups_outlined,
-            'Équipe',
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.team),
-          ),
-          _Entry(
-            key: const ValueKey('profile-rules'),
-            Icons.checklist_rounded,
-            'Règles de remboursement',
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.rules),
-          ),
-        ],
-        _Entry(
-          key: const ValueKey('profile-whatsapp'),
-          Icons.chat_outlined,
-          'WhatsApp',
-          value: user.whatsappPhone ?? 'Non relié',
-          onTap: () => showWhatsAppSheet(context),
-        ),
-        _Entry(
-          key: const ValueKey('profile-password'),
-          Icons.lock_outline_rounded,
-          'Changer de mot de passe',
-          onTap: () => _resetPassword(context, state),
-        ),
-        const _Entry(Icons.language_rounded, 'Langue', value: 'Français'),
-        const SizedBox(height: RemboSpace.lg),
-        RemboSecondaryButton(
-          key: const ValueKey('profile-signout'),
-          label: 'Se déconnecter',
-          icon: Icons.logout_rounded,
-          onPressed: () => _signOut(context, state),
-        ),
         const SizedBox(height: RemboSpace.md),
-        Text(
-          state.isDemo
-              ? 'Mode démonstration : aucune donnée n’est enregistrée.'
-              : state.isLocal
-              ? 'Vos données sont enregistrées sur ce téléphone uniquement. '
-                    'Désinstaller l’application les efface.'
-              : 'Votre rôle est géré par un responsable de votre entreprise.',
-          style: RemboText.caption,
-          textAlign: TextAlign.center,
+        Center(
+          child: TextButton.icon(
+            key: const ValueKey('profile-signout'),
+            icon: const Icon(Icons.logout_rounded, size: 18),
+            label: const Text('Se déconnecter'),
+            style: TextButton.styleFrom(foregroundColor: RemboColors.danger),
+            onPressed: () => _signOut(context, state),
+          ),
         ),
+        if (state.isDemo || state.isLocal)
+          Text(
+            state.isDemo
+                ? 'Démonstration : rien n’est enregistré.'
+                : 'Données enregistrées sur ce téléphone uniquement.',
+            style: RemboText.caption,
+            textAlign: TextAlign.center,
+          ),
       ],
     );
   }
 }
 
 class _Entry extends StatelessWidget {
-  const _Entry(this.icon, this.label, {super.key, this.value, this.onTap});
+  const _Entry(
+    this.icon,
+    this.label, {
+    super.key,
+    this.value,
+    this.onTap,
+    this.last = false,
+  });
   final IconData icon;
   final String label;
   final String? value;
   final VoidCallback? onTap;
 
+  /// The last row of the group has no line under it.
+  final bool last;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: RemboSpace.sm),
-    child: RemboCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: RemboSpace.lg,
-        vertical: RemboSpace.md,
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 52),
+      padding: const EdgeInsets.symmetric(horizontal: RemboSpace.lg),
+      decoration: BoxDecoration(
+        border: last
+            ? null
+            : const Border(bottom: BorderSide(color: RemboColors.border)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: RemboColors.night),
+          Icon(icon, size: 20, color: RemboColors.night),
           const SizedBox(width: RemboSpace.md),
-          Expanded(
-            child: Text(
-              label,
-              style: RemboText.subtitle.copyWith(fontSize: 16),
-            ),
-          ),
-          if (value != null)
+          Expanded(child: Text(label, style: RemboText.body)),
+          if (value != null && value!.isNotEmpty)
             Flexible(
               child: Text(
                 value!,
@@ -177,8 +193,12 @@ class _Entry extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          if (onTap != null)
-            const Icon(Icons.chevron_right_rounded, color: RemboColors.night),
+          const SizedBox(width: RemboSpace.xs),
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: RemboColors.muted,
+          ),
         ],
       ),
     ),

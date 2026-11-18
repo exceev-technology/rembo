@@ -57,6 +57,7 @@ class ExpenseFormScreen extends StatefulWidget {
 class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _supplier = TextEditingController();
   final _amount = TextEditingController();
+  final _vat = TextEditingController();
   final _date = TextEditingController();
   final _project = TextEditingController();
   final _reason = TextEditingController();
@@ -89,6 +90,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     if (e != null) {
       _supplier.text = e.supplier;
       if (e.amountCents > 0) _amount.text = amountInput(e.amountCents);
+      if (e.vatCents > 0) _vat.text = amountInput(e.vatCents);
       if (e.date != null) _date.text = formatDayInput(e.date!);
       _project.text = e.project;
       _reason.text = e.reason;
@@ -102,6 +104,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         _amount.text = amountInput(r.amountCents!);
         _proposed.add('amount');
       }
+      if (r.vatCents != null && r.vatCents! > 0) {
+        _vat.text = amountInput(r.vatCents!);
+        _proposed.add('vat');
+      }
       if (r.date != null) {
         _date.text = formatDayInput(r.date!);
         _proposed.add('date');
@@ -113,7 +119,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
 
   @override
   void dispose() {
-    for (final c in [_supplier, _amount, _date, _project, _reason]) {
+    for (final c in [_supplier, _amount, _vat, _date, _project, _reason]) {
       c.dispose();
     }
     super.dispose();
@@ -124,6 +130,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   bool _validate({required bool strict}) {
     final amount = _amount.text.trim();
     final date = _date.text.trim();
+    final vat = _vatCents;
     setState(() {
       _errors
         ..clear()
@@ -132,6 +139,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             'supplier': 'Renseignez le fournisseur.',
           if ((strict || amount.isNotEmpty) && parseAmount(amount) == null)
             'amount': 'Saisissez un montant positif, ex. 240,00.',
+          if (vat == null)
+            'vat': 'Saisissez un montant, ex. 21,82, ou laissez vide.'
+          else if (vat > 0 && vat >= (parseAmount(amount) ?? vat + 1))
+            'vat': 'La TVA doit être inférieure au montant TTC.',
           if ((strict || date.isNotEmpty) && parseDay(date) == null)
             'date': 'Date invalide : JJ/MM/AAAA, pas dans le futur.',
           if (strict && _category == null)
@@ -141,6 +152,14 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         });
     });
     return _errors.isEmpty;
+  }
+
+  /// VAT typed in the form, in centimes: 0 when left empty, null when it
+  /// is not an amount.
+  int? get _vatCents {
+    final text = _vat.text.trim();
+    if (text.isEmpty || RegExp(r'^0+([.,]0{1,2})?$').hasMatch(text)) return 0;
+    return parseAmount(text);
   }
 
   Expense _draft(AppUser user) {
@@ -163,10 +182,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       supplierIce: base.supplierIce,
       date: parseDay(_date.text),
       amountCents: amount,
-      // The VAT read on the receipt only holds for the amount read with it.
-      vatCents: reading?.amountCents == amount && reading?.vatCents != null
-          ? reading!.vatCents!
-          : (base.amountCents == amount ? base.vatCents : 0),
+      vatCents: _vatCents ?? 0,
       category: _category ?? '',
       project: _project.text,
       reason: _reason.text,
@@ -411,8 +427,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           title: title,
           subtitle: _correcting
               ? 'Vous pourrez ensuite la soumettre à nouveau.'
-              : 'Contrôlez et complétez les détails de votre dépense avant '
-                    'de l’envoyer.',
+              : null,
           below: _correcting
               ? const StatusBadge(status: ExpenseStatus.rejected)
               : null,
@@ -429,14 +444,13 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           InfoStrip(
             reading.simulated
                 ? 'Démonstration : valeurs simulées, non lues sur la photo.'
-                : 'Informations proposées par l’IA : vérifiez-les.',
+                : 'Valeurs lues sur le ticket : vérifiez-les.',
             icon: Icons.auto_awesome_outlined,
           ),
           const SizedBox(height: RemboSpace.lg),
         ] else if (widget.readerMissing) ...[
           const InfoStrip(
-            'Lecture automatique indisponible : saisissez les informations '
-            'du justificatif.',
+            'Lecture automatique indisponible : saisissez les valeurs.',
           ),
           const SizedBox(height: RemboSpace.lg),
         ],
@@ -486,6 +500,19 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         ),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
+          fieldKey: const ValueKey('form-vat'),
+          label: 'TVA incluse (MAD)',
+          hint: 'Facultatif',
+          icon: Icons.percent_rounded,
+          controller: _vat,
+          errorText: _errors['vat'],
+          suffix: _readBadge('vat'),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          textInputAction: TextInputAction.next,
+          onChanged: (_) => setState(() => _proposed.remove('vat')),
+        ),
+        const SizedBox(height: RemboSpace.lg),
+        RemboTextField(
           fieldKey: const ValueKey('form-date'),
           label: 'Date',
           required: true,
@@ -513,7 +540,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               ),
             ],
           ),
-          style: RemboText.subtitle.copyWith(fontSize: 15),
+          style: RemboText.subtitle,
         ),
         const SizedBox(height: RemboSpace.sm),
         DropdownButtonFormField<String>(
@@ -580,7 +607,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                       children: [
                         Text(
                           '${ev.status.label} · ${ev.actorName}',
-                          style: RemboText.subtitle.copyWith(fontSize: 15),
+                          style: RemboText.subtitle,
                         ),
                         Text(
                           '${formatDateLong(ev.at)} à ${formatTime(ev.at)}',

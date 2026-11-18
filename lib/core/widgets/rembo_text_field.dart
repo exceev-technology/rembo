@@ -66,7 +66,7 @@ class RemboTextField extends StatelessWidget {
               ),
           ],
         ),
-        style: RemboText.subtitle.copyWith(fontSize: 15),
+        style: RemboText.subtitle.copyWith(fontSize: 13.5),
       ),
       const SizedBox(height: RemboSpace.sm),
       TextField(

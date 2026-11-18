@@ -68,7 +68,6 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
       children: [
         const RemboHero(
           title: 'Préparer l’export',
-          subtitle: 'Exportez vos dépenses validées dans un fichier CSV.',
           illustration: RemboArt.download,
         ),
         InfoStrip(
@@ -131,7 +130,7 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
           ],
         ),
         const SizedBox(height: RemboSpace.lg),
-        Text('Délimiteur', style: RemboText.subtitle.copyWith(fontSize: 15)),
+        Text('Délimiteur', style: RemboText.subtitle),
         const SizedBox(height: RemboSpace.sm),
         DropdownButtonFormField<String>(
           key: const ValueKey('export-delimiter'),
@@ -152,12 +151,9 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
             showStatus: false,
             subtitle:
                 '${e.employeeName} · '
-                '${e.date == null ? '' : formatDate(e.date!)}',
+                '${e.date == null ? '' : formatDayShort(e.date!)}',
           ),
-        const InfoStrip(
-          'Une fois le fichier généré, ces dépenses passent au statut '
-          '« Exportée » et ne peuvent plus être exportées à nouveau.',
-        ),
+        const InfoStrip('Une dépense exportée ne peut plus l’être à nouveau.'),
       ],
     );
   }

@@ -50,8 +50,22 @@ class RoleShell extends StatefulWidget {
   State<RoleShell> createState() => _RoleShellState();
 }
 
-class _RoleShellState extends State<RoleShell> {
-  late final _index = ValueNotifier<int>(widget.initialTab);
+class _RoleShellState extends State<RoleShell>
+    with SingleTickerProviderStateMixin {
+  late final _index = ValueNotifier<int>(widget.initialTab)
+    ..addListener(_tabChanged);
+
+  /// The tab that comes in fades and rises a little; tabs keep their state.
+  late final _tabIn = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 380),
+    value: 1,
+  );
+
+  void _tabChanged() {
+    if (!RemboMotion.reduced(context)) _tabIn.forward(from: 0);
+  }
+
   List<_TabSpec> _tabs = const [];
 
   static const _home = _TabSpec(
@@ -123,6 +137,7 @@ class _RoleShellState extends State<RoleShell> {
   @override
   void dispose() {
     _index.dispose();
+    _tabIn.dispose();
     super.dispose();
   }
 
@@ -146,9 +161,22 @@ class _RoleShellState extends State<RoleShell> {
                     child: MediaQuery.removePadding(
                       context: context,
                       removeTop: state.isDemo,
-                      child: IndexedStack(
-                        index: current,
-                        children: [for (final t in _tabs) _body(t.tab)],
+                      child: AnimatedBuilder(
+                        animation: _tabIn,
+                        builder: (context, child) {
+                          final t = Curves.easeOutCubic.transform(_tabIn.value);
+                          return Opacity(
+                            opacity: t,
+                            child: Transform.translate(
+                              offset: Offset(0, 10 * (1 - t)),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: IndexedStack(
+                          index: current,
+                          children: [for (final t in _tabs) _body(t.tab)],
+                        ),
                       ),
                     ),
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/data/app_state.dart';
+import '../../core/ocr/receipt_reader.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../whatsapp/whatsapp.dart';
 import 'expense_form_screen.dart';
@@ -46,7 +47,12 @@ class _CaptureScreenState extends State<CaptureScreen> {
     setState(() => _busy = true);
     ReceiptReading? reading;
     try {
-      reading = await state.backend.readReceipt(picked.bytes, picked.name);
+      reading = await readReceipt(
+        picked.bytes,
+        picked.name,
+        onDevice: state.isDemo ? null : deviceReceiptReader,
+        onServer: state.backend.readReceipt,
+      );
     } on RemboException {
       reading = null; // The form opens without proposals.
     }
@@ -73,26 +79,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final demo = AppScope.of(context).isDemo;
     return RemboPage(
       children: [
-        Semantics(
-          header: true,
-          child: Text(
-            'Nouvelle dépense',
-            style: RemboText.display,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: RemboSpace.sm),
-        Text(
-          'Ajoutez un justificatif pour l’enregistrer et le faire valider.',
-          style: RemboText.body.copyWith(color: RemboColors.muted),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: RemboSpace.xl),
-        const Center(child: HeroArt(height: 220, art: RemboArt.camera)),
-        const SizedBox(height: RemboSpace.xl),
+        const RemboHero(title: 'Nouvelle dépense'),
         if (_busy)
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: RemboSpace.xl),
+            padding: EdgeInsets.symmetric(vertical: RemboSpace.xxl),
             child: Column(
               children: [
                 CircularProgressIndicator(),
@@ -102,34 +92,35 @@ class _CaptureScreenState extends State<CaptureScreen> {
             ),
           )
         else ...[
-          RemboPrimaryButton(
+          // Four ways in, each said in one line. The photo comes first.
+          _Way(
             key: const ValueKey('capture-photo'),
-            label: 'Prendre une photo',
+            title: 'Prendre une photo',
+            hint: 'Ticket entier, photo nette.',
             icon: Icons.photo_camera_outlined,
-            onPressed: () => _pick(camera: true),
+            primary: true,
+            onTap: () => _pick(camera: true),
           ),
-          const SizedBox(height: RemboSpace.md),
-          RemboSecondaryButton(
+          _Way(
             key: const ValueKey('capture-import'),
-            label: 'Importer une image',
-            icon: Icons.insert_drive_file_outlined,
-            onPressed: () => _pick(camera: false),
+            title: 'Importer une image',
+            hint: 'Depuis la galerie ou vos fichiers.',
+            icon: Icons.image_outlined,
+            onTap: () => _pick(camera: false),
           ),
-          const SizedBox(height: RemboSpace.sm),
-          Center(
-            child: TextButton(
-              key: const ValueKey('capture-manual'),
-              onPressed: () => ExpenseFormScreen.open(context),
-              child: const Text('Saisir manuellement'),
-            ),
+          _Way(
+            key: const ValueKey('capture-whatsapp'),
+            title: 'Envoyer par WhatsApp',
+            hint: 'Un message vocal ou une photo suffit.',
+            icon: Icons.chat_outlined,
+            onTap: () => showWhatsAppSheet(context),
           ),
-          Center(
-            child: TextButton.icon(
-              key: const ValueKey('capture-whatsapp'),
-              icon: const Icon(Icons.chat_outlined, size: 18),
-              label: const Text('Envoyer par WhatsApp ou note vocale'),
-              onPressed: () => showWhatsAppSheet(context),
-            ),
+          _Way(
+            key: const ValueKey('capture-manual'),
+            title: 'Saisir sans photo',
+            hint: 'Vous remplissez les champs vous-même.',
+            icon: Icons.edit_note_rounded,
+            onTap: () => ExpenseFormScreen.open(context),
           ),
           if (demo)
             Center(
@@ -139,16 +130,91 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 child: const Text('Démo : tester un reçu illisible'),
               ),
             ),
-          const SizedBox(height: RemboSpace.md),
-          const Center(
-            child: RemboBadge(
-              label: 'Photo nette, ticket entier',
-              tone: BadgeTone.info,
-              icon: Icons.auto_awesome_outlined,
-            ),
-          ),
         ],
       ],
+    );
+  }
+}
+
+/// One way to declare an expense: what it is, and what it asks of you.
+class _Way extends StatelessWidget {
+  const _Way({
+    super.key,
+    required this.title,
+    required this.hint,
+    required this.icon,
+    required this.onTap,
+    this.primary = false,
+  });
+  final String title;
+  final String hint;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  /// The recommended way: filled, with the camera picture.
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final onColor = primary ? Colors.white : RemboColors.ink;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: RemboSpace.md),
+      child: Semantics(
+        button: true,
+        child: RemboCard(
+          color: primary ? RemboColors.indigo : RemboColors.card,
+          borderColor: primary ? RemboColors.indigo : RemboColors.border,
+          padding: EdgeInsets.fromLTRB(
+            RemboSpace.lg,
+            primary ? RemboSpace.xl : RemboSpace.lg,
+            RemboSpace.md,
+            primary ? RemboSpace.xl : RemboSpace.lg,
+          ),
+          onTap: onTap,
+          child: Row(
+            children: [
+              IconTile(
+                icon,
+                color: primary ? Colors.white : RemboColors.indigo,
+                background: primary
+                    ? const Color(0x33FFFFFF)
+                    : RemboColors.surface,
+              ),
+              const SizedBox(width: RemboSpace.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: (primary ? RemboText.title : RemboText.subtitle)
+                          .copyWith(color: onColor),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hint,
+                      style: RemboText.note.copyWith(
+                        color: primary
+                            ? const Color(0xE6FFFFFF)
+                            : RemboColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (primary)
+                const ExcludeSemantics(
+                  child: HeroArt(height: 76, art: RemboArt.camera),
+                )
+              else
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: RemboColors.muted,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

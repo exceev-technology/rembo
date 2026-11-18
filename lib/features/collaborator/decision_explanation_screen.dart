@@ -158,7 +158,7 @@ class _Check extends StatelessWidget {
           initiallyExpanded: expanded && details.isNotEmpty,
           enabled: details.isNotEmpty,
           leading: Icon(icon, color: RemboColors.night),
-          title: Text(title, style: RemboText.subtitle.copyWith(fontSize: 16)),
+          title: Text(title, style: RemboText.subtitle),
           subtitle: Text(
             summary,
             style: RemboText.caption.copyWith(

@@ -1,13 +1,21 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_routes.dart';
-import '../../core/widgets/rembo_widgets.dart';
+import '../../core/motion/rembo_motion.dart';
+import '../../core/theme/rembo_tokens.dart';
+import '../../core/widgets/rembo_logo.dart';
 
-/// Floating 3D welcome scene. Layers drift with the pointer (or a drag on a
-/// phone) according to their depth, and bob on their own.
+/// First screen of a person who is not signed in: what REMBO is for, then
+/// « Commencer » (create an account) or « Se connecter ».
+///
+/// The drawing tells the product in three beats, the same as the pitch:
+/// a receipt arrives (capture), a beam reads it line by line and the total
+/// counts up (understand), a green stamp lands (validate). Then it floats,
+/// and is read again from time to time. The receipt follows the finger.
+/// Nothing moves when the phone asks for reduced motion.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -16,667 +24,718 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _clock = AnimationController(
+    with TickerProviderStateMixin {
+  /// Plays once: arrival, reading, stamp, then the words.
+  late final AnimationController _intro = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 12),
-  )..repeat();
+    duration: const Duration(milliseconds: 3400),
+  );
 
-  /// Pointer position in the stage, from -0.5 to 0.5 on each axis.
-  Offset _tilt = Offset.zero;
+  /// Then it floats, slowly, and is read again once per turn.
+  late final AnimationController _loop = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 9),
+  );
+
+  /// Brings the receipt back after the finger let it go.
+  late final AnimationController _release = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..addListener(_springBack);
+
+  /// How far the finger turned the receipt, in radians (y axis, x axis).
+  final _tilt = ValueNotifier<Offset>(Offset.zero);
+  Offset _releasedFrom = Offset.zero;
+  bool _still = false;
+  bool _asked = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.of(context).disableAnimations) {
-      _clock.stop();
-    } else if (!_clock.isAnimating) {
-      _clock.repeat();
+    _still = MediaQuery.of(context).disableAnimations;
+    if (_still) {
+      _intro.value = 1;
+      _loop
+        ..stop()
+        ..value = 0;
+    } else {
+      if (!_asked) {
+        _asked = true;
+        RemboMotion.whenVisible(() {
+          if (mounted && !_still) _intro.forward();
+        });
+      }
+      if (!_loop.isAnimating) _loop.repeat();
     }
+  }
+
+  void _springBack() {
+    _tilt.value =
+        _releasedFrom * (1 - Curves.elasticOut.transform(_release.value));
+  }
+
+  void _turn(DragUpdateDetails details) {
+    if (_still) return;
+    _release.stop();
+    final next = _tilt.value + details.delta / 150;
+    _tilt.value = Offset(next.dx.clamp(-.7, .7), next.dy.clamp(-.45, .45));
+  }
+
+  void _letGo([DragEndDetails? _]) {
+    _releasedFrom = _tilt.value;
+    _release.forward(from: 0);
   }
 
   @override
   void dispose() {
-    _clock.dispose();
+    _intro.dispose();
+    _loop.dispose();
+    _release.dispose();
+    _tilt.dispose();
     super.dispose();
   }
 
-  void _track(Offset local, Size size) => setState(() {
-    _tilt = Offset(
-      (local.dx / size.width - .5).clamp(-.5, .5),
-      (local.dy / size.height - .5).clamp(-.5, .5),
-    );
-  });
+  Animation<double> _slice(double from, double to, [Curve? curve]) =>
+      CurvedAnimation(
+        parent: _intro,
+        curve: Interval(from, to, curve: curve ?? Curves.easeOutCubic),
+      );
 
-  void _reset() => setState(() => _tilt = Offset.zero);
+  /// Fades [child] in during one slice of the intro.
+  Widget _fade(double from, double to, Widget child) =>
+      FadeTransition(opacity: _slice(from, to, Curves.easeOut), child: child);
+
+  /// A line of the headline rises from behind its own base line.
+  Widget _line(double from, double to, Widget child) => ClipRect(
+    child: SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 1.05),
+        end: Offset.zero,
+      ).animate(_slice(from, to, Curves.easeOutQuart)),
+      child: child,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final reduceMotion = media.disableAnimations;
-    final size = Size(
-      math.min(media.size.width, 430),
-      (media.size.height - 380).clamp(300, 520).toDouble(),
-    );
+    final navigator = Navigator.of(context);
     return Scaffold(
-      backgroundColor: RemboColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 12, 0),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: RemboLogo(size: 28),
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          key: const ValueKey('welcome-skip'),
-                          onPressed: () =>
-                              Navigator.of(context).pushNamed(AppRoutes.login),
-                          child: const Text('Passer'),
-                        ),
-                      ],
+      backgroundColor: RemboColors.surface,
+      body: Stack(
+        children: [
+          const Positioned.fill(
+            child: CustomPaint(painter: _BackgroundPainter()),
+          ),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = math.min(constraints.maxWidth, 480.0);
+                final narrow = width < 370;
+                final heroHeight = (constraints.maxHeight * .42).clamp(
+                  200.0,
+                  420.0,
+                );
+                final headline = TextStyle(
+                  fontFamily: RemboFonts.display,
+                  fontFamilyFallback: RemboFonts.sansFallback,
+                  fontSize: narrow ? 36 : 44,
+                  height: 1.08,
+                  letterSpacing: -1.6,
+                  fontWeight: FontWeight.w900,
+                  fontVariations: const [FontVariation('wght', 900)],
+                  color: RemboColors.ink,
+                );
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                  ),
-                  SizedBox.fromSize(
-                    size: size,
-                    child: MouseRegion(
-                      onHover: (e) => _track(e.localPosition, size),
-                      onExit: (_) => _reset(),
-                      child: GestureDetector(
-                        onPanUpdate: (e) => _track(e.localPosition, size),
-                        onPanEnd: (_) => _reset(),
-                        // The scene is an illustration: its labels keep their
-                        // drawn size whatever the system text scale.
-                        child: MediaQuery.withNoTextScaling(
-                          child: ClipRect(
-                            child: AnimatedBuilder(
-                              animation: _clock,
-                              builder: (context, _) => _Stage(
-                                size: size,
-                                tilt: _tilt,
-                                t: reduceMotion ? 0 : _clock.value,
+                    child: Center(
+                      child: SizedBox(
+                        width: width,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _fade(0, .25, const RemboLogo(size: 44)),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onPanUpdate: _turn,
+                                onPanEnd: _letGo,
+                                onPanCancel: _letGo,
+                                child: SizedBox(
+                                  height: heroHeight,
+                                  width: double.infinity,
+                                  child: ExcludeSemantics(
+                                    child: RepaintBoundary(
+                                      child: CustomPaint(
+                                        painter: _ReceiptPainter(
+                                          intro: _intro,
+                                          loop: _loop,
+                                          tilt: _tilt,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Semantics(
+                                    key: const ValueKey('welcome-title'),
+                                    header: true,
+                                    label: 'Vos frais, l’esprit libre.',
+                                    child: ExcludeSemantics(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _line(
+                                            .5,
+                                            .76,
+                                            Text('Vos frais,', style: headline),
+                                          ),
+                                          _line(
+                                            .57,
+                                            .83,
+                                            Text(
+                                              'l’esprit libre.',
+                                              style: headline,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _fade(
+                                    .7,
+                                    .92,
+                                    const Text(
+                                      'Moins de paperasse.\n'
+                                      'Plus de temps pour l’essentiel.',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        height: 1.4,
+                                        color: Color(0xFF20202B),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  _fade(
+                                    .78,
+                                    1,
+                                    ScaleTransition(
+                                      scale: Tween(begin: .94, end: 1.0)
+                                          .animate(
+                                            _slice(.78, 1, Curves.easeOutBack),
+                                          ),
+                                      child: _Actions(navigator: navigator),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const _Pitch(),
-                ],
-              ),
+                );
+              },
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _Stage extends StatelessWidget {
-  const _Stage({required this.size, required this.tilt, required this.t});
-  final Size size;
-  final Offset tilt;
-
-  /// Animation phase, 0 to 1.
-  final double t;
-
-  double _wave(double speed, double phase) =>
-      math.sin((t * speed + phase) * 2 * math.pi);
+class _Actions extends StatelessWidget {
+  const _Actions({required this.navigator});
+  final NavigatorState navigator;
 
   @override
-  Widget build(BuildContext context) {
-    final sway = _wave(1, 0) * .08;
-    final scale = math.min(size.width / 390, size.height / 470).clamp(.6, 1.2);
-
-    // A layer drifts against the pointer in proportion to its depth.
-    Widget layer({
-      required double left,
-      required double top,
-      required double depth,
-      required Widget child,
-      double bob = 0,
-      double speed = 2,
-      double phase = 0,
-      double turn = 0,
-    }) {
-      final dx = -tilt.dx * depth * 60 + sway * depth * 40;
-      final dy = -tilt.dy * depth * 40 + _wave(speed, phase) * bob;
-      return Positioned(
-        left: left,
-        top: top,
-        child: Transform.translate(
-          offset: Offset(dx, dy),
-          child: Transform.rotate(
-            angle: turn + _wave(speed, phase) * .03,
-            child: child,
+  Widget build(BuildContext context) => Column(
+    children: [
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          key: const ValueKey('welcome-start'),
+          onPressed: () => navigator.pushNamed(AppRoutes.signup),
+          style: FilledButton.styleFrom(
+            backgroundColor: RemboColors.indigo,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(0, 58),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: const StadiumBorder(),
+          ),
+          child: const Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            children: [
+              Text(
+                'Commencer',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+              ),
+              Icon(Icons.arrow_forward_rounded, size: 24),
+            ],
           ),
         ),
+      ),
+      const SizedBox(height: 6),
+      Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const Text(
+            'Déjà un compte ?',
+            style: TextStyle(fontSize: 15, color: RemboColors.ink),
+          ),
+          TextButton(
+            key: const ValueKey('welcome-login'),
+            onPressed: () => navigator.pushNamed(AppRoutes.login),
+            style: TextButton.styleFrom(
+              foregroundColor: RemboColors.indigo,
+              minimumSize: const Size(48, 48),
+            ),
+            child: const Text(
+              'Se connecter',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+class _BackgroundPainter extends CustomPainter {
+  const _BackgroundPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF5F4FF), Color(0xFFEAE7FC), Color(0xFFF5F4FF)],
+        ).createShader(rect),
+    );
+    final paint = Paint()..color = const Color(0x127B61E8);
+    canvas.drawOval(
+      Rect.fromLTWH(
+        size.width * .45,
+        -size.height * .25,
+        size.width * 1.4,
+        size.height * .6,
+      ),
+      paint,
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(
+        -size.width * .9,
+        size.height * .53,
+        size.width * 1.5,
+        size.height * .65,
+      ),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BackgroundPainter oldDelegate) => false;
+}
+
+/// The receipt and what happens to it. Drawn in a 360 × 360 box, centred.
+class _ReceiptPainter extends CustomPainter {
+  _ReceiptPainter({required this.intro, required this.loop, required this.tilt})
+    : super(repaint: Listenable.merge([intro, loop, tilt]));
+
+  /// 0 → 1, once.
+  final Animation<double> intro;
+
+  /// 0 → 1, for ever.
+  final Animation<double> loop;
+  final ValueListenable<Offset> tilt;
+
+  static const _ringTilt = -.32;
+  static const _ring = Rect.fromLTWH(-166, -82, 332, 98);
+
+  /// Demo total written on the receipt, in centimes.
+  static const _total = 24000;
+
+  /// The paper: top and bottom edges are torn in small waves.
+  static final Path _paper = () {
+    final p = Path()..moveTo(-96, -125);
+    for (var i = 0; i < 8; i++) {
+      final x = -96.0 + i * 24;
+      p.quadraticBezierTo(x + 6, -134, x + 12, -125);
+      p.quadraticBezierTo(x + 18, -116, x + 24, -125);
+    }
+    p.lineTo(96, 125);
+    for (var i = 0; i < 8; i++) {
+      final x = 96.0 - i * 24;
+      p.quadraticBezierTo(x - 6, 134, x - 12, 125);
+      p.quadraticBezierTo(x - 18, 116, x - 24, 125);
+    }
+    return p..close();
+  }();
+
+  /// Rows of the receipt: y, width of the label, width of the price.
+  static const _rows = [
+    (-38.0, 78.0, 30.0),
+    (-12.0, 54.0, 24.0),
+    (14.0, 92.0, 34.0),
+  ];
+
+  double _part(double from, double to, [Curve curve = Curves.easeOutCubic]) =>
+      curve.transform(((intro.value - from) / (to - from)).clamp(0.0, 1.0));
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = math.min(size.width / 360, size.height / 360);
+    final turn = loop.value;
+    final phase = turn * math.pi * 2;
+    final done = intro.value >= 1;
+
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.scale(scale);
+
+    final arrive = _part(0, .34);
+    final settle = _part(0, .42, Curves.easeOutBack);
+    final float = math.sin(phase) * 7;
+
+    // Where the beam is: once in the intro, once per turn afterwards.
+    final reading = done
+        ? ((turn - .52) / .2).clamp(0.0, 1.0)
+        : _part(.3, .6, Curves.easeInOut);
+    final beamOn = reading > 0 && reading < 1;
+    final beamY = -140 + 280 * reading;
+
+    // Shadow on the ground: tightens when the receipt comes down.
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: const Offset(0, 150),
+        width: (170 + math.sin(phase) * 12) * arrive,
+        height: 14,
+      ),
+      Paint()
+        ..color = Color.fromRGBO(114, 90, 203, .18 * arrive)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+    );
+
+    final spheres = _part(.18, .6, Curves.easeOutBack);
+    _sphere(canvas, Offset(-142, -70 + math.sin(phase + 1) * 7), 11 * spheres);
+    _sphere(canvas, Offset(128, 104 + math.sin(phase + 2) * 9), 22 * spheres);
+    _sphere(canvas, Offset(138, -118 + math.cos(phase) * 6), 19 * spheres);
+
+    // The ring goes round the receipt: its far half first.
+    final ringDrawn = _part(.3, .8);
+    final orbit = phase + math.pi * .25;
+    final planetBehind = math.sin(orbit) < 0;
+    _ringHalf(canvas, back: true, drawn: ringDrawn);
+    if (planetBehind) _planet(canvas, orbit, ringDrawn);
+
+    // The receipt itself, in perspective: it falls flat from above, sways
+    // slowly, and follows the finger.
+    final finger = tilt.value;
+    final matrix = Matrix4.identity()
+      ..setEntry(3, 2, .0016)
+      ..translateByDouble(0, float - (1 - settle) * 70, 0, 1)
+      ..rotateX((1 - arrive) * 1.2 - finger.dy + math.cos(phase) * .05)
+      ..rotateY(finger.dx + math.sin(phase) * .14)
+      ..rotateZ(.14 * arrive + math.sin(phase) * .012);
+    canvas.save();
+    canvas.transform(matrix.storage);
+    canvas.saveLayer(
+      const Rect.fromLTWH(-190, -200, 380, 400),
+      Paint()..color = Color.fromRGBO(0, 0, 0, _part(0, .16, Curves.easeOut)),
+    );
+
+    canvas.drawPath(
+      _paper.shift(const Offset(5, 14)),
+      Paint()
+        ..color = const Color(0x40725ACB)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+    );
+    canvas.drawPath(
+      _paper,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFFBFAFF), Color(0xFFE4E0FB)],
+        ).createShader(const Rect.fromLTWH(-100, -140, 200, 280)),
+    );
+
+    canvas.save();
+    canvas.clipPath(_paper);
+
+    // How much of the receipt has been read at height [y] (intro only),
+    // and how close the beam is to it right now.
+    double read(double y) =>
+        done ? 1 : ((beamY - y) / 18).clamp(0.0, 1.0) * (reading > 0 ? 1 : 0);
+    double lit(double y) =>
+        beamOn ? (1 - (beamY - y).abs() / 30).clamp(0.0, 1.0) : 0;
+    Color ink(double y, {double strength = 1}) => Color.lerp(
+      const Color(0xFFB5A6F2),
+      RemboColors.indigo,
+      lit(y),
+    )!.withValues(alpha: read(y) * strength);
+
+    void bar(double x, double y, double w, double h, {double strength = 1}) {
+      final shown = w * read(y);
+      if (shown < h) return;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, y, shown, h),
+          Radius.circular(h / 2),
+        ),
+        Paint()..color = ink(y, strength: strength),
       );
     }
 
-    final stage = Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, .0012)
-        ..rotateX(tilt.dy * -.3)
-        ..rotateY(tilt.dx * .4 + sway),
-      child: SizedBox(
-        width: 390,
-        height: 470,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            layer(
-              left: 70,
-              top: 412,
-              depth: 0,
-              child: Opacity(
-                opacity: .45 + _wave(2, 0) * .1,
-                child: ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                  child: Container(
-                    width: 250,
-                    height: 34,
-                    decoration: const BoxDecoration(
-                      color: Color(0x592E2A7E),
-                      borderRadius: BorderRadius.all(
-                        Radius.elliptical(125, 17),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            layer(left: 75, top: 40, depth: .3, child: const _ArchWindow()),
-            layer(
-              left: 300,
-              top: 36,
-              depth: .7,
-              bob: 9,
-              phase: .2,
-              child: const _Sphere(
-                size: 46,
-                colors: [
-                  Color(0xFFB3A9FF),
-                  Color(0xFF6B57F0),
-                  Color(0xFF2E2A7E),
-                ],
-              ),
-            ),
-            layer(
-              left: 40,
-              top: 378,
-              depth: 1.2,
-              bob: 7,
-              phase: .6,
-              child: const _Sphere(
-                size: 26,
-                colors: [
-                  Color(0xFFF6C99A),
-                  RemboColors.orange,
-                  Color(0xFF8A4B0C),
-                ],
-              ),
-            ),
-            layer(
-              left: 150,
-              top: 18,
-              depth: .5,
-              bob: 6,
-              phase: .4,
-              child: const _Pill(),
-            ),
-            layer(
-              left: 16,
-              top: 160,
-              depth: 1,
-              bob: 12,
-              turn: -.14,
-              child: _Receipt(scan: (_wave(2.5, 0) + 1) / 2),
-            ),
-            layer(
-              left: 192,
-              top: 96,
-              depth: 1.4,
-              bob: 9,
-              phase: .3,
-              child: const _VatChip(),
-            ),
-            layer(
-              left: 212,
-              top: 326,
-              depth: 1.7,
-              bob: 8,
-              phase: .7,
-              child: const _ApprovedChip(),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    return Center(
-      child: Transform.scale(scale: scale.toDouble(), child: stage),
-    );
-  }
-}
-
-class _ArchWindow extends StatelessWidget {
-  const _ArchWindow();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 240,
-    height: 350,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(120),
-        bottom: Radius.circular(26),
-      ),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x402E2A7E),
-          blurRadius: 60,
-          offset: Offset(0, 30),
-        ),
-      ],
-    ),
-    padding: const EdgeInsets.all(6),
-    child: ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(114),
-        bottom: Radius.circular(20),
-      ),
-      child: Image.asset(
-        'assets/images/receipt-art.webp',
-        fit: BoxFit.cover,
-        alignment: const Alignment(0, -.1),
-        semanticLabel:
-            'Un reçu et une coche de validation flottent sous une arche',
-      ),
-    ),
-  );
-}
-
-class _Sphere extends StatelessWidget {
-  const _Sphere({required this.size, required this.colors});
-  final double size;
-  final List<Color> colors;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(
-        center: const Alignment(-.36, -.44),
-        colors: colors,
-        stops: const [0, .5, 1],
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: colors.last.withValues(alpha: .35),
-          blurRadius: 22,
-          offset: const Offset(0, 12),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-    decoration: BoxDecoration(
-      color: RemboColors.night,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x4D2E2A7E),
-          blurRadius: 22,
-          offset: Offset(0, 12),
-        ),
-      ],
-    ),
-    child: const Text(
-      'Repas client · Atlas',
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  );
-}
-
-class _Receipt extends StatelessWidget {
-  const _Receipt({required this.scan});
-
-  /// Scan line position, 0 (top) to 1 (bottom).
-  final double scan;
-
-  static const _mono = TextStyle(
-    fontFamily: RemboFonts.mono,
-    fontFamilyFallback: RemboFonts.monoFallback,
-    fontSize: 9,
-    color: Color(0xFF50505F),
-  );
-
-  Widget _row(String label, String value, {TextStyle style = _mono}) => Row(
-    children: [
-      Expanded(
-        child: Text(label, style: style, overflow: TextOverflow.clip),
-      ),
-      Text(value, style: style),
-    ],
-  );
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x380E0E14),
-          blurRadius: 26,
-          offset: Offset(0, 22),
-        ),
-      ],
-    ),
-    child: ClipPath(
-      clipper: _ZigzagClipper(),
-      child: Container(
-        width: 148,
-        color: Colors.white,
-        padding: const EdgeInsets.fromLTRB(14, 16, 14, 22),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'LE ZELLIGE · RABAT',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: RemboFonts.mono,
-                    fontFamilyFallback: RemboFonts.monoFallback,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: RemboColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Container(height: 1, color: const Color(0xFFC9C5BB)),
-                const SizedBox(height: 7),
-                _row('2 menus', '345,45'),
-                const SizedBox(height: 7),
-                _row('TVA 10%', '34,55'),
-                const SizedBox(height: 7),
-                _row(
-                  'TOTAL',
-                  '380,00',
-                  style: const TextStyle(
-                    fontFamily: RemboFonts.mono,
-                    fontFamilyFallback: RemboFonts.monoFallback,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: RemboColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                const Text(
-                  'ICE 001234567000089',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: RemboFonts.mono,
-                    fontFamilyFallback: RemboFonts.monoFallback,
-                    fontSize: 8,
-                    color: Color(0xFF7A7A88),
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              left: -14,
-              right: -14,
-              top: 4 + scan * 100,
-              child: Container(
-                height: 2,
-                decoration: const BoxDecoration(
-                  color: RemboColors.indigo,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x734A35E0),
-                      blurRadius: 12,
-                      spreadRadius: 3,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _ZigzagClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    const teeth = 10;
-    const depth = 8.0;
-    final step = size.width / teeth;
-    final path = Path()
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height - depth);
-    for (var i = teeth; i > 0; i--) {
-      path
-        ..lineTo((i - .5) * step, size.height)
-        ..lineTo((i - 1) * step, size.height - depth);
+    // Shop name and date.
+    bar(-70, -98, 84, 11);
+    bar(-70, -78, 48, 7, strength: .7);
+    // Lines bought, with their prices on the right.
+    for (final (y, label, price) in _rows) {
+      bar(-70, y, label, 8);
+      final r = read(y);
+      if (r > 0) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(70 - price, y, price, 8),
+            const Radius.circular(4),
+          ),
+          Paint()..color = ink(y, strength: .8),
+        );
+      }
     }
-    return path..close();
+    // Dashed rule above the total.
+    final rule = Paint()
+      ..color = const Color(0xFFCFC6F5).withValues(alpha: read(44))
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var x = -70.0; x < 70; x += 10) {
+      canvas.drawLine(Offset(x, 44), Offset(x + 4, 44), rule);
+    }
+    // The total counts up while it is read.
+    final counted = done ? 1.0 : _part(.5, .78);
+    final cents = (_total * counted).round();
+    final shown = read(64);
+    if (shown > 0) {
+      _text(
+        canvas,
+        'Total',
+        const Offset(-70, 62),
+        size: 13,
+        weight: 600,
+        color: const Color(0xFF8676D6).withValues(alpha: shown),
+      );
+      _text(
+        canvas,
+        '${cents ~/ 100},${(cents % 100).toString().padLeft(2, '0')}',
+        const Offset(70, 56),
+        size: 24,
+        weight: 800,
+        alignRight: true,
+        color: Color.lerp(
+          RemboColors.night,
+          RemboColors.indigo,
+          lit(70),
+        )!.withValues(alpha: shown),
+      );
+      _text(
+        canvas,
+        'MAD',
+        const Offset(70, 86),
+        size: 10,
+        weight: 600,
+        alignRight: true,
+        color: const Color(0xFF8676D6).withValues(alpha: shown),
+      );
+    }
+
+    // The reading beam: a bright line and the light it leaves behind.
+    if (beamOn) {
+      final fade = math.sin(reading * math.pi).clamp(0.0, 1.0);
+      canvas.drawRect(
+        Rect.fromLTWH(-100, beamY - 54, 200, 54),
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0x004A35E0),
+              Color.fromRGBO(74, 53, 224, .20 * fade),
+            ],
+          ).createShader(Rect.fromLTWH(-100, beamY - 54, 200, 54)),
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(-100, beamY - 1.5, 200, 3),
+        Paint()..color = Color.fromRGBO(74, 53, 224, .9 * fade),
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(-100, beamY - 5, 200, 10),
+        Paint()
+          ..color = Color.fromRGBO(122, 99, 240, .45 * fade)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+    }
+    canvas.restore(); // clip
+
+    // The stamp lands last; afterwards it beats once each time the
+    // receipt has been read again.
+    const badge = Offset(74, -104);
+    final landed = _part(.8, .96, Curves.easeOutBack);
+    if (intro.value > .8) {
+      final again = done ? ((turn - .72) / .22).clamp(0.0, 1.0) : 0.0;
+      final ripple = done ? again : _part(.88, 1, Curves.easeOut);
+      if (ripple > 0 && ripple < 1) {
+        canvas.drawCircle(
+          badge,
+          30 + ripple * 26,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3 * (1 - ripple) + .5
+            ..color = Color.fromRGBO(47, 176, 110, .5 * (1 - ripple)),
+        );
+      }
+      final size = (1.7 - .7 * landed) * (1 + .09 * math.sin(again * math.pi));
+      canvas.save();
+      canvas.translate(badge.dx, badge.dy);
+      canvas.scale(size);
+      canvas.drawCircle(
+        const Offset(1, 4),
+        30,
+        Paint()
+          ..color = Color.fromRGBO(50, 133, 86, .35 * _part(.8, .9))
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+      final face = Rect.fromCircle(center: Offset.zero, radius: 30);
+      canvas.drawCircle(
+        Offset.zero,
+        30,
+        Paint()
+          ..shader = RadialGradient(
+            center: const Alignment(-.5, -.6),
+            colors: [
+              const Color(0xFFB1F4B9).withValues(alpha: _part(.8, .88)),
+              const Color(0xFF3FBF73).withValues(alpha: _part(.8, .88)),
+            ],
+          ).createShader(face),
+      );
+      // The check mark is drawn, not shown at once.
+      final drawn = _part(.86, 1, Curves.easeOut);
+      final check = Path()
+        ..moveTo(-14, 1)
+        ..lineTo(-4, 11)
+        ..lineTo(15, -9);
+      final metric = check.computeMetrics().first;
+      canvas.drawPath(
+        metric.extractPath(0, metric.length * drawn),
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
+      canvas.restore();
+    }
+    canvas.restore(); // layer
+    canvas.restore(); // perspective
+
+    _ringHalf(canvas, back: false, drawn: ringDrawn);
+    if (!planetBehind) _planet(canvas, orbit, ringDrawn);
+    canvas.restore();
+  }
+
+  void _text(
+    Canvas canvas,
+    String text,
+    Offset at, {
+    required double size,
+    required double weight,
+    required Color color,
+    bool alignRight = false,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: RemboFonts.display,
+          fontFamilyFallback: RemboFonts.sansFallback,
+          fontSize: size,
+          height: 1.1,
+          letterSpacing: -.3,
+          fontVariations: [FontVariation('wght', weight)],
+          fontFeatures: const [FontFeature.tabularFigures()],
+          color: color,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, alignRight ? at - Offset(painter.width, 0) : at);
+    painter.dispose();
+  }
+
+  void _ringHalf(Canvas canvas, {required bool back, required double drawn}) {
+    if (drawn <= 0) return;
+    canvas.save();
+    canvas.rotate(_ringTilt);
+    canvas.drawArc(
+      _ring,
+      back ? math.pi : 0,
+      math.pi * drawn,
+      false,
+      Paint()
+        ..color = Color.fromRGBO(196, 183, 250, back ? .32 : .62)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = back ? 3.5 : 5
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.restore();
+  }
+
+  /// A small sphere travelling on the ring, larger when it is in front.
+  void _planet(Canvas canvas, double angle, double shown) {
+    if (shown <= 0) return;
+    final depth = (math.sin(angle) + 1) / 2;
+    canvas.save();
+    canvas.rotate(_ringTilt);
+    _sphere(
+      canvas,
+      Offset(
+        _ring.center.dx + _ring.width / 2 * math.cos(angle),
+        _ring.center.dy + _ring.height / 2 * math.sin(angle),
+      ),
+      (7 + depth * 5) * shown,
+    );
+    canvas.restore();
+  }
+
+  void _sphere(Canvas canvas, Offset center, double radius) {
+    if (radius <= 0) return;
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-.5, -.6),
+          colors: [Color(0xFFE5DCFF), Color(0xFFA28AE7)],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
+    );
   }
 
   @override
-  bool shouldReclip(_ZigzagClipper oldClipper) => false;
-}
-
-class _VatChip extends StatelessWidget {
-  const _VatChip();
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(16),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .88),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: RemboColors.surface,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.document_scanner_outlined,
-                size: 18,
-                color: RemboColors.indigo,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'TVA lue sur le reçu',
-                  style: TextStyle(fontSize: 11, color: RemboColors.muted),
-                ),
-                Text(
-                  '34,55 MAD',
-                  style: TextStyle(
-                    fontFamily: RemboFonts.mono,
-                    fontFamilyFallback: RemboFonts.monoFallback,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _ApprovedChip extends StatelessWidget {
-  const _ApprovedChip();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(30),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x380F5A3C),
-          blurRadius: 34,
-          offset: Offset(0, 18),
-        ),
-      ],
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: const BoxDecoration(
-            color: RemboColors.green,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.check_rounded, size: 18, color: Colors.white),
-        ),
-        const SizedBox(width: 8),
-        const Text(
-          'Approuvée',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF0F5A3C),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Pitch extends StatelessWidget {
-  const _Pitch();
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'NOTES DE FRAIS · PENSÉ POUR LE MAROC',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-            color: RemboColors.indigo,
-          ),
-        ),
-        const SizedBox(height: 14),
-        const Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(text: 'Le reçu entre.\nLa dépense sort '),
-              TextSpan(
-                text: 'prête.',
-                style: TextStyle(color: RemboColors.indigo),
-              ),
-            ],
-          ),
-          key: ValueKey('destination-title'),
-          style: TextStyle(
-            fontSize: 36,
-            height: 1.05,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.4,
-            color: RemboColors.ink,
-          ),
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Une photo suffit. REMBO lit le montant, la TVA et l’ICE, '
-          'puis une personne décide.',
-          style: TextStyle(fontSize: 15, height: 1.5, color: Color(0xFF50505F)),
-        ),
-        const SizedBox(height: 20),
-        ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: double.infinity,
-            minHeight: 56,
-          ),
-          child: FilledButton.icon(
-            key: const ValueKey('welcome-start'),
-            style: FilledButton.styleFrom(
-              backgroundColor: RemboColors.ink,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
-            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.login),
-            iconAlignment: IconAlignment.end,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-            label: const Text(
-              'Commencer',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: TextButton(
-            key: const ValueKey('back-to-menu'),
-            onPressed: () =>
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(AppRoutes.home, (_) => false),
-            child: const Text('Passer'),
-          ),
-        ),
-      ],
-    ),
-  );
+  bool shouldRepaint(_ReceiptPainter oldDelegate) => false;
 }

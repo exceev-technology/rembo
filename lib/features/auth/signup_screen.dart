@@ -93,23 +93,18 @@ class _SignupScreenState extends State<SignupScreen> {
     }
     return RemboPage(
       children: [
-        const Center(
-          child: RemboBadge(label: 'Nouveau compte', tone: BadgeTone.info),
-        ),
-        const SizedBox(height: RemboSpace.md),
         Semantics(
           header: true,
           child: Text(
-            'Rejoindre\nmon entreprise',
+            'Créer un compte',
             style: RemboText.display,
             textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: RemboSpace.sm),
         Text(
-          'Utilisez l’adresse à laquelle vous avez été invité pour rejoindre '
-          'votre équipe. Sinon, vous pourrez créer votre entreprise.',
-          style: RemboText.body.copyWith(color: RemboColors.muted),
+          'Invité ? Utilisez l’adresse qui a reçu l’invitation.',
+          style: RemboText.note,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: RemboSpace.xl),

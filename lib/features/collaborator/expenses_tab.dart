@@ -58,10 +58,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
         child: const Icon(Icons.add_rounded),
       ),
       children: [
-        const RemboHero(
-          title: 'Mes dépenses',
-          subtitle: 'Suivez vos dépenses, du brouillon à l’export.',
-        ),
+        const RemboHero(title: 'Mes dépenses'),
         TextField(
           key: const ValueKey('expenses-search'),
           controller: _search,

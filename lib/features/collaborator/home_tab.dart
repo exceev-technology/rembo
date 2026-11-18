@@ -30,6 +30,7 @@ class HomeTab extends StatelessWidget {
     void add() => Navigator.of(context).pushNamed(AppRoutes.capture);
 
     return RemboPage(
+      logo: true,
       embedded: true,
       showBack: false,
       onRefresh: state.refresh,
@@ -61,12 +62,7 @@ class HomeTab extends StatelessWidget {
         if (mine.isEmpty && !state.loading && state.loadError == null)
           ..._firstExpense(context, user, add)
         else ...[
-          RemboHero(
-            title: 'Bonjour\n${user.firstName},',
-            subtitle:
-                'Gérez vos dépenses professionnelles en toute '
-                'simplicité.',
-          ),
+          RemboHero(title: 'Bonjour ${user.firstName}'),
           if (toDecide > 0 && state.role == UserRole.manager) ...[
             _Callout(
               key: const ValueKey('home-to-review'),
@@ -208,6 +204,7 @@ class MyExpensesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     return RemboPage(
+      logo: true,
       children: [
         const RemboHero(title: 'Mes dépenses'),
         for (final e in state.mine)
@@ -248,7 +245,7 @@ class _Callout extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: RemboText.subtitle.copyWith(color: color, fontSize: 15),
+              style: RemboText.subtitle.copyWith(color: color, fontSize: 14.5),
             ),
           ),
           Icon(Icons.chevron_right_rounded, color: color),
@@ -268,6 +265,7 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => RemboCard(
     color: RemboColors.surface,
     borderColor: Colors.transparent,
+    onTap: () => ShellTabs.goTo(context, ShellTab.expenses),
     child: Row(
       children: [
         Icon(icon, color: RemboColors.indigo, size: 28),

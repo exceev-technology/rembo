@@ -59,9 +59,7 @@ class _InterruptedScreenState<T> extends State<InterruptedScreen<T>> {
       children: [
         const RemboMoment(
           title: 'Envoi interrompu',
-          message:
-              'La dépense n’a pas encore été envoyée. Vérifiez votre '
-              'connexion puis réessayez.',
+          message: 'Rien n’est perdu. Vérifiez votre connexion.',
           illustration: RemboArt.warning,
         ),
         RemboCard(

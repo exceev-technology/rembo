@@ -1,7 +1,8 @@
 /// Display helpers for amounts and dates, French (Morocco) conventions.
 library;
 
-const _thinSpace = ' ';
+// No-break space: the narrow one has no width in the Archivo face.
+const _thinSpace = '\u00A0';
 const _months = [
   'janv.',
   'févr.',
@@ -74,6 +75,21 @@ String formatTime(DateTime at) =>
 String formatDayInput(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/'
     '${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+/// One short mention for lists: « Aujourd’hui », « Hier », then « 10 nov. »,
+/// with the year only when it is not the current one.
+String formatDayShort(DateTime date, {DateTime? today}) {
+  final now = today ?? DateTime.now();
+  final days = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).difference(DateTime(date.year, date.month, date.day)).inDays;
+  if (days == 0) return 'Aujourd’hui';
+  if (days == 1) return 'Hier';
+  final short = '${date.day} ${_months[date.month - 1]}';
+  return date.year == now.year ? short : '$short ${date.year}';
+}
 
 /// « Aujourd’hui », « Hier », « Il y a 3 jours », then the date itself.
 String formatRelativeDay(DateTime date, {DateTime? today}) {
