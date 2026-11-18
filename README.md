@@ -54,13 +54,13 @@ It is built for Morocco (amounts in **MAD**, Moroccan VAT rates and ICE) and it 
 
 | Feature | Description | Status |
 | --- | --- | --- |
-| Accounts and roles | Employee, manager and accountant roles per company, enforced by Row Level Security | 🚧 Sprint 1 |
-| Expense entry | Category, reason, client or project allocation, receipt upload to private storage | 🗓️ Sprint 2 |
-| Receipt capture and OCR | Field extraction with a review and correction screen | 🗓️ Sprint 3 |
-| Approval workflow | Submit, approve or reject with a reason, expense policy, status history | 🗓️ Sprint 4 |
-| Mobile MVP | The full journey on **Android and iOS** | 🗓️ Sprint 5 |
-| CSV accounting export | Approved expenses exported as a documented CSV | 🗓️ Sprint 6 |
-| WhatsApp and voice notes in darija | Declare an expense without typing | 💡 After the MVP |
+| Accounts and roles | Employee, manager and accountant roles per company, enforced by Row Level Security | 🚧 Sprint 1 · built |
+| Expense entry | Category, reason, client or project (free text), receipt upload to private storage | 🗓️ Sprint 2 · built |
+| Receipt capture and OCR | Text recognition on the phone (Latin script) fills a review and correction screen | 🗓️ Sprint 3 · built |
+| Approval workflow | Submit, approve or reject with a reason, expense policy, status history, no self-approval | 🗓️ Sprint 4 · built |
+| Mobile MVP | The full journey on **Android and iOS**, in French or Arabic | 🗓️ Sprint 5 · in progress |
+| CSV accounting export | Approved expenses exported as a CSV; the format is still to be validated with accountants | 🗓️ Sprint 6 · built |
+| WhatsApp messages and voice notes | A linked number sends expenses as drafts; voice notes are transcribed only when a speech-to-text service is configured | 💡 Built, not yet run against WhatsApp |
 
 Out of scope for the MVP: web app and PWA, desktop apps, direct ERP connectors (Sage, etc.), bank transfers, payment cards, payroll, legally binding archiving and full offline sync. See the [Roadmap](https://github.com/exceev-technology/rembo/wiki/Roadmap).
 
@@ -99,7 +99,9 @@ flutter pub get
 flutter run
 ```
 
-**Local backend.** The Supabase project (`supabase/`: migrations, seed data, Edge Functions) lands in Sprint 1. Once it is in the repository:
+Without a Supabase configuration, the app keeps accounts and expenses on the phone only; with `REMBO_DEMO=true` it starts with fictional data. See `.env.example`.
+
+**Local backend.** The Supabase project is in `supabase/` (migrations, Edge Functions, database tests):
 
 ```bash
 supabase start                             # Postgres, Auth, Storage and Edge Functions in Docker
@@ -115,6 +117,8 @@ flutter analyze
 flutter test
 ```
 
+The database tests (`supabase/tests/database/`) need the local stack and are not run by CI: `supabase test db`.
+
 The full guide covers emulators, the local Supabase stack and troubleshooting: [Development Setup](https://github.com/exceev-technology/rembo/wiki/Development-Setup).
 
 ## Project structure
@@ -123,8 +127,9 @@ The full guide covers emulators, the local Supabase stack and troubleshooting: [
 rembo/
 ├── lib/                  # Flutter app, organized by feature (lib/features/<feature>/)
 ├── test/                 # Unit and widget tests
+├── integration_test/     # Journeys run on a phone or an emulator
 ├── android/ ios/         # Mobile platform projects
-├── supabase/             # Migrations, RLS policies, Edge Functions (from Sprint 1)
+├── supabase/             # Migrations, RLS policies, Edge Functions, database tests
 ├── docs/wiki/            # Wiki source, published to the GitHub wiki on merge
 └── .github/              # CI workflows, templates, Dependabot, CODEOWNERS
 ```
