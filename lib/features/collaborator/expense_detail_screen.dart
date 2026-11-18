@@ -4,6 +4,7 @@ import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../expenses/expense_form_screen.dart';
 import '../expenses/receipt_view.dart';
+import '../manager/alone_manager_notice.dart';
 import '../whatsapp/whatsapp.dart';
 import '../whatsapp/whatsapp_expense_screen.dart';
 import 'decision_explanation_screen.dart';
@@ -128,6 +129,10 @@ class ExpenseDetailScreen extends StatelessWidget {
             title: 'Commentaire du responsable',
             message: rejection!.reason,
           ),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        if (AloneManagerNotice.appliesTo(state, e)) ...[
+          AloneManagerNotice(expense: e),
           const SizedBox(height: RemboSpace.lg),
         ],
         for (final f in e.flags)
