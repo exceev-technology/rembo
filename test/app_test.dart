@@ -6,7 +6,7 @@ import 'package:rembo/features/expenses/receipt_picker.dart';
 import 'package:rembo/app/app_routes.dart';
 import 'package:rembo/app/rembo_app.dart';
 import 'package:rembo/core/data/app_state.dart';
-import 'package:rembo/core/data/demo_backend.dart';
+import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/format/formatters.dart';
 import 'package:rembo/features/auth/login_screen.dart';

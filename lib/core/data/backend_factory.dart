@@ -1,8 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'backend.dart';
-import 'demo_backend.dart';
 import 'demo_build.dart';
+import 'local_backend.dart';
 import 'local_store.dart';
 import 'local_store_none.dart' if (dart.library.io) 'local_store_io.dart';
 import 'supabase_backend.dart';

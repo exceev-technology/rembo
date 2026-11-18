@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rembo/app/rembo_app.dart';
 import 'package:rembo/core/data/app_state.dart';
-import 'package:rembo/core/data/demo_backend.dart';
+import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/features/onboarding/splash_screen.dart';
 
 /// The other tests ask for reduced motion. These ones leave animations on:
