@@ -1,123 +1,237 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
+import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
-import 'capture_screen.dart';
-import 'confirmation_screen.dart';
-import 'expense_draft.dart';
+import '../collaborator/expense_detail_screen.dart';
+import 'interrupted_screen.dart';
+import 'receipt_view.dart';
 
-/// Step 3: last look before the simulated submission.
+/// « Tout est correct ? » : last look before the expense is submitted.
 class SummaryScreen extends StatefulWidget {
-  const SummaryScreen({super.key, required this.draft});
-  final ExpenseDraft draft;
-
-  static const submitDelay = Duration(milliseconds: 900);
+  const SummaryScreen({super.key, required this.expenseId, this.receiptBytes});
+  final String expenseId;
+  final Uint8List? receiptBytes;
 
   @override
   State<SummaryScreen> createState() => _SummaryScreenState();
 }
 
 class _SummaryScreenState extends State<SummaryScreen> {
-  bool _sending = false;
+  bool _checked = false;
+  bool _loading = false;
+  String? _failure;
 
-  Future<void> _submit() async {
-    setState(() => _sending = true);
-    await Future<void>.delayed(SummaryScreen.submitDelay);
+  Future<void> _submit(Expense expense) async {
+    final state = AppScope.read(context);
+    final navigator = Navigator.of(context);
+    setState(() {
+      _loading = true;
+      _failure = null;
+    });
+    Expense? result;
+    try {
+      result = await state.submit(expense.id);
+    } on RemboException catch (e) {
+      if (!mounted) return;
+      if (e.network) {
+        result = await InterruptedScreen.show<Expense>(
+          context,
+          expense: expense,
+          retry: () => state.submit(expense.id),
+        );
+      } else {
+        setState(() => _failure = e.message);
+      }
+    }
     if (!mounted) return;
-    final draft = widget.draft;
-    Navigator.of(context).pushAndRemoveUntil(
+    setState(() => _loading = false);
+    if (result == null) return;
+    navigator.pushAndRemoveUntil(
       MaterialPageRoute<void>(
-        builder: (_) => ConfirmationScreen(
-          supplier: draft.value(DraftField.supplier),
-          amountCentimes: draft.amountCentimes ?? 0,
-        ),
+        builder: (_) => SubmissionResultScreen(expenseId: expense.id),
       ),
-      (route) => route.isFirst,
+      (r) => r.isFirst,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final draft = widget.draft;
-    String show(DraftField f) {
-      final v = draft.value(f).trim();
-      if (v.isEmpty) return '—';
-      if (f == DraftField.amount) return formatMad(draft.amountCentimes ?? 0);
-      if (f == DraftField.vat) {
-        final vat = ExpenseDraft.parseAmount(v);
-        return vat == null ? v : formatMad(vat);
-      }
-      return v;
-    }
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle dépense')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(RemboSpace.xl),
-          children: [
-            const ExpenseStepLabel(3, 'Récapitulatif'),
-            const SizedBox(height: RemboSpace.sm),
-            const Text('Récapitulatif', style: RemboText.title),
-            const SizedBox(height: RemboSpace.xl),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(RemboSpace.lg),
-                child: Column(
-                  children: [
-                    for (final f in DraftField.values) ...[
-                      if (f != DraftField.values.first)
-                        const Divider(height: RemboSpace.xl),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(f.label, style: RemboText.caption),
+    final e = AppScope.of(context).byId(widget.expenseId);
+    if (e == null) return const RemboPage(children: []);
+    return RemboPage(
+      bottom: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RemboPrimaryButton(
+            key: const ValueKey('summary-submit'),
+            label: 'Soumettre la dépense',
+            loading: _loading,
+            onPressed: _checked ? () => _submit(e) : null,
+          ),
+          TextButton(
+            key: const ValueKey('summary-edit'),
+            onPressed: _loading ? null : () => Navigator.of(context).pop(),
+            child: const Text('Modifier'),
+          ),
+        ],
+      ),
+      children: [
+        const RemboHero(
+          title: 'Tout est correct ?',
+          subtitle:
+              'Vérifiez les informations avant de soumettre votre '
+              'dépense.',
+          illustration: RemboArt.approved,
+        ),
+        if (_failure != null) ...[
+          RemboMessage(tone: MessageTone.error, title: _failure!),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        RemboCard(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(RemboRadius.sm),
+                    child: SizedBox(
+                      width: 84,
+                      height: 84,
+                      child: ReceiptImage(
+                        expense: e,
+                        bytes: widget.receiptBytes,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: RemboSpace.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(e.supplier, style: RemboText.title),
+                        const SizedBox(height: RemboSpace.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: RemboSpace.md,
+                            vertical: RemboSpace.sm,
                           ),
-                          const SizedBox(width: RemboSpace.md),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              show(f),
-                              key: ValueKey('summary-${f.name}'),
-                              textAlign: TextAlign.right,
-                              style:
-                                  f == DraftField.amount || f == DraftField.vat
-                                  ? RemboText.amount
-                                  : RemboText.body,
+                          decoration: BoxDecoration(
+                            color: RemboColors.surface,
+                            borderRadius: BorderRadius.circular(RemboRadius.sm),
+                          ),
+                          child: Text(
+                            formatMad(e.amountCents),
+                            key: const ValueKey('summary-amount'),
+                            style: RemboText.amount.copyWith(
+                              fontSize: 20,
+                              color: RemboColors.night,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: RemboSpace.xl),
+              DetailRow(
+                Icons.calendar_today_outlined,
+                'Date',
+                e.date == null ? '' : formatDateLong(e.date!),
+              ),
+              DetailRow(categoryIcon(e.category), 'Catégorie', e.category),
+              if (e.project.isNotEmpty)
+                DetailRow(Icons.layers_outlined, 'Projet', e.project),
+              DetailRow(Icons.chat_bubble_outline_rounded, 'Motif', e.reason),
+            ],
+          ),
+        ),
+        const SizedBox(height: RemboSpace.md),
+        RemboCard(
+          padding: const EdgeInsets.symmetric(horizontal: RemboSpace.sm),
+          child: CheckboxListTile(
+            key: const ValueKey('summary-check'),
+            value: _checked,
+            onChanged: (v) => setState(() => _checked = v ?? false),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            title: Text('J’ai vérifié les informations', style: RemboText.body),
+          ),
+        ),
+        const SizedBox(height: RemboSpace.md),
+        const InfoStrip(
+          'Un contrôle automatique vérifie votre dépense : conforme, elle est '
+          'validée ; sinon, votre responsable décide.',
+          icon: Icons.groups_2_outlined,
+        ),
+      ],
+    );
+  }
+}
+
+/// What the server decided right after the submission.
+class SubmissionResultScreen extends StatelessWidget {
+  const SubmissionResultScreen({super.key, required this.expenseId});
+  final String expenseId;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = AppScope.of(context).byId(expenseId);
+    if (e == null) return const RemboPage(children: []);
+    final approved = e.status == ExpenseStatus.approved;
+    return RemboPage(
+      showBack: false,
+      bottom: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RemboPrimaryButton(
+            key: const ValueKey('result-home'),
+            label: 'Retour à l’accueil',
+            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+          ),
+          TextButton(
+            key: const ValueKey('result-detail'),
+            onPressed: () => Navigator.of(context).pushReplacement(
+              MaterialPageRoute<void>(
+                builder: (_) => ExpenseDetailScreen(expenseId: e.id),
               ),
             ),
-            const SizedBox(height: RemboSpace.lg),
-            const RemboMessage(
-              tone: MessageTone.info,
-              title: 'Simulation',
-              message:
-                  'La dépense sera envoyée à votre responsable pour '
-                  'validation. Rien n’est enregistré dans cette version.',
-            ),
-            const SizedBox(height: RemboSpace.xl),
-            RemboPrimaryButton(
-              key: const ValueKey('summary-submit'),
-              label: 'Soumettre la dépense',
-              icon: Icons.send_rounded,
-              loading: _sending,
-              onPressed: _submit,
-            ),
-            const SizedBox(height: RemboSpace.md),
-            RemboSecondaryButton(
-              key: const ValueKey('summary-edit'),
-              label: 'Modifier',
-              onPressed: _sending ? null : () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
+            child: const Text('Voir le suivi'),
+          ),
+        ],
       ),
+      children: [
+        RemboMoment(
+          title: approved ? 'Dépense validée' : 'Transmise à votre responsable',
+          message: approved
+              ? 'Les contrôles automatiques sont conformes. Elle sera '
+                    'exportée en comptabilité.'
+              : 'Le contrôle automatique a relevé un point à examiner : '
+                    'votre responsable prendra la décision.',
+          illustration: approved ? RemboArt.approved : RemboArt.search,
+        ),
+        Center(
+          child: Text(
+            formatMad(e.amountCents),
+            style: RemboText.amount.copyWith(fontSize: 22),
+          ),
+        ),
+        const SizedBox(height: RemboSpace.md),
+        Center(child: StatusBadge.of(e, key: const ValueKey('result-status'))),
+        const SizedBox(height: RemboSpace.lg),
+        for (final f in e.flags)
+          Padding(
+            padding: const EdgeInsets.only(bottom: RemboSpace.sm),
+            child: InfoStrip(
+              '${f.kind.label} : ${f.message}',
+              icon: Icons.warning_amber_rounded,
+              color: RemboColors.warningText,
+              background: RemboColors.warningTint,
+            ),
+          ),
+      ],
     );
   }
 }

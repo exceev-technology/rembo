@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>REMBO utilise l'appareil photo pour photographier vos justificatifs.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>REMBO accède à vos photos pour importer un justificatif.</string>
 </dict>
 </plist>
