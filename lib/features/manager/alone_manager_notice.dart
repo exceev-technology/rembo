@@ -31,14 +31,15 @@ class AloneManagerNotice extends StatelessWidget {
   Widget build(BuildContext context) => RemboMessage(
     key: const ValueKey('detail-alone-manager'),
     tone: MessageTone.info,
-    title: 'Vous êtes le seul responsable',
-    message:
-        'Personne ne décide de sa propre dépense. Invitez un autre '
-        'responsable : il pourra approuver ou rejeter celle-ci.',
+    title: tr('Vous êtes le seul responsable'),
+    message: tr(
+      'Personne ne décide de sa propre dépense. Invitez un autre '
+      'responsable : il pourra approuver ou rejeter celle-ci.',
+    ),
     action: TextButton.icon(
       key: const ValueKey('detail-invite-manager'),
       icon: const Icon(Icons.person_add_alt_1_outlined),
-      label: const Text('Inviter un responsable'),
+      label: Text(tr('Inviter un responsable')),
       onPressed: () => Navigator.of(context).pushNamed(AppRoutes.team),
     ),
   );

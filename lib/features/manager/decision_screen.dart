@@ -41,7 +41,9 @@ class _DecisionScreenState extends State<DecisionScreen> {
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text(approve ? 'Exception approuvée.' : 'Dépense rejetée.'),
+          content: Text(
+            approve ? tr('Exception approuvée.') : tr('Dépense rejetée.'),
+          ),
         ),
       );
     } on RemboException catch (e) {
@@ -57,8 +59,8 @@ class _DecisionScreenState extends State<DecisionScreen> {
   Future<void> _reject(Expense e) async {
     final reason = await showRemboSheet<String>(
       context,
-      title: 'Motiver le rejet',
-      subtitle: '${e.employeeName} · ${formatMad(e.amountCents)}',
+      title: tr('Motiver le rejet'),
+      subtitle: '${isolate(e.employeeName)} · ${formatMad(e.amountCents)}',
       builder: (context) => _RejectForm(initial: _note.text),
     );
     if (reason != null) await _decide(approve: false, reason: reason);
@@ -81,32 +83,32 @@ class _DecisionScreenState extends State<DecisionScreen> {
               children: [
                 RemboPrimaryButton(
                   key: const ValueKey('decision-approve'),
-                  label: 'Approuver l’exception',
+                  label: tr('Approuver l’exception'),
                   loading: _loading,
                   onPressed: own ? null : () => _decide(approve: true),
                 ),
                 const SizedBox(height: RemboSpace.sm),
                 RemboSecondaryButton(
                   key: const ValueKey('decision-reject'),
-                  label: 'Rejeter',
+                  label: tr('Rejeter'),
                   onPressed: own || _loading ? null : () => _reject(e),
                 ),
               ],
             ),
       children: [
         RemboMoment(
-          title: open ? 'Décision nécessaire' : 'Dépense traitée',
+          title: open ? tr('Décision nécessaire') : tr('Dépense traitée'),
           message: open
-              ? 'Le contrôle automatique a relevé un point.'
-              : 'Statut actuel : ${e.status.label}.',
+              ? tr('Le contrôle automatique a relevé un point.')
+              : tr('Statut actuel : {label}.', {'label': e.status.label}),
           illustration: RemboArt.warning,
         ),
         if (own) ...[
-          const RemboMessage(
+          RemboMessage(
             key: ValueKey('decision-own'),
             tone: MessageTone.info,
-            title: 'C’est votre dépense',
-            message: 'Un autre responsable doit prendre la décision.',
+            title: tr('C’est votre dépense'),
+            message: tr('Un autre responsable doit prendre la décision.'),
           ),
           const SizedBox(height: RemboSpace.lg),
         ],
@@ -133,7 +135,7 @@ class _DecisionScreenState extends State<DecisionScreen> {
                     Text(
                       e.date == null
                           ? e.supplier
-                          : '${e.supplier} · ${formatDayShort(e.date!)}',
+                          : '${isolate(e.supplier)} · ${formatDayShort(e.date!)}',
                       style: RemboText.caption,
                     ),
                   ],
@@ -163,15 +165,17 @@ class _DecisionScreenState extends State<DecisionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          f.message,
+                          trData(f.message),
                           style: RemboText.subtitle.copyWith(
                             color: RemboColors.warningText,
                           ),
                         ),
                         Text(
                           f.kind == FlagKind.policy && rule != null
-                              ? 'Règle interne ${e.category} : '
-                                    '${formatMad(rule.limitCents)}'
+                              ? tr('Règle interne {category} : {limitCents}', {
+                                  'category': tr(e.category),
+                                  'limitCents': formatMad(rule.limitCents),
+                                })
                               : f.kind.label,
                           style: RemboText.body,
                         ),
@@ -191,10 +195,14 @@ class _DecisionScreenState extends State<DecisionScreen> {
           ),
           child: Column(
             children: [
-              DetailRow(Icons.sell_outlined, 'Motif', e.reason),
-              DetailRow(categoryIcon(e.category), 'Catégorie', e.category),
+              DetailRow(Icons.sell_outlined, tr('Motif'), e.reason),
+              DetailRow(
+                categoryIcon(e.category),
+                tr('Catégorie'),
+                tr(e.category),
+              ),
               if (e.project.isNotEmpty)
-                DetailRow(Icons.layers_outlined, 'Projet', e.project),
+                DetailRow(Icons.layers_outlined, tr('Projet'), e.project),
             ],
           ),
         ),
@@ -202,8 +210,8 @@ class _DecisionScreenState extends State<DecisionScreen> {
           const SizedBox(height: RemboSpace.lg),
           RemboTextField(
             fieldKey: const ValueKey('decision-note'),
-            label: 'Justification de la décision',
-            hint: 'Facultative pour approuver',
+            label: tr('Justification de la décision'),
+            hint: tr('Facultative pour approuver'),
             controller: _note,
             maxLines: 2,
             maxLength: 200,
@@ -238,12 +246,12 @@ class _RejectFormState extends State<_RejectForm> {
     children: [
       RemboTextField(
         fieldKey: const ValueKey('reject-reason'),
-        label: 'Motif',
+        label: tr('Motif'),
         required: true,
-        hint: 'Ex. : merci de joindre un justificatif lisible.',
+        hint: tr('Ex. : merci de joindre un justificatif lisible.'),
         controller: _reason,
         errorText: _error,
-        helper: 'Ce message sera visible par le collaborateur.',
+        helper: tr('Ce message sera visible par le collaborateur.'),
         maxLines: 3,
         maxLength: 200,
       ),
@@ -256,17 +264,17 @@ class _RejectFormState extends State<_RejectForm> {
           onPressed: () {
             final text = _reason.text.trim();
             if (text.isEmpty) {
-              setState(() => _error = 'Le motif du rejet est obligatoire.');
+              setState(() => _error = tr('Le motif du rejet est obligatoire.'));
             } else {
               Navigator.of(context).pop(text);
             }
           },
-          child: const Text('Confirmer le rejet'),
+          child: Text(tr('Confirmer le rejet')),
         ),
       ),
       const SizedBox(height: RemboSpace.sm),
       RemboSecondaryButton(
-        label: 'Annuler',
+        label: tr('Annuler'),
         onPressed: () => Navigator.of(context).pop(),
       ),
     ],

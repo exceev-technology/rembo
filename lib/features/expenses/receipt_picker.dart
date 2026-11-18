@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/data/models.dart';
+import '../../core/l10n/l10n.dart';
 
 class PickedReceipt {
   const PickedReceipt(this.bytes, this.name);
@@ -29,14 +30,14 @@ Future<PickedReceipt?> pickWithDevice({required bool camera}) async {
   } catch (_) {
     throw RemboException(
       camera
-          ? 'L’appareil photo n’est pas disponible sur cet appareil.'
-          : 'Impossible d’ouvrir la galerie sur cet appareil.',
+          ? tr('L’appareil photo n’est pas disponible sur cet appareil.')
+          : tr('Impossible d’ouvrir la galerie sur cet appareil.'),
     );
   }
   if (file == null) return null;
   final bytes = await file.readAsBytes();
   if (bytes.length > maxReceiptBytes) {
-    throw const RemboException('Le fichier dépasse 10 Mo.');
+    throw RemboException(tr('Le fichier dépasse 10 Mo.'));
   }
   return PickedReceipt(bytes, file.name);
 }

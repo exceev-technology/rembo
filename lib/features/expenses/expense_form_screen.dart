@@ -136,19 +136,19 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         ..clear()
         ..addAll({
           if (strict && _supplier.text.trim().isEmpty)
-            'supplier': 'Renseignez le fournisseur.',
+            'supplier': tr('Renseignez le fournisseur.'),
           if ((strict || amount.isNotEmpty) && parseAmount(amount) == null)
-            'amount': 'Saisissez un montant positif, ex. 240,00.',
+            'amount': tr('Saisissez un montant positif, ex. 240,00.'),
           if (vat == null)
-            'vat': 'Saisissez un montant, ex. 21,82, ou laissez vide.'
+            'vat': tr('Saisissez un montant, ex. 21,82, ou laissez vide.')
           else if (vat > 0 && vat >= (parseAmount(amount) ?? vat + 1))
-            'vat': 'La TVA doit être inférieure au montant TTC.',
+            'vat': tr('La TVA doit être inférieure au montant TTC.'),
           if ((strict || date.isNotEmpty) && parseDay(date) == null)
-            'date': 'Date invalide : JJ/MM/AAAA, pas dans le futur.',
+            'date': tr('Date invalide : JJ/MM/AAAA, pas dans le futur.'),
           if (strict && _category == null)
-            'category': 'Choisissez une catégorie.',
+            'category': tr('Choisissez une catégorie.'),
           if (strict && _reason.text.trim().isEmpty)
-            'reason': 'Précisez le motif de la dépense.',
+            'reason': tr('Précisez le motif de la dépense.'),
         });
     });
     return _errors.isEmpty;
@@ -245,7 +245,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     if (await _save() == null) return;
     navigator.popUntil((r) => r.isFirst);
     messenger.showSnackBar(
-      const SnackBar(content: Text('Brouillon enregistré.')),
+      SnackBar(content: Text(tr('Brouillon enregistré.'))),
     );
   }
 
@@ -272,23 +272,24 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       padding: const EdgeInsets.only(bottom: RemboSpace.sm),
       child: ExpenseTile(
         e,
-        subtitle: '$note · ${e.date == null ? '' : formatDate(e.date!)}',
+        subtitle:
+            '${isolate(note)} · ${e.date == null ? '' : formatDate(e.date!)}',
         showStatus: false,
       ),
     );
     return showRemboSheet<bool>(
       context,
-      title: 'Doublon possible',
-      subtitle: 'Une autre dépense a la même date et le même montant.',
+      title: tr('Doublon possible'),
+      subtitle: tr('Une autre dépense a la même date et le même montant.'),
       builder: (context) => Column(
         children: [
-          line(draft, 'Cette dépense'),
-          line(twin, 'Existante · ${twin.status.label}'),
-          const InfoStrip('Comparez les justificatifs avant de continuer.'),
+          line(draft, tr('Cette dépense')),
+          line(twin, tr('Existante · {label}', {'label': twin.status.label})),
+          InfoStrip(tr('Comparez les justificatifs avant de continuer.')),
           const SizedBox(height: RemboSpace.lg),
           RemboPrimaryButton(
             key: const ValueKey('duplicate-view'),
-            label: 'Voir la dépense existante',
+            label: tr('Voir la dépense existante'),
             onPressed: () {
               Navigator.of(context).pop(false);
               ExpenseDetailScreen.open(this.context, twin.id);
@@ -297,7 +298,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           const SizedBox(height: RemboSpace.md),
           RemboSecondaryButton(
             key: const ValueKey('duplicate-keep-draft'),
-            label: 'Conserver le brouillon',
+            label: tr('Conserver le brouillon'),
             onPressed: () {
               Navigator.of(context).pop(false);
               Navigator.of(this.context).popUntil((r) => r.isFirst);
@@ -306,7 +307,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           TextButton(
             key: const ValueKey('duplicate-continue'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Ce n’est pas un doublon, continuer'),
+            child: Text(tr('Ce n’est pas un doublon, continuer')),
           ),
         ],
       ),
@@ -333,17 +334,17 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   Future<void> _pickReceipt() async {
     final camera = await showRemboSheet<bool>(
       context,
-      title: 'Justificatif',
+      title: tr('Justificatif'),
       builder: (context) => Column(
         children: [
           RemboPrimaryButton(
-            label: 'Prendre une photo',
+            label: tr('Prendre une photo'),
             icon: Icons.photo_camera_outlined,
             onPressed: () => Navigator.of(context).pop(true),
           ),
           const SizedBox(height: RemboSpace.md),
           RemboSecondaryButton(
-            label: 'Importer une image',
+            label: tr('Importer une image'),
             icon: Icons.insert_drive_file_outlined,
             onPressed: () => Navigator.of(context).pop(false),
           ),
@@ -372,7 +373,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         });
         showRemboSnackBar(
           context,
-          'Démonstration : un reçu d’exemple est utilisé.',
+          tr('Démonstration : un reçu d’exemple est utilisé.'),
           tone: MessageTone.info,
         );
       } else {
@@ -382,10 +383,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   }
 
   Widget? _readBadge(String field) => _proposed.contains(field)
-      ? const Padding(
-          padding: EdgeInsets.only(right: RemboSpace.md),
+      ? Padding(
+          padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
           child: RemboBadge(
-            label: 'Reçu',
+            label: tr('Reçu'),
             tone: BadgeTone.info,
             icon: Icons.receipt_long_outlined,
           ),
@@ -399,26 +400,28 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     final rejection = _correcting ? existing!.lastDecision : null;
     final hasReceipt = _receiptBytes != null || (_saved?.hasReceipt ?? false);
     final title = _correcting
-        ? 'Corriger ma dépense'
+        ? tr('Corriger ma dépense')
         : (reading != null
-              ? 'Vérifier les informations'
+              ? tr('Vérifier les informations')
               : (existing != null
-                    ? 'Reprendre le brouillon'
-                    : 'Saisir une dépense'));
+                    ? tr('Reprendre le brouillon')
+                    : tr('Saisir une dépense')));
     return RemboPage(
       bottom: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           RemboPrimaryButton(
             key: const ValueKey('form-continue'),
-            label: _correcting ? 'Enregistrer les corrections' : 'Continuer',
+            label: _correcting
+                ? tr('Enregistrer les corrections')
+                : tr('Continuer'),
             loading: _saving,
             onPressed: _continue,
           ),
           TextButton(
             key: const ValueKey('form-save-draft'),
             onPressed: _saving ? null : _saveDraft,
-            child: const Text('Enregistrer le brouillon'),
+            child: Text(tr('Enregistrer le brouillon')),
           ),
         ],
       ),
@@ -426,7 +429,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         RemboHero(
           title: title,
           subtitle: _correcting
-              ? 'Vous pourrez ensuite la soumettre à nouveau.'
+              ? tr('Vous pourrez ensuite la soumettre à nouveau.')
               : null,
           below: _correcting
               ? const StatusBadge(status: ExpenseStatus.rejected)
@@ -435,7 +438,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         if (rejection?.reason != null) ...[
           RemboMessage(
             tone: MessageTone.warning,
-            title: 'Commentaire du responsable',
+            title: tr('Commentaire du responsable'),
             message: rejection!.reason,
           ),
           const SizedBox(height: RemboSpace.lg),
@@ -443,14 +446,14 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         if (reading != null) ...[
           InfoStrip(
             reading.simulated
-                ? 'Démonstration : valeurs simulées, non lues sur la photo.'
-                : 'Valeurs lues sur le ticket : vérifiez-les.',
+                ? tr('Démonstration : valeurs simulées, non lues sur la photo.')
+                : tr('Valeurs lues sur le ticket : vérifiez-les.'),
             icon: Icons.auto_awesome_outlined,
           ),
           const SizedBox(height: RemboSpace.lg),
         ] else if (widget.readerMissing) ...[
-          const InfoStrip(
-            'Lecture automatique indisponible : saisissez les valeurs.',
+          InfoStrip(
+            tr('Lecture automatique indisponible : saisissez les valeurs.'),
           ),
           const SizedBox(height: RemboSpace.lg),
         ],
@@ -467,16 +470,18 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               hasReceipt ? Icons.sync_rounded : Icons.attach_file_rounded,
               size: 18,
             ),
-            label: Text(hasReceipt ? 'Remplacer' : 'Ajouter un justificatif'),
+            label: Text(
+              hasReceipt ? tr('Remplacer') : tr('Ajouter un justificatif'),
+            ),
             onPressed: _pickReceipt,
           ),
         ),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-supplier'),
-          label: 'Fournisseur',
+          label: tr('Fournisseur'),
           required: true,
-          hint: 'Nom du fournisseur',
+          hint: tr('Nom du fournisseur'),
           icon: Icons.storefront_outlined,
           controller: _supplier,
           errorText: _errors['supplier'],
@@ -487,7 +492,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-amount'),
-          label: 'Montant TTC (MAD)',
+          label: tr('Montant TTC (MAD)'),
           required: true,
           hint: '0,00',
           icon: Icons.payments_outlined,
@@ -501,8 +506,8 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-vat'),
-          label: 'TVA incluse (MAD)',
-          hint: 'Facultatif',
+          label: tr('TVA incluse (MAD)'),
+          hint: tr('Facultatif'),
           icon: Icons.percent_rounded,
           controller: _vat,
           errorText: _errors['vat'],
@@ -514,9 +519,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-date'),
-          label: 'Date',
+          label: tr('Date'),
           required: true,
-          hint: 'JJ/MM/AAAA',
+          hint: tr('JJ/MM/AAAA'),
           icon: Icons.calendar_today_outlined,
           controller: _date,
           errorText: _errors['date'],
@@ -524,15 +529,15 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           textInputAction: TextInputAction.next,
           onChanged: (_) => setState(() => _proposed.remove('date')),
           suffix: IconButton(
-            tooltip: 'Choisir dans le calendrier',
+            tooltip: tr('Choisir dans le calendrier'),
             icon: const Icon(Icons.expand_more_rounded),
             onPressed: _pickDate,
           ),
         ),
         const SizedBox(height: RemboSpace.lg),
         Text.rich(
-          const TextSpan(
-            text: 'Catégorie',
+          TextSpan(
+            text: tr('Catégorie'),
             children: [
               TextSpan(
                 text: ' *',
@@ -547,7 +552,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           key: const ValueKey('form-category'),
           initialValue: _category,
           isExpanded: true,
-          hint: const Text('Choisir'),
+          hint: Text(tr('Choisir')),
           decoration: InputDecoration(
             prefixIcon: Icon(
               categoryIcon(_category ?? ''),
@@ -557,7 +562,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           ),
           items: [
             for (final c in expenseCategories)
-              DropdownMenuItem(value: c, child: Text(c)),
+              DropdownMenuItem(value: c, child: Text(tr(c))),
           ],
           onChanged: (c) => setState(() {
             _category = c;
@@ -567,8 +572,8 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-project'),
-          label: 'Client ou projet',
-          hint: 'Facultatif',
+          label: tr('Client ou projet'),
+          hint: tr('Facultatif'),
           icon: Icons.work_outline_rounded,
           controller: _project,
           textInputAction: TextInputAction.next,
@@ -576,9 +581,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-reason'),
-          label: 'Motif',
+          label: tr('Motif'),
           required: true,
-          hint: 'Précisez le contexte de la dépense',
+          hint: tr('Précisez le contexte de la dépense'),
           icon: Icons.notes_rounded,
           controller: _reason,
           errorText: _errors['reason'],
@@ -586,7 +591,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           maxLength: 200,
         ),
         if (_correcting && existing!.events.isNotEmpty) ...[
-          const SectionTitle('Historique de décision'),
+          SectionTitle(tr('Historique de décision')),
           for (final ev in existing.events.reversed.take(3))
             Padding(
               padding: const EdgeInsets.only(bottom: RemboSpace.md),
@@ -606,7 +611,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${ev.status.label} · ${ev.actorName}',
+                          '${ev.status.label} · ${trData(ev.actorName)}',
                           style: RemboText.subtitle,
                         ),
                         Text(
@@ -625,7 +630,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             padding: const EdgeInsets.only(top: RemboSpace.sm),
             child: TextButton(
               onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-              child: const Text('Abandonner'),
+              child: Text(tr('Abandonner')),
             ),
           ),
       ],

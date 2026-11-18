@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app/rembo_app.dart';
 import 'core/data/app_state.dart';
 import 'core/data/backend_factory.dart';
+import 'core/l10n/l10n.dart';
 import 'core/motion/rembo_motion.dart';
 import 'features/onboarding/splash_screen.dart';
 
@@ -32,6 +33,7 @@ class _RemboBootState extends State<RemboBoot> {
   }
 
   Future<void> _prepare() async {
+    await loadLanguage();
     final state = AppState(await createBackend());
     await state.restore(wait: false);
     if (mounted) setState(() => _state = state);

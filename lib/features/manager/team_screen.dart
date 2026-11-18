@@ -20,17 +20,17 @@ class TeamScreen extends StatelessWidget {
       onRefresh: state.refresh,
       bottom: RemboPrimaryButton(
         key: const ValueKey('team-invite'),
-        label: 'Inviter un membre',
+        label: tr('Inviter un membre'),
         icon: Icons.person_add_alt_1_outlined,
         onPressed: () => showRemboSheet<void>(
           context,
-          title: 'Inviter un membre',
-          subtitle: 'Ajoutez un collaborateur à votre équipe.',
+          title: tr('Inviter un membre'),
+          subtitle: tr('Ajoutez un collaborateur à votre équipe.'),
           builder: (_) => const _InviteForm(),
         ),
       ),
       children: [
-        const RemboHero(title: 'Équipe', illustration: RemboArt.team),
+        RemboHero(title: tr('Équipe'), illustration: RemboArt.team),
         for (final m in state.members)
           Padding(
             padding: const EdgeInsets.only(bottom: RemboSpace.sm),
@@ -68,8 +68,8 @@ class TeamScreen extends StatelessWidget {
                               tone: _tone(m.role),
                             ),
                             if (m.pending)
-                              const RemboBadge(
-                                label: 'Invitation en attente',
+                              RemboBadge(
+                                label: tr('Invitation en attente'),
                                 tone: BadgeTone.warning,
                               ),
                           ],
@@ -108,7 +108,7 @@ class _InviteFormState extends State<_InviteForm> {
 
   Future<void> _send() async {
     if (!isValidEmail(_email.text)) {
-      setState(() => _error = 'Adresse e-mail invalide.');
+      setState(() => _error = tr('Adresse e-mail invalide.'));
       return;
     }
     setState(() {
@@ -133,18 +133,23 @@ class _InviteFormState extends State<_InviteForm> {
           RemboMessage(
             key: const ValueKey('invite-done'),
             tone: MessageTone.success,
-            title: 'Invitation enregistrée',
+            title: tr('Invitation enregistrée'),
             message: AppScope.read(context).isLocal
-                ? '${_email.text.trim()} peut maintenant créer son compte '
-                      'sur ce téléphone avec cette adresse. Son rôle sera '
-                      'attribué automatiquement.'
-                : 'REMBO n’envoie pas encore d’e-mail : demandez à '
-                      '${_email.text.trim()} de créer son compte avec cette '
-                      'adresse. Son rôle sera attribué automatiquement.',
+                ? tr(
+                    '{trim} peut maintenant créer son compte sur ce téléphone avec '
+                    'cette adresse. Son rôle sera attribué automatiquement.',
+                    {'trim': _email.text.trim()},
+                  )
+                : tr(
+                    'REMBO n’envoie pas encore d’e-mail : demandez à {trim} de '
+                    'créer son compte avec cette adresse. Son rôle sera attribué '
+                    'automatiquement.',
+                    {'trim': _email.text.trim()},
+                  ),
           ),
           const SizedBox(height: RemboSpace.lg),
           RemboPrimaryButton(
-            label: 'Terminer',
+            label: tr('Terminer'),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -155,7 +160,7 @@ class _InviteFormState extends State<_InviteForm> {
       children: [
         RemboTextField(
           fieldKey: const ValueKey('invite-email'),
-          label: 'Adresse e-mail',
+          label: tr('Adresse e-mail'),
           hint: 'personne@exemple.ma',
           icon: Icons.mail_outline_rounded,
           controller: _email,
@@ -163,7 +168,7 @@ class _InviteFormState extends State<_InviteForm> {
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: RemboSpace.lg),
-        Text('Rôle', style: RemboText.subtitle),
+        Text(tr('Rôle'), style: RemboText.subtitle),
         const SizedBox(height: RemboSpace.sm),
         DropdownButtonFormField<UserRole>(
           key: const ValueKey('invite-role'),
@@ -180,7 +185,7 @@ class _InviteFormState extends State<_InviteForm> {
         const SizedBox(height: RemboSpace.xl),
         RemboPrimaryButton(
           key: const ValueKey('invite-submit'),
-          label: 'Enregistrer l’invitation',
+          label: tr('Enregistrer l’invitation'),
           loading: _loading,
           onPressed: _send,
         ),

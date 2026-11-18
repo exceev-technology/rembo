@@ -44,36 +44,36 @@ class UnreadableScreen extends StatelessWidget {
       const SizedBox(height: RemboSpace.xl),
       Semantics(
         header: true,
-        child: Text('Photo difficile à lire', style: RemboText.display),
+        child: Text(tr('Photo difficile à lire'), style: RemboText.display),
       ),
       const SizedBox(height: RemboSpace.sm),
       Text(
-        'Reprenez la photo ou saisissez les informations.',
+        tr('Reprenez la photo ou saisissez les informations.'),
         style: RemboText.body.copyWith(color: RemboColors.muted),
       ),
       const SizedBox(height: RemboSpace.lg),
-      const _Tip(
+      _Tip(
         Icons.crop_free_rounded,
-        'Ticket à plat',
-        'Placez le ticket bien à plat sur une surface stable.',
+        tr('Ticket à plat'),
+        tr('Placez le ticket bien à plat sur une surface stable.'),
       ),
       const SizedBox(height: RemboSpace.sm),
-      const _Tip(
+      _Tip(
         Icons.light_mode_outlined,
-        'Évitez les reflets',
-        'Prenez la photo dans une lumière uniforme, sans flash.',
+        tr('Évitez les reflets'),
+        tr('Prenez la photo dans une lumière uniforme, sans flash.'),
       ),
       const SizedBox(height: RemboSpace.xl),
       RemboPrimaryButton(
         key: const ValueKey('unreadable-retake'),
-        label: 'Reprendre la photo',
+        label: tr('Reprendre la photo'),
         icon: Icons.photo_camera_outlined,
         onPressed: () => Navigator.of(context).pop(),
       ),
       const SizedBox(height: RemboSpace.md),
       RemboSecondaryButton(
         key: const ValueKey('unreadable-manual'),
-        label: 'Saisir manuellement',
+        label: tr('Saisir manuellement'),
         icon: Icons.edit_outlined,
         onPressed: () =>
             ExpenseFormScreen.open(context, receipt: receipt, replace: true),

@@ -25,17 +25,17 @@ class ExpenseDetailScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer ce brouillon ?'),
-        content: const Text('Cette action est définitive.'),
+        title: Text(tr('Supprimer ce brouillon ?')),
+        content: Text(tr('Cette action est définitive.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
+            child: Text(tr('Annuler')),
           ),
           TextButton(
             key: const ValueKey('confirm-delete'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer'),
+            child: Text(tr('Supprimer')),
           ),
         ],
       ),
@@ -57,11 +57,11 @@ class ExpenseDetailScreen extends StatelessWidget {
     final state = AppScope.of(context);
     final e = state.byId(expenseId);
     if (e == null) {
-      return const RemboPage(
+      return RemboPage(
         children: [
           RemboMoment(
-            title: 'Dépense introuvable',
-            message: 'Elle a peut-être été supprimée.',
+            title: tr('Dépense introuvable'),
+            message: tr('Elle a peut-être été supprimée.'),
           ),
         ],
       );
@@ -75,21 +75,21 @@ class ExpenseDetailScreen extends StatelessWidget {
     if (own && e.status == ExpenseStatus.draft && e.fromWhatsApp) {
       action = RemboPrimaryButton(
         key: const ValueKey('detail-whatsapp'),
-        label: 'Confirmer la dépense WhatsApp',
+        label: tr('Confirmer la dépense WhatsApp'),
         icon: Icons.chat_outlined,
         onPressed: () => WhatsAppExpenseScreen.open(context, e.id),
       );
     } else if (own && e.status == ExpenseStatus.draft) {
       action = RemboPrimaryButton(
         key: const ValueKey('detail-resume'),
-        label: 'Reprendre le brouillon',
+        label: tr('Reprendre le brouillon'),
         icon: Icons.edit_outlined,
         onPressed: () => ExpenseFormScreen.open(context, expense: e),
       );
     } else if (own && e.status == ExpenseStatus.rejected) {
       action = RemboPrimaryButton(
         key: const ValueKey('detail-correct'),
-        label: 'Corriger ma dépense',
+        label: tr('Corriger ma dépense'),
         icon: Icons.edit_outlined,
         onPressed: () => ExpenseFormScreen.open(context, expense: e),
       );
@@ -99,7 +99,7 @@ class ExpenseDetailScreen extends StatelessWidget {
       trailing: own && e.status == ExpenseStatus.draft
           ? IconButton(
               key: const ValueKey('detail-delete'),
-              tooltip: 'Supprimer le brouillon',
+              tooltip: tr('Supprimer le brouillon'),
               icon: const Icon(Icons.delete_outline_rounded),
               color: RemboColors.danger,
               onPressed: () => _delete(context),
@@ -108,7 +108,11 @@ class ExpenseDetailScreen extends StatelessWidget {
       bottom: action,
       children: [
         RemboHero(
-          overline: own ? 'Dépense · ${e.id}' : 'Dépense de ${e.employeeName}',
+          overline: own
+              ? tr('Dépense · {id}', {'id': e.id})
+              : tr('Dépense de {employeeName}', {
+                  'employeeName': e.employeeName,
+                }),
           title: e.reason.isEmpty ? e.title : e.reason,
           below: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +130,7 @@ class ExpenseDetailScreen extends StatelessWidget {
         if (rejection?.reason != null) ...[
           RemboMessage(
             tone: MessageTone.warning,
-            title: 'Commentaire du responsable',
+            title: tr('Commentaire du responsable'),
             message: rejection!.reason,
           ),
           const SizedBox(height: RemboSpace.lg),
@@ -140,7 +144,7 @@ class ExpenseDetailScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: RemboSpace.sm),
               child: InfoStrip(
-                '${f.kind.label} : ${f.message}',
+                '${f.kind.label} : ${trData(f.message)}',
                 icon: Icons.warning_amber_rounded,
                 color: RemboColors.warningText,
                 background: RemboColors.warningTint,
@@ -155,20 +159,28 @@ class ExpenseDetailScreen extends StatelessWidget {
             children: [
               DetailRow(
                 Icons.calendar_today_outlined,
-                'Date',
+                tr('Date'),
                 e.date == null ? '' : formatWeekday(e.date!),
               ),
-              DetailRow(Icons.storefront_outlined, 'Fournisseur', e.supplier),
+              DetailRow(
+                Icons.storefront_outlined,
+                tr('Fournisseur'),
+                e.supplier,
+              ),
               if (e.vatCents > 0)
                 DetailRow(
                   Icons.percent_rounded,
-                  'TVA incluse',
+                  tr('TVA incluse'),
                   formatMad(e.vatCents),
                   mono: true,
                 ),
-              DetailRow(categoryIcon(e.category), 'Catégorie', e.category),
+              DetailRow(
+                categoryIcon(e.category),
+                tr('Catégorie'),
+                tr(e.category),
+              ),
               if (e.project.isNotEmpty)
-                DetailRow(Icons.layers_outlined, 'Projet', e.project),
+                DetailRow(Icons.layers_outlined, tr('Projet'), e.project),
             ],
           ),
         ),
@@ -180,8 +192,8 @@ class ExpenseDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const RemboBadge(
-                  label: 'Reçue par WhatsApp',
+                RemboBadge(
+                  label: tr('Reçue par WhatsApp'),
                   tone: BadgeTone.success,
                   icon: Icons.chat_outlined,
                 ),
@@ -192,14 +204,14 @@ class ExpenseDetailScreen extends StatelessWidget {
                 if (e.hasVoice)
                   TextButton.icon(
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Écouter le message vocal'),
+                    label: Text(tr('Écouter le message vocal')),
                     onPressed: () => playVoiceNote(context, e),
                   ),
               ],
             ),
           ),
         ],
-        const SectionTitle('Suivi de la dépense'),
+        SectionTitle(tr('Suivi de la dépense')),
         _Timeline(e),
         if (e.status != ExpenseStatus.draft) ...[
           const SizedBox(height: RemboSpace.md),
@@ -221,7 +233,7 @@ class ExpenseDetailScreen extends StatelessWidget {
                 const SizedBox(width: RemboSpace.md),
                 Expanded(
                   child: Text(
-                    'Comprendre la décision',
+                    tr('Comprendre la décision'),
                     style: RemboText.subtitle.copyWith(
                       color: RemboColors.indigo,
                       fontSize: 15,
@@ -246,13 +258,17 @@ class _Timeline extends StatelessWidget {
   final Expense expense;
 
   static String _label(ExpenseEvent ev) => switch (ev.status) {
-    ExpenseStatus.draft => 'Brouillon',
-    ExpenseStatus.submitted => 'Confirmée et soumise',
-    ExpenseStatus.needsReview => 'Transmise au responsable',
+    ExpenseStatus.draft => tr('Brouillon'),
+    ExpenseStatus.submitted => tr('Confirmée et soumise'),
+    ExpenseStatus.needsReview => tr('Transmise au responsable'),
     ExpenseStatus.approved =>
-      ev.byAgent ? 'Validée par l’agent' : 'Validée par ${ev.actorName}',
-    ExpenseStatus.rejected => 'Rejetée par ${ev.actorName}',
-    ExpenseStatus.exported => 'Exportée en comptabilité',
+      ev.byAgent
+          ? tr('Validée par l’agent')
+          : tr('Validée par {actorName}', {'actorName': trData(ev.actorName)}),
+    ExpenseStatus.rejected => tr('Rejetée par {actorName}', {
+      'actorName': trData(ev.actorName),
+    }),
+    ExpenseStatus.exported => tr('Exportée en comptabilité'),
   };
 
   /// What the manager wrote with a decision, so the history reads alone.
@@ -260,8 +276,8 @@ class _Timeline extends StatelessWidget {
     final text = ev.reason?.trim() ?? '';
     if (text.isEmpty || ev.byAgent) return null;
     return switch (ev.status) {
-      ExpenseStatus.rejected => 'Motif : $text',
-      ExpenseStatus.approved => 'Commentaire : $text',
+      ExpenseStatus.rejected => tr('Motif : {text}', {'text': text}),
+      ExpenseStatus.approved => tr('Commentaire : {text}', {'text': text}),
       _ => null,
     };
   }
@@ -271,7 +287,7 @@ class _Timeline extends StatelessWidget {
     String at(DateTime d) => '${formatWeekday(d)} · ${formatTime(d)}';
     final steps = <(String, String, bool, bool, String?)>[
       (
-        expense.fromWhatsApp ? 'Reçue par WhatsApp' : 'Capturée',
+        expense.fromWhatsApp ? tr('Reçue par WhatsApp') : tr('Capturée'),
         at(expense.createdAt),
         true,
         false,
@@ -286,11 +302,11 @@ class _Timeline extends StatelessWidget {
           _note(ev),
         ),
       if (expense.status == ExpenseStatus.draft)
-        ('Soumission', 'À faire', false, false, null),
+        (tr('Soumission'), tr('À faire'), false, false, null),
       if (expense.status == ExpenseStatus.needsReview)
-        ('Décision du responsable', 'En attente', false, false, null),
+        (tr('Décision du responsable'), tr('En attente'), false, false, null),
       if (expense.status == ExpenseStatus.approved)
-        ('Export', 'À préparer', false, false, null),
+        (tr('Export'), tr('À préparer'), false, false, null),
     ];
     return Column(
       children: [

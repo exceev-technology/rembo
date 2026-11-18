@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/rembo_tokens.dart';
+import '../l10n/l10n.dart';
 
 /// Main call to action. Shows a spinner and ignores taps while [loading].
 class RemboPrimaryButton extends StatelessWidget {
@@ -38,7 +39,10 @@ class RemboPrimaryButton extends StatelessWidget {
                 disabledBackgroundColor: RemboColors.indigo,
               )
             : null,
-        child: Semantics(label: loading ? 'Chargement' : null, child: child),
+        child: Semantics(
+          label: loading ? tr('Chargement') : null,
+          child: child,
+        ),
       ),
     );
   }

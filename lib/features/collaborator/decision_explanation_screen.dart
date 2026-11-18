@@ -16,8 +16,10 @@ class DecisionExplanationScreen extends StatelessWidget {
     if (e == null) return const RemboPage(children: []);
     final rule = state.policyOf(e.category);
     bool has(FlagKind k) => e.flags.any((f) => f.kind == k);
-    String messages(FlagKind k) =>
-        e.flags.where((f) => f.kind == k).map((f) => f.message).join(' · ');
+    String messages(FlagKind k) => e.flags
+        .where((f) => f.kind == k)
+        .map((f) => trData(f.message))
+        .join(' · ');
     final over = rule != null && e.amountCents > rule.limitCents;
     final decision = e.lastDecision;
 
@@ -28,14 +30,14 @@ class DecisionExplanationScreen extends StatelessWidget {
         Semantics(
           header: true,
           child: Text(
-            'Comprendre la décision',
+            tr('Comprendre la décision'),
             style: RemboText.display.copyWith(fontSize: 28),
             textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: RemboSpace.xs),
         Text(
-          '${e.id} · ${formatMad(e.amountCents)}',
+          '${isolate(e.id)} · ${formatMad(e.amountCents)}',
           style: RemboText.subtitle.copyWith(color: RemboColors.muted),
           textAlign: TextAlign.center,
         ),
@@ -44,85 +46,95 @@ class DecisionExplanationScreen extends StatelessWidget {
         const SizedBox(height: RemboSpace.xl),
         _Check(
           icon: Icons.document_scanner_outlined,
-          title: 'Justificatif',
-          summary: e.hasReceipt ? 'Justificatif joint' : 'Aucun justificatif',
+          title: tr('Justificatif'),
+          summary: e.hasReceipt
+              ? tr('Justificatif joint')
+              : tr('Aucun justificatif'),
           ok: e.hasReceipt || !(rule?.receiptRequired ?? false),
           details: [
             (
-              'Exigé pour ${e.category}',
-              (rule?.receiptRequired ?? false) ? 'Oui' : 'Non',
+              tr('Exigé pour {category}', {'category': tr(e.category)}),
+              (rule?.receiptRequired ?? false) ? tr('Oui') : tr('Non'),
             ),
           ],
         ),
         _Check(
           icon: Icons.sell_outlined,
-          title: 'Catégorie',
-          summary: e.category,
+          title: tr('Catégorie'),
+          summary: tr(e.category),
           ok: e.category != 'Autre',
           details: const [],
         ),
         _Check(
           icon: Icons.shield_outlined,
-          title: 'Règles',
+          title: tr('Règles'),
           summary: rule == null
-              ? 'Aucun plafond défini pour cette catégorie'
-              : (over ? 'Plafond dépassé' : 'Dans le plafond'),
+              ? tr('Aucun plafond défini pour cette catégorie')
+              : (over ? tr('Plafond dépassé') : tr('Dans le plafond')),
           ok: !over,
           expanded: true,
           details: [
-            if (rule != null) ('Plafond interne', formatMad(rule.limitCents)),
-            ('Montant', formatMad(e.amountCents)),
+            if (rule != null)
+              (tr('Plafond interne'), formatMad(rule.limitCents)),
+            (tr('Montant'), formatMad(e.amountCents)),
             if (over)
-              ('Dépassement', formatMad(e.amountCents - rule.limitCents)),
+              (tr('Dépassement'), formatMad(e.amountCents - rule.limitCents)),
           ],
         ),
         _Check(
           icon: Icons.layers_outlined,
-          title: 'Doublons',
+          title: tr('Doublons'),
           summary: has(FlagKind.duplicate)
               ? messages(FlagKind.duplicate)
-              : 'Aucun doublon détecté',
+              : tr('Aucun doublon détecté'),
           ok: !has(FlagKind.duplicate),
           details: const [],
         ),
         if (has(FlagKind.ambiguity))
           _Check(
             icon: Icons.help_outline_rounded,
-            title: 'Ambiguïtés',
+            title: tr('Ambiguïtés'),
             summary: messages(FlagKind.ambiguity),
             ok: false,
             details: const [],
           ),
         _Check(
           icon: Icons.task_alt_rounded,
-          title: 'Décision',
+          title: tr('Décision'),
           summary: switch (e.status) {
-            ExpenseStatus.needsReview =>
+            ExpenseStatus.needsReview => tr(
               'En attente de la décision d’un responsable',
-            ExpenseStatus.rejected => 'Rejetée par ${decision?.actorName}',
+            ),
+            ExpenseStatus.rejected => tr('Rejetée par {actorName}', {
+              'actorName': trData(decision?.actorName),
+            }),
             ExpenseStatus.approved || ExpenseStatus.exported =>
               e.approvedByAgent
-                  ? 'Contrôles conformes, dépense validée automatiquement'
-                  : 'Validée par ${decision?.actorName}',
-            _ => 'Pas encore soumise',
+                  ? tr('Contrôles conformes, dépense validée automatiquement')
+                  : tr('Validée par {actorName}', {
+                      'actorName': trData(decision?.actorName),
+                    }),
+            _ => tr('Pas encore soumise'),
           },
           ok:
               e.status == ExpenseStatus.approved ||
               e.status == ExpenseStatus.exported,
           expanded: decision?.reason != null,
           details: [
-            if (decision?.reason != null) ('Motif', decision!.reason!),
+            if (decision?.reason != null) (tr('Motif'), decision!.reason!),
             if (decision != null)
               (
-                'Date',
+                tr('Date'),
                 '${formatDate(decision.at)} · ${formatTime(decision.at)}',
               ),
           ],
         ),
         const SizedBox(height: RemboSpace.sm),
         Text(
-          'Une erreur ? Parlez-en à votre responsable : lui seul peut revoir '
-          'une décision.',
+          tr(
+            'Une erreur ? Parlez-en à votre responsable : lui seul peut '
+            'revoir une décision.',
+          ),
           style: RemboText.caption,
           textAlign: TextAlign.center,
         ),
@@ -190,7 +202,7 @@ class _Check extends StatelessWidget {
                       child: Text(
                         value,
                         style: RemboText.amount,
-                        textAlign: TextAlign.right,
+                        textAlign: TextAlign.end,
                       ),
                     ),
                   ],

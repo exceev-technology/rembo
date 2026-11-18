@@ -9,6 +9,7 @@ import 'backend.dart';
 import 'csv_export.dart';
 import 'local_store.dart';
 import 'models.dart';
+import '../l10n/l10n.dart';
 
 /// The automatic control, as the demo runs it. The real one is the SQL
 /// function `submit_expense` (supabase/migrations): keep both in step.
@@ -153,8 +154,8 @@ class LocalBackend extends RemboBackend {
     try {
       data = jsonDecode(text) as Map<String, dynamic>;
     } on FormatException {
-      throw const RemboException(
-        'Les données enregistrées sur ce téléphone sont illisibles.',
+      throw RemboException(
+        tr('Les données enregistrées sur ce téléphone sont illisibles.'),
       );
     }
     List<Map<String, dynamic>> rows(Object? list) => [
@@ -247,14 +248,14 @@ class LocalBackend extends RemboBackend {
   Future<void> _latency() async {
     if (latency > Duration.zero) await Future<void>.delayed(latency);
     if (offline) {
-      throw const RemboException(
-        'Connexion impossible. Vérifiez votre réseau puis réessayez.',
+      throw RemboException(
+        tr('Connexion impossible. Vérifiez votre réseau puis réessayez.'),
         network: true,
       );
     }
   }
 
-  AppUser get _me => _user ?? (throw const RemboException('Session expirée.'));
+  AppUser get _me => _user ?? (throw RemboException(tr('Session expirée.')));
 
   void _replaceMe(AppUser updated) {
     _users[_users.indexWhere((u) => u.id == updated.id)] = updated;
@@ -277,7 +278,7 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final found = _users.where((u) => u.email == email.trim().toLowerCase());
     if (found.isEmpty || !_passwordMatches(found.first, password)) {
-      throw const RemboException('E-mail ou mot de passe incorrect.');
+      throw RemboException(tr('E-mail ou mot de passe incorrect.'));
     }
     _user = found.first;
     await _save();
@@ -293,7 +294,7 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final address = email.trim().toLowerCase();
     if (_users.any((u) => u.email == address)) {
-      throw const RemboException('Un compte existe déjà pour cet e-mail.');
+      throw RemboException(tr('Un compte existe déjà pour cet e-mail.'));
     }
     final invited = _invitations.where((i) => i.email == address).firstOrNull;
     final user = AppUser(
@@ -315,9 +316,11 @@ class LocalBackend extends RemboBackend {
   @override
   Future<void> sendPasswordReset(String email) async {
     await _latency();
-    throw const RemboException(
-      'Les comptes sont enregistrés sur ce téléphone uniquement : aucun '
-      'e-mail de réinitialisation ne peut être envoyé.',
+    throw RemboException(
+      tr(
+        'Les comptes sont enregistrés sur ce téléphone uniquement : '
+        'aucun e-mail de réinitialisation ne peut être envoyé.',
+      ),
     );
   }
 
@@ -336,10 +339,10 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final me = _me;
     if (me.companyId != null) {
-      throw const RemboException('Vous faites déjà partie d’une entreprise.');
+      throw RemboException(tr('Vous faites déjà partie d’une entreprise.'));
     }
     if (name.trim().isEmpty) {
-      throw const RemboException('Le nom de l’entreprise est obligatoire.');
+      throw RemboException(tr('Le nom de l’entreprise est obligatoire.'));
     }
     _replaceMe(
       AppUser(
@@ -385,7 +388,7 @@ class LocalBackend extends RemboBackend {
   int _indexOf(String id) {
     final i = _expenses.indexWhere((e) => e.id == id);
     if (i < 0 || !_visible(_expenses[i])) {
-      throw const RemboException('Dépense introuvable.');
+      throw RemboException(tr('Dépense introuvable.'));
     }
     return i;
   }
@@ -400,7 +403,7 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final me = _me;
     if (me.companyId == null) {
-      throw const RemboException('Créez ou rejoignez d’abord une entreprise.');
+      throw RemboException(tr('Créez ou rejoignez d’abord une entreprise.'));
     }
     Expense saved;
     final created = createId == null ? null : _createdIds[createId];
@@ -419,7 +422,7 @@ class LocalBackend extends RemboBackend {
     } else {
       saved = _expenses[_indexOf(draft.id)];
       if (saved.employeeId != me.id || !saved.status.editable) {
-        throw const RemboException('Cette dépense ne peut plus être modifiée.');
+        throw RemboException(tr('Cette dépense ne peut plus être modifiée.'));
       }
     }
     if (receiptBytes != null) {
@@ -452,7 +455,7 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final e = _expenses[_indexOf(id)];
     if (e.employeeId != _me.id || e.status != ExpenseStatus.draft) {
-      throw const RemboException('Seul un brouillon peut être supprimé.');
+      throw RemboException(tr('Seul un brouillon peut être supprimé.'));
     }
     _expenses.removeAt(_indexOf(id));
     _receipts.remove(id);
@@ -467,12 +470,12 @@ class LocalBackend extends RemboBackend {
     final i = _indexOf(id);
     var e = _expenses[i];
     if (e.employeeId != me.id) {
-      throw const RemboException('Vous ne pouvez soumettre que vos dépenses.');
+      throw RemboException(tr('Vous ne pouvez soumettre que vos dépenses.'));
     }
     if (!e.status.editable) return e; // Already submitted: a retry is a no-op.
     if (e.missingFields.isNotEmpty) {
       throw RemboException(
-        'Complétez d’abord : ${e.missingFields.join(', ')}.',
+        tr('Complétez d’abord : {join}.', {'join': e.missingFields.join(', ')}),
       );
     }
     final flags = controlExpense(
@@ -516,20 +519,20 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final me = _me;
     if (me.role != UserRole.manager) {
-      throw const RemboException('Cette action est réservée aux responsables.');
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
     }
     final i = _indexOf(id);
     final e = _expenses[i];
     if (e.employeeId == me.id) {
-      throw const RemboException(
-        'Vous ne pouvez pas décider de votre propre dépense.',
+      throw RemboException(
+        tr('Vous ne pouvez pas décider de votre propre dépense.'),
       );
     }
     if (e.status != ExpenseStatus.needsReview) {
-      throw const RemboException('Cette dépense a déjà été traitée.');
+      throw RemboException(tr('Cette dépense a déjà été traitée.'));
     }
     if ((reason ?? '').trim().isEmpty && !approve) {
-      throw const RemboException('Le motif du rejet est obligatoire.');
+      throw RemboException(tr('Le motif du rejet est obligatoire.'));
     }
     final status = approve ? ExpenseStatus.approved : ExpenseStatus.rejected;
     _expenses[i] = e.copyWith(
@@ -594,7 +597,7 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final me = _me;
     if (me.role != UserRole.manager || me.companyId == null) {
-      throw const RemboException('Cette action est réservée aux responsables.');
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
     }
     final address = email.trim().toLowerCase();
     final existing = _users.where((u) => u.email == address).firstOrNull;
@@ -602,11 +605,11 @@ class LocalBackend extends RemboBackend {
         _invitations.any(
           (i) => i.email == address && i.companyId == me.companyId,
         )) {
-      throw const RemboException('Cette personne est déjà dans l’équipe.');
+      throw RemboException(tr('Cette personne est déjà dans l’équipe.'));
     }
     if (existing != null) {
-      throw const RemboException(
-        'Un compte existe déjà pour cet e-mail dans une autre entreprise.',
+      throw RemboException(
+        tr('Un compte existe déjà pour cet e-mail dans une autre entreprise.'),
       );
     }
     _invitations
@@ -627,10 +630,10 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final me = _me;
     if (me.role != UserRole.manager || me.companyId == null) {
-      throw const RemboException('Cette action est réservée aux responsables.');
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
     }
     if (rule.limitCents <= 0) {
-      throw const RemboException('Le plafond doit être supérieur à zéro.');
+      throw RemboException(tr('Le plafond doit être supérieur à zéro.'));
     }
     _policiesOf(me.companyId!)
       ..removeWhere((p) => p.category == rule.category)
@@ -651,13 +654,16 @@ class LocalBackend extends RemboBackend {
     if (done != null) return done;
     final me = _me;
     if (me.role != UserRole.accountant || me.companyId == null) {
-      throw const RemboException('Cette action est réservée aux comptables.');
+      throw RemboException(tr('Cette action est réservée aux comptables.'));
     }
     final chosen = [for (final id in ids.toSet()) _expenses[_indexOf(id)]];
     if (chosen.isEmpty ||
         chosen.any((e) => e.status != ExpenseStatus.approved)) {
-      throw const RemboException(
-        'Seules des dépenses validées et non exportées peuvent être exportées.',
+      throw RemboException(
+        tr(
+          'Seules des dépenses validées et non exportées peuvent être '
+          'exportées.',
+        ),
       );
     }
     final batches = _exportsOf(me.companyId!);

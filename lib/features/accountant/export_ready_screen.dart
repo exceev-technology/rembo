@@ -36,7 +36,7 @@ class ExportReadyScreen extends StatelessWidget {
       if (!context.mounted) return;
       showRemboSnackBar(
         context,
-        'Partage indisponible ici : le contenu du CSV a été copié.',
+        tr('Partage indisponible ici : le contenu du CSV a été copié.'),
         tone: MessageTone.info,
       );
     }
@@ -50,13 +50,13 @@ class ExportReadyScreen extends StatelessWidget {
       showBack: false,
       bottom: RemboSecondaryButton(
         key: const ValueKey('export-done'),
-        label: 'Terminer',
+        label: tr('Terminer'),
         onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
       ),
       children: [
-        const RemboMoment(
-          title: 'Export prêt',
-          message: 'Enregistrez le fichier pour votre logiciel comptable.',
+        RemboMoment(
+          title: tr('Export prêt'),
+          message: tr('Enregistrez le fichier pour votre logiciel comptable.'),
           illustration: RemboArt.approved,
         ),
         RemboCard(
@@ -75,13 +75,15 @@ class ExportReadyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: RemboSpace.xs),
                     Text(
-                      '${batch.count} dépense${batch.count > 1 ? 's' : ''} · '
+                      '${expenseCount(batch.count)} · '
                       '${formatMad(batch.totalCents)}',
                       key: const ValueKey('export-summary'),
                       style: RemboText.body,
                     ),
                     Text(
-                      'Créé le ${formatDateLong(batch.createdAt)}',
+                      tr('Créé le {createdAt}', {
+                        'createdAt': formatDateLong(batch.createdAt),
+                      }),
                       style: RemboText.caption,
                     ),
                   ],
@@ -93,12 +95,12 @@ class ExportReadyScreen extends StatelessWidget {
         const SizedBox(height: RemboSpace.lg),
         RemboPrimaryButton(
           key: const ValueKey('export-share'),
-          label: 'Enregistrer ou partager le CSV',
+          label: tr('Enregistrer ou partager le CSV'),
           icon: Icons.download_rounded,
           onPressed: batch.csv == null ? null : () => _share(context),
         ),
         if (earlier.isNotEmpty) ...[
-          const SectionTitle('Exports récents'),
+          SectionTitle(tr('Exports récents')),
           for (final b in earlier) ExportBatchTile(b),
         ],
       ],

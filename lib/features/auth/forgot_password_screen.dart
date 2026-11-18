@@ -26,7 +26,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _send() async {
     setState(() {
       _failure = null;
-      _error = isValidEmail(_email.text) ? null : 'Adresse e-mail invalide.';
+      _error = isValidEmail(_email.text)
+          ? null
+          : tr('Adresse e-mail invalide.');
     });
     if (_error != null) return;
     setState(() => _loading = true);
@@ -51,11 +53,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: RemboSpace.xl),
         Semantics(
           header: true,
-          child: Text('Mot de passe\noublié ?', style: RemboText.display),
+          child: Text(tr('Mot de passe\noublié ?'), style: RemboText.display),
         ),
         const SizedBox(height: RemboSpace.sm),
         Text(
-          'Recevez un lien de réinitialisation par e-mail.',
+          tr('Recevez un lien de réinitialisation par e-mail.'),
           style: RemboText.note.copyWith(fontSize: 14),
         ),
         const SizedBox(height: RemboSpace.xl),
@@ -64,13 +66,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             key: const ValueKey('reset-sent'),
             tone: demo ? MessageTone.info : MessageTone.success,
             title: demo
-                ? 'Démonstration : aucun e-mail envoyé'
-                : 'Demande envoyée',
+                ? tr('Démonstration : aucun e-mail envoyé')
+                : tr('Demande envoyée'),
             message: demo
-                ? 'Avec un serveur configuré, un lien serait envoyé à '
-                      '${_email.text.trim()}.'
-                : 'Si un compte existe pour ${_email.text.trim()}, vous '
-                      'recevrez un lien dans quelques minutes.',
+                ? tr(
+                    'Avec un serveur configuré, un lien serait envoyé à {trim}.',
+                    {'trim': _email.text.trim()},
+                  )
+                : tr(
+                    'Si un compte existe pour {trim}, vous recevrez un lien dans '
+                    'quelques minutes.',
+                    {'trim': _email.text.trim()},
+                  ),
           )
         else ...[
           if (_failure != null) ...[
@@ -79,7 +86,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ],
           RemboTextField(
             fieldKey: const ValueKey('reset-email'),
-            label: 'Adresse e-mail',
+            label: tr('Adresse e-mail'),
             hint: 'votre@email.com',
             icon: Icons.mail_outline_rounded,
             controller: _email,
@@ -90,7 +97,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: RemboSpace.xl),
           RemboPrimaryButton(
             key: const ValueKey('reset-submit'),
-            label: 'Envoyer le lien',
+            label: tr('Envoyer le lien'),
             loading: _loading,
             onPressed: _send,
           ),
@@ -99,7 +106,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Center(
           child: TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Retour à la connexion'),
+            child: Text(tr('Retour à la connexion')),
           ),
         ),
       ],

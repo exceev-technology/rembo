@@ -9,6 +9,7 @@ import 'backend.dart';
 import 'csv_export.dart';
 import 'ids.dart';
 import 'models.dart';
+import '../l10n/l10n.dart';
 
 /// Real backend. Rights are enforced by the database (row level security)
 /// and every decision is taken by an SQL function: see supabase/migrations.
@@ -43,14 +44,14 @@ class SupabaseBackend extends RemboBackend {
       // message is written for the user.
       if (e.code == 'P0001') throw RemboException(e.message);
       if (e.code == '42501' || e.code == 'PGRST301') {
-        throw const RemboException('Vous n’avez pas accès à cette action.');
+        throw RemboException(tr('Vous n’avez pas accès à cette action.'));
       }
-      throw const RemboException(
-        'Le serveur a refusé la demande. Réessayez dans un instant.',
+      throw RemboException(
+        tr('Le serveur a refusé la demande. Réessayez dans un instant.'),
       );
     } on StorageException {
-      throw const RemboException(
-        'Le justificatif n’a pas pu être enregistré.',
+      throw RemboException(
+        tr('Le justificatif n’a pas pu être enregistré.'),
         network: true,
       );
     } on TimeoutException {
@@ -65,35 +66,37 @@ class SupabaseBackend extends RemboBackend {
           '$e'.contains('SocketException')) {
         throw _offline;
       }
-      throw const RemboException('Une erreur inattendue est survenue.');
+      throw RemboException(tr('Une erreur inattendue est survenue.'));
     }
   }
 
-  static const _offline = RemboException(
-    'Connexion impossible. Vérifiez votre réseau puis réessayez.',
+  static RemboException get _offline => RemboException(
+    tr('Connexion impossible. Vérifiez votre réseau puis réessayez.'),
     network: true,
   );
 
   static String _authMessage(AuthException e) => switch (e.code) {
-    'invalid_credentials' => 'E-mail ou mot de passe incorrect.',
-    'email_not_confirmed' =>
+    'invalid_credentials' => tr('E-mail ou mot de passe incorrect.'),
+    'email_not_confirmed' => tr(
       'Confirmez d’abord votre adresse avec le lien reçu par e-mail.',
+    ),
     'user_already_exists' ||
-    'email_exists' => 'Un compte existe déjà pour cet e-mail.',
-    'weak_password' => 'Mot de passe trop faible.',
-    'over_request_rate_limit' ||
-    'over_email_send_rate_limit' => 'Trop de tentatives. Réessayez plus tard.',
-    'signup_disabled' => 'La création de compte est désactivée.',
-    _ => 'Authentification impossible. Réessayez.',
+    'email_exists' => tr('Un compte existe déjà pour cet e-mail.'),
+    'weak_password' => tr('Mot de passe trop faible.'),
+    'over_request_rate_limit' || 'over_email_send_rate_limit' => tr(
+      'Trop de tentatives. Réessayez plus tard.',
+    ),
+    'signup_disabled' => tr('La création de compte est désactivée.'),
+    _ => tr('Authentification impossible. Réessayez.'),
   };
 
   String get _uid =>
       _client.auth.currentUser?.id ??
-      (throw const RemboException('Session expirée. Reconnectez-vous.'));
+      (throw RemboException(tr('Session expirée. Reconnectez-vous.')));
 
   String get _companyId =>
       _user?.companyId ??
-      (throw const RemboException('Aucune entreprise associée à ce compte.'));
+      (throw RemboException(tr('Aucune entreprise associée à ce compte.')));
 
   Future<AppUser?> _loadUser() async {
     final auth = _client.auth.currentUser;
@@ -346,8 +349,8 @@ class SupabaseBackend extends RemboBackend {
         });
       } on PostgrestException catch (e) {
         if (e.code == '23505') {
-          throw const RemboException(
-            'Ce numéro est déjà relié à un autre compte.',
+          throw RemboException(
+            tr('Ce numéro est déjà relié à un autre compte.'),
           );
         }
         rethrow;
@@ -395,7 +398,7 @@ class SupabaseBackend extends RemboBackend {
       });
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
-        throw const RemboException('Cette personne est déjà invitée.');
+        throw RemboException(tr('Cette personne est déjà invitée.'));
       }
       rethrow;
     }

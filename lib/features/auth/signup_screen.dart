@@ -39,11 +39,13 @@ class _SignupScreenState extends State<SignupScreen> {
       _errors
         ..clear()
         ..addAll({
-          if (!isValidEmail(_email.text)) 'email': 'Adresse e-mail invalide.',
-          if (_first.text.trim().isEmpty) 'first': 'Saisissez votre prénom.',
-          if (_last.text.trim().isEmpty) 'last': 'Saisissez votre nom.',
+          if (!isValidEmail(_email.text))
+            'email': tr('Adresse e-mail invalide.'),
+          if (_first.text.trim().isEmpty)
+            'first': tr('Saisissez votre prénom.'),
+          if (_last.text.trim().isEmpty) 'last': tr('Saisissez votre nom.'),
           if (!(rules.length && rules.mixed && rules.special))
-            'password': 'Le mot de passe ne respecte pas les règles.',
+            'password': tr('Le mot de passe ne respecte pas les règles.'),
         });
     });
     if (_errors.isNotEmpty) return;
@@ -75,17 +77,19 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_confirm) {
       return RemboPage(
         bottom: RemboPrimaryButton(
-          label: 'Retour à la connexion',
+          label: tr('Retour à la connexion'),
           onPressed: () =>
               Navigator.of(context)
                   .pushNamedAndRemoveUntil(AppRoutes.home, (_) => false),
         ),
         children: [
           RemboMoment(
-            title: 'Confirmez votre adresse',
-            message:
-                'Un e-mail de confirmation a été envoyé à '
-                '${_email.text.trim()}. Ouvrez le lien puis connectez-vous.',
+            title: tr('Confirmez votre adresse'),
+            message: tr(
+              'Un e-mail de confirmation a été envoyé à {trim}. Ouvrez le '
+              'lien puis connectez-vous.',
+              {'trim': _email.text.trim()},
+            ),
             illustration: RemboArt.envelope,
           ),
         ],
@@ -96,14 +100,14 @@ class _SignupScreenState extends State<SignupScreen> {
         Semantics(
           header: true,
           child: Text(
-            'Créer un compte',
+            tr('Créer un compte'),
             style: RemboText.display,
             textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: RemboSpace.sm),
         Text(
-          'Invité ? Utilisez l’adresse qui a reçu l’invitation.',
+          tr('Invité ? Utilisez l’adresse qui a reçu l’invitation.'),
           style: RemboText.note,
           textAlign: TextAlign.center,
         ),
@@ -114,7 +118,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ],
         RemboTextField(
           fieldKey: const ValueKey('signup-email'),
-          label: 'Adresse e-mail',
+          label: tr('Adresse e-mail'),
           hint: 'votre@email.com',
           icon: Icons.mail_outline_rounded,
           controller: _email,
@@ -125,8 +129,8 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('signup-first'),
-          label: 'Prénom',
-          hint: 'Votre prénom',
+          label: tr('Prénom'),
+          hint: tr('Votre prénom'),
           icon: Icons.person_outline_rounded,
           controller: _first,
           errorText: _errors['first'],
@@ -135,8 +139,8 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('signup-last'),
-          label: 'Nom',
-          hint: 'Votre nom',
+          label: tr('Nom'),
+          hint: tr('Votre nom'),
           icon: Icons.person_outline_rounded,
           controller: _last,
           errorText: _errors['last'],
@@ -145,8 +149,8 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('signup-password'),
-          label: 'Mot de passe',
-          hint: 'Votre mot de passe',
+          label: tr('Mot de passe'),
+          hint: tr('Votre mot de passe'),
           icon: Icons.lock_outline_rounded,
           controller: _password,
           errorText: _errors['password'],
@@ -154,8 +158,8 @@ class _SignupScreenState extends State<SignupScreen> {
           onChanged: (_) => setState(() {}),
           suffix: IconButton(
             tooltip: _obscure
-                ? 'Afficher le mot de passe'
-                : 'Masquer le mot de passe',
+                ? tr('Afficher le mot de passe')
+                : tr('Masquer le mot de passe'),
             icon: Icon(
               _obscure
                   ? Icons.visibility_outlined
@@ -165,15 +169,18 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
         const SizedBox(height: RemboSpace.md),
-        Text('Votre mot de passe doit contenir :', style: RemboText.caption),
+        Text(
+          tr('Votre mot de passe doit contenir :'),
+          style: RemboText.caption,
+        ),
         const SizedBox(height: RemboSpace.xs),
-        _Rule('Au moins 8 caractères', rules.length),
-        _Rule('Une lettre et un chiffre', rules.mixed),
-        _Rule('Un caractère spécial (ex. : !, @, #)', rules.special),
+        _Rule(tr('Au moins 8 caractères'), rules.length),
+        _Rule(tr('Une lettre et un chiffre'), rules.mixed),
+        _Rule(tr('Un caractère spécial (ex. : !, @, #)'), rules.special),
         const SizedBox(height: RemboSpace.xl),
         RemboPrimaryButton(
           key: const ValueKey('signup-submit'),
-          label: 'Créer mon compte',
+          label: tr('Créer mon compte'),
           loading: _loading,
           onPressed: _submit,
         ),

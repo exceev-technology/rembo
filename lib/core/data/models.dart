@@ -2,13 +2,18 @@
 /// are civil days; the JSON shape matches the Supabase tables.
 library;
 
+import '../l10n/l10n.dart';
+
 enum UserRole {
   employee('Collaborateur'),
   manager('Responsable'),
   accountant('Comptable');
 
-  const UserRole(this.label);
-  final String label;
+  const UserRole(this._label);
+  final String _label;
+
+  /// Name of the role in the current language.
+  String get label => tr(_label);
 
   static UserRole parse(String? name) =>
       values.firstWhere((r) => r.name == name, orElse: () => employee);
@@ -23,9 +28,12 @@ enum ExpenseStatus {
   rejected('rejected', 'Rejetée'),
   exported('exported', 'Exportée');
 
-  const ExpenseStatus(this.code, this.label);
+  const ExpenseStatus(this.code, this._label);
   final String code;
-  final String label;
+  final String _label;
+
+  /// Name of the status in the current language.
+  String get label => tr(_label);
 
   static ExpenseStatus parse(String? code) =>
       values.firstWhere((s) => s.code == code, orElse: () => draft);
@@ -48,8 +56,10 @@ enum FlagKind {
   ambiguity('Ambiguïté'),
   duplicate('Doublon possible');
 
-  const FlagKind(this.label);
-  final String label;
+  const FlagKind(this._label);
+  final String _label;
+
+  String get label => tr(_label);
 
   static FlagKind parse(String? name) =>
       values.firstWhere((k) => k.name == name, orElse: () => ambiguity);
@@ -154,15 +164,15 @@ class Expense {
   /// What lists show: the reason when given, else the supplier.
   String get title => supplier.isNotEmpty
       ? supplier
-      : (reason.isNotEmpty ? reason : 'Dépense sans titre');
+      : (reason.isNotEmpty ? reason : tr('Dépense sans titre'));
 
   /// The fields a submission needs; empty when the draft is complete.
   List<String> get missingFields => [
-    if (supplier.trim().isEmpty) 'fournisseur',
-    if (date == null) 'date',
-    if (amountCents <= 0) 'montant',
-    if (category.trim().isEmpty) 'catégorie',
-    if (reason.trim().isEmpty) 'motif',
+    if (supplier.trim().isEmpty) tr('fournisseur'),
+    if (date == null) tr('date'),
+    if (amountCents <= 0) tr('montant'),
+    if (category.trim().isEmpty) tr('catégorie'),
+    if (reason.trim().isEmpty) tr('motif'),
   ];
 
   ExpenseEvent? get lastDecision {
