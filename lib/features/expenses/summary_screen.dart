@@ -19,7 +19,6 @@ class SummaryScreen extends StatefulWidget {
 }
 
 class _SummaryScreenState extends State<SummaryScreen> {
-  bool _checked = false;
   bool _loading = false;
   String? _failure;
 
@@ -68,7 +67,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
             key: const ValueKey('summary-submit'),
             label: 'Soumettre la dépense',
             loading: _loading,
-            onPressed: _checked ? () => _submit(e) : null,
+            onPressed: () => _submit(e),
           ),
           TextButton(
             key: const ValueKey('summary-edit'),
@@ -80,9 +79,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
       children: [
         const RemboHero(
           title: 'Tout est correct ?',
-          subtitle:
-              'Vérifiez les informations avant de soumettre votre '
-              'dépense.',
           illustration: RemboArt.approved,
         ),
         if (_failure != null) ...[
@@ -141,6 +137,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 'Date',
                 e.date == null ? '' : formatDateLong(e.date!),
               ),
+              if (e.vatCents > 0)
+                DetailRow(
+                  Icons.percent_rounded,
+                  'TVA incluse',
+                  formatMad(e.vatCents),
+                  mono: true,
+                ),
               DetailRow(categoryIcon(e.category), 'Catégorie', e.category),
               if (e.project.isNotEmpty)
                 DetailRow(Icons.layers_outlined, 'Projet', e.project),
@@ -149,21 +152,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
           ),
         ),
         const SizedBox(height: RemboSpace.md),
-        RemboCard(
-          padding: const EdgeInsets.symmetric(horizontal: RemboSpace.sm),
-          child: CheckboxListTile(
-            key: const ValueKey('summary-check'),
-            value: _checked,
-            onChanged: (v) => setState(() => _checked = v ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: Text('J’ai vérifié les informations', style: RemboText.body),
-          ),
-        ),
-        const SizedBox(height: RemboSpace.md),
         const InfoStrip(
-          'Un contrôle automatique vérifie votre dépense : conforme, elle est '
-          'validée ; sinon, votre responsable décide.',
+          'Hors règles, votre responsable décide.',
           icon: Icons.groups_2_outlined,
         ),
       ],
@@ -206,20 +196,28 @@ class SubmissionResultScreen extends StatelessWidget {
         RemboMoment(
           title: approved ? 'Dépense validée' : 'Transmise à votre responsable',
           message: approved
-              ? 'Les contrôles automatiques sont conformes. Elle sera '
-                    'exportée en comptabilité.'
-              : 'Le contrôle automatique a relevé un point à examiner : '
-                    'votre responsable prendra la décision.',
+              ? 'Conforme aux règles de votre entreprise.'
+              : 'Un point est à examiner : votre responsable décide.',
           illustration: approved ? RemboArt.approved : RemboArt.search,
         ),
         Center(
-          child: Text(
-            formatMad(e.amountCents),
-            style: RemboText.amount.copyWith(fontSize: 22),
+          child: CountUp(
+            value: e.amountCents,
+            format: formatMad,
+            delay: const Duration(milliseconds: 250),
+            style: RemboText.amount.copyWith(fontSize: 26),
           ),
         ),
         const SizedBox(height: RemboSpace.md),
-        Center(child: StatusBadge.of(e, key: const ValueKey('result-status'))),
+        Center(
+          child: Entrance(
+            order: 6,
+            rise: 0,
+            scaleFrom: .8,
+            curve: Curves.easeOutBack,
+            child: StatusBadge.of(e, key: const ValueKey('result-status')),
+          ),
+        ),
         const SizedBox(height: RemboSpace.lg),
         for (final f in e.flags)
           Padding(

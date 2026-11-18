@@ -4,6 +4,7 @@ library;
 export '../data/models.dart';
 export '../format/formatters.dart';
 export '../format/parsers.dart';
+export '../motion/rembo_motion.dart';
 export '../theme/rembo_theme.dart';
 export '../theme/rembo_tokens.dart';
 export 'expense_tile.dart';

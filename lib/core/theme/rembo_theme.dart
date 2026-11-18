@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion/rembo_motion.dart';
 import 'rembo_tokens.dart';
 
 abstract final class RemboTheme {
@@ -26,6 +27,12 @@ abstract final class RemboTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: RemboColors.background,
       fontFamily: RemboFonts.body,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: {
+          for (final platform in TargetPlatform.values)
+            platform: const RemboPageTransitions(),
+        },
+      ),
       fontFamilyFallback: RemboFonts.sansFallback,
       textTheme: const TextTheme(
         headlineMedium: RemboText.display,
