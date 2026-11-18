@@ -212,13 +212,23 @@ async function handle(message: any) {
     const parsed = parseMessage(text || String(message.image?.caption ?? ""));
     const id = await createDraft(owner, parsed, { transcript: text || null });
     const path = `${owner.profile_id}/${id}${voice ? "-voice" : ""}`;
-    const { error } = await db.storage.from(BUCKET).upload(path, media.bytes, {
+    // The draft exists from here on: a file that cannot be kept (refused
+    // type, storage down) is said to the person instead of being dropped.
+    const upload = await db.storage.from(BUCKET).upload(path, media.bytes, {
       contentType: media.type,
       upsert: true,
     });
-    if (!error) {
-      await db.from("expenses").update(voice ? { voice_path: path } : { receipt_path: path })
-        .eq("id", id);
+    const link = upload.error ? null : await db.from("expenses")
+      .update(voice ? { voice_path: path } : { receipt_path: path })
+      .eq("id", id);
+    const failure = upload.error ?? link?.error;
+    if (failure) {
+      console.error("media not stored", message.id, failure.message);
+      await reply(
+        message.from,
+        "La dépense est créée, mais le fichier n’a pas pu être enregistré. Ajoutez-le dans l’application.",
+      );
+      return;
     }
     await reply(
       message.from,
