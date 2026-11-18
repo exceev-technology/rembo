@@ -17,9 +17,10 @@ class ProfileTab extends StatelessWidget {
       showRemboSnackBar(
         context,
         state.isDemo
-            ? 'Démonstration : aucun e-mail n’est envoyé.'
-            : 'Un lien de réinitialisation a été envoyé à '
-                  '${state.user!.email}.',
+            ? tr('Démonstration : aucun e-mail n’est envoyé.')
+            : tr('Un lien de réinitialisation a été envoyé à {email}.', {
+                'email': state.user!.email,
+              }),
         tone: state.isDemo ? MessageTone.info : MessageTone.success,
       );
     } on RemboException catch (e) {
@@ -45,7 +46,7 @@ class ProfileTab extends StatelessWidget {
       embedded: embedded,
       showBack: embedded ? false : null,
       children: [
-        const RemboHero(title: 'Mon profil'),
+        RemboHero(title: tr('Mon profil')),
         Row(
           children: [
             CircleAvatar(
@@ -100,14 +101,14 @@ class ProfileTab extends StatelessWidget {
                 _Entry(
                   key: const ValueKey('profile-team'),
                   Icons.groups_outlined,
-                  'Équipe',
+                  tr('Équipe'),
                   value: user.companyName,
                   onTap: () => Navigator.of(context).pushNamed(AppRoutes.team),
                 ),
                 _Entry(
                   key: const ValueKey('profile-rules'),
                   Icons.checklist_rounded,
-                  'Règles de remboursement',
+                  tr('Règles de remboursement'),
                   onTap: () => Navigator.of(context).pushNamed(AppRoutes.rules),
                 ),
               ],
@@ -115,13 +116,22 @@ class ProfileTab extends StatelessWidget {
                 key: const ValueKey('profile-whatsapp'),
                 Icons.chat_outlined,
                 'WhatsApp',
-                value: user.whatsappPhone ?? 'Non relié',
+                value: user.whatsappPhone == null
+                    ? tr('Non relié')
+                    : ltr(user.whatsappPhone!),
                 onTap: () => showWhatsAppSheet(context),
+              ),
+              _Entry(
+                key: const ValueKey('profile-language'),
+                Icons.language_rounded,
+                tr('Langue'),
+                value: currentLanguageName,
+                onTap: () => showLanguageSheet(context),
               ),
               _Entry(
                 key: const ValueKey('profile-password'),
                 Icons.lock_outline_rounded,
-                'Mot de passe',
+                tr('Mot de passe'),
                 last: true,
                 onTap: () => _resetPassword(context, state),
               ),
@@ -133,7 +143,7 @@ class ProfileTab extends StatelessWidget {
           child: TextButton.icon(
             key: const ValueKey('profile-signout'),
             icon: const Icon(Icons.logout_rounded, size: 18),
-            label: const Text('Se déconnecter'),
+            label: Text(tr('Se déconnecter')),
             style: TextButton.styleFrom(foregroundColor: RemboColors.danger),
             onPressed: () => _signOut(context, state),
           ),
@@ -141,8 +151,8 @@ class ProfileTab extends StatelessWidget {
         if (state.isDemo || state.isLocal)
           Text(
             state.isDemo
-                ? 'Démonstration : rien n’est enregistré.'
-                : 'Données enregistrées sur ce téléphone uniquement.',
+                ? tr('Démonstration : rien n’est enregistré.')
+                : tr('Données enregistrées sur ce téléphone uniquement.'),
             style: RemboText.caption,
             textAlign: TextAlign.center,
           ),

@@ -13,9 +13,9 @@ class RulesScreen extends StatelessWidget {
     final state = AppScope.of(context);
     return RemboPage(
       children: [
-        const RemboHero(
-          title: 'Règles de remboursement',
-          subtitle: 'Plafonds par dépense et justificatifs exigés.',
+        RemboHero(
+          title: tr('Règles de remboursement'),
+          subtitle: tr('Plafonds par dépense et justificatifs exigés.'),
         ),
         for (final category in expenseCategories)
           if (category != 'Autre')
@@ -25,8 +25,8 @@ class RulesScreen extends StatelessWidget {
               rule: state.policyOf(category),
             ),
         const SizedBox(height: RemboSpace.sm),
-        const InfoStrip(
-          'Tout écart, et la catégorie « Autre », va au responsable.',
+        InfoStrip(
+          tr('Tout écart, et la catégorie « Autre », va au responsable.'),
         ),
       ],
     );
@@ -60,7 +60,7 @@ class _RuleCardState extends State<_RuleCard> {
   Future<void> _save() async {
     final cents = parseAmount(_limit.text);
     if (cents == null) {
-      setState(() => _error = 'Saisissez un plafond positif, ex. 200,00.');
+      setState(() => _error = tr('Saisissez un plafond positif, ex. 200,00.'));
       return;
     }
     setState(() {
@@ -77,7 +77,10 @@ class _RuleCardState extends State<_RuleCard> {
       );
       if (!mounted) return;
       setState(() => _open = false);
-      showRemboSnackBar(context, 'Règle ${widget.category} enregistrée.');
+      showRemboSnackBar(
+        context,
+        tr('Règle {category} enregistrée.', {'category': tr(widget.category)}),
+      );
     } on RemboException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -108,10 +111,10 @@ class _RuleCardState extends State<_RuleCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.category, style: RemboText.subtitle),
+                          Text(tr(widget.category), style: RemboText.subtitle),
                           Text(
                             rule == null
-                                ? 'Aucun plafond'
+                                ? tr('Aucun plafond')
                                 : formatMad(rule.limitCents),
                             style: RemboText.amount.copyWith(
                               color: RemboColors.muted,
@@ -143,7 +146,7 @@ class _RuleCardState extends State<_RuleCard> {
                   children: [
                     RemboTextField(
                       fieldKey: ValueKey('rule-limit-${widget.category}'),
-                      label: 'Plafond par dépense (MAD)',
+                      label: tr('Plafond par dépense (MAD)'),
                       icon: Icons.payments_outlined,
                       controller: _limit,
                       errorText: _error,
@@ -153,13 +156,16 @@ class _RuleCardState extends State<_RuleCard> {
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text('Justificatif requis', style: RemboText.body),
+                      title: Text(
+                        tr('Justificatif requis'),
+                        style: RemboText.body,
+                      ),
                       value: _receipt,
                       onChanged: (v) => setState(() => _receipt = v),
                     ),
                     RemboPrimaryButton(
                       key: ValueKey('rule-save-${widget.category}'),
-                      label: 'Enregistrer',
+                      label: tr('Enregistrer'),
                       loading: _loading,
                       onPressed: _save,
                     ),

@@ -51,6 +51,17 @@ class RemboTextField extends StatelessWidget {
   /// Adds the red asterisk of mandatory fields.
   final bool required;
 
+  /// Numbers, e-mail addresses and passwords read left to right even in
+  /// Arabic: without this, « 06 12 34 » would show its groups reversed.
+  bool get _latin =>
+      obscureText ||
+      keyboardType == TextInputType.phone ||
+      keyboardType == TextInputType.number ||
+      keyboardType == TextInputType.datetime ||
+      keyboardType == TextInputType.emailAddress ||
+      keyboardType == TextInputType.visiblePassword ||
+      (keyboardType?.index == TextInputType.number.index);
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,6 +88,10 @@ class RemboTextField extends StatelessWidget {
         onTap: onTap,
         maxLength: maxLength,
         obscureText: obscureText,
+        textDirection: _latin ? TextDirection.ltr : null,
+        textAlign: _latin && Directionality.of(context) == TextDirection.rtl
+            ? TextAlign.right
+            : TextAlign.start,
         keyboardType: keyboardType,
         textInputAction: textInputAction,
         onChanged: onChanged,

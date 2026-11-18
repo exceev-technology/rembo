@@ -60,18 +60,18 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
     return RemboPage(
       bottom: RemboPrimaryButton(
         key: const ValueKey('export-generate'),
-        label: 'Générer le CSV',
+        label: tr('Générer le CSV'),
         icon: Icons.download_rounded,
         loading: _loading,
         onPressed: rows.isEmpty ? null : _generate,
       ),
       children: [
-        const RemboHero(
-          title: 'Préparer l’export',
+        RemboHero(
+          title: tr('Préparer l’export'),
           illustration: RemboArt.download,
         ),
         InfoStrip(
-          '${rows.length} dépense${rows.length > 1 ? 's' : ''} · '
+          '${expenseCount(rows.length)} · '
           '${formatMad(total)}',
           icon: Icons.layers_outlined,
         ),
@@ -79,7 +79,7 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
           const SizedBox(height: RemboSpace.lg),
           RemboMessage(tone: MessageTone.error, title: _failure!),
         ],
-        const SectionTitle('Format d’export'),
+        SectionTitle(tr('Format d’export')),
         Row(
           children: [
             Expanded(
@@ -116,7 +116,7 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
                           children: [
                             Text('ERP', style: RemboText.subtitle),
                             Text(
-                              'Pas encore disponible',
+                              tr('Pas encore disponible'),
                               style: RemboText.caption,
                             ),
                           ],
@@ -130,7 +130,7 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
           ],
         ),
         const SizedBox(height: RemboSpace.lg),
-        Text('Délimiteur', style: RemboText.subtitle),
+        Text(tr('Délimiteur'), style: RemboText.subtitle),
         const SizedBox(height: RemboSpace.sm),
         DropdownButtonFormField<String>(
           key: const ValueKey('export-delimiter'),
@@ -138,22 +138,24 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
           decoration: const InputDecoration(
             prefixIcon: Icon(Icons.code_rounded, color: RemboColors.night),
           ),
-          items: const [
-            DropdownMenuItem(value: ';', child: Text('Point-virgule')),
-            DropdownMenuItem(value: ',', child: Text('Virgule')),
+          items: [
+            DropdownMenuItem(value: ';', child: Text(tr('Point-virgule'))),
+            DropdownMenuItem(value: ',', child: Text(tr('Virgule'))),
           ],
           onChanged: (d) => setState(() => _delimiter = d ?? ';'),
         ),
-        SectionTitle('Aperçu des enregistrements (${rows.length})'),
+        SectionTitle(
+          tr('Aperçu des enregistrements ({rows})', {'rows': rows.length}),
+        ),
         for (final e in rows)
           ExpenseTile(
             e,
             showStatus: false,
             subtitle:
-                '${e.employeeName} · '
+                '${isolate(e.employeeName)} · '
                 '${e.date == null ? '' : formatDayShort(e.date!)}',
           ),
-        const InfoStrip('Une dépense exportée ne peut plus l’être à nouveau.'),
+        InfoStrip(tr('Une dépense exportée ne peut plus l’être à nouveau.')),
       ],
     );
   }

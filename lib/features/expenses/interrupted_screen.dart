@@ -45,7 +45,7 @@ class _InterruptedScreenState<T> extends State<InterruptedScreen<T>> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _failure = e.network ? 'Toujours pas de connexion.' : e.message;
+          _failure = e.network ? tr('Toujours pas de connexion.') : e.message;
         });
       }
     }
@@ -57,9 +57,9 @@ class _InterruptedScreenState<T> extends State<InterruptedScreen<T>> {
     return RemboPage(
       showBack: false,
       children: [
-        const RemboMoment(
-          title: 'Envoi interrompu',
-          message: 'Rien n’est perdu. Vérifiez votre connexion.',
+        RemboMoment(
+          title: tr('Envoi interrompu'),
+          message: tr('Rien n’est perdu. Vérifiez votre connexion.'),
           illustration: RemboArt.warning,
         ),
         RemboCard(
@@ -73,7 +73,7 @@ class _InterruptedScreenState<T> extends State<InterruptedScreen<T>> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Dépense', style: RemboText.subtitle),
+                        Text(tr('Dépense'), style: RemboText.subtitle),
                         Text(
                           e.reason.isEmpty ? e.title : e.reason,
                           style: RemboText.caption,
@@ -81,13 +81,13 @@ class _InterruptedScreenState<T> extends State<InterruptedScreen<T>> {
                       ],
                     ),
                   ),
-                  const RemboBadge(label: 'À envoyer', tone: BadgeTone.warning),
+                  RemboBadge(label: tr('À envoyer'), tone: BadgeTone.warning),
                 ],
               ),
               const Divider(height: RemboSpace.xl),
-              _Line('Montant', formatMad(e.amountCents)),
-              _Line('Date', e.date == null ? '—' : formatDate(e.date!)),
-              _Line('Catégorie', e.category.isEmpty ? '—' : e.category),
+              _Line(tr('Montant'), formatMad(e.amountCents)),
+              _Line(tr('Date'), e.date == null ? '—' : formatDate(e.date!)),
+              _Line(tr('Catégorie'), e.category.isEmpty ? '—' : tr(e.category)),
             ],
           ),
         ),
@@ -98,14 +98,14 @@ class _InterruptedScreenState<T> extends State<InterruptedScreen<T>> {
         const SizedBox(height: RemboSpace.xl),
         RemboPrimaryButton(
           key: const ValueKey('interrupted-retry'),
-          label: 'Réessayer',
+          label: tr('Réessayer'),
           loading: _loading,
           onPressed: _retry,
         ),
         const SizedBox(height: RemboSpace.md),
         RemboSecondaryButton(
           key: const ValueKey('interrupted-cancel'),
-          label: 'Annuler l’envoi',
+          label: tr('Annuler l’envoi'),
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
         ),
       ],

@@ -91,8 +91,8 @@ class ReceiptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_has && action == null) {
-      return const InfoStrip(
-        'Aucun justificatif joint.',
+      return InfoStrip(
+        tr('Aucun justificatif joint.'),
         icon: Icons.receipt_long_outlined,
         color: RemboColors.neutralText,
         background: RemboColors.neutralTint,
@@ -115,13 +115,13 @@ class ReceiptCard extends StatelessWidget {
           const SizedBox(width: RemboSpace.md),
           Expanded(
             child: Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child:
                   action ??
                   OutlinedButton.icon(
                     key: const ValueKey('receipt-zoom'),
                     icon: const Icon(Icons.open_in_full_rounded, size: 18),
-                    label: const Text('Agrandir'),
+                    label: Text(tr('Agrandir')),
                     onPressed: () =>
                         showReceipt(context, expense: expense, bytes: bytes),
                   ),
@@ -157,7 +157,7 @@ Future<void> showReceipt(
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Fermer'),
+          child: Text(tr('Fermer')),
         ),
       ],
     ),

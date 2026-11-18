@@ -4,6 +4,7 @@ import '../motion/rembo_motion.dart';
 import '../theme/rembo_tokens.dart';
 import 'rembo_illustration.dart';
 import 'rembo_logo.dart';
+import '../l10n/l10n.dart';
 
 /// Lavender backdrop of every screen: a soft gradient and two pale shapes.
 class RemboBackground extends StatelessWidget {
@@ -123,8 +124,8 @@ class RemboPage extends StatelessWidget {
       return Stack(
         children: [
           content,
-          Positioned(
-            right: RemboSpace.lg,
+          PositionedDirectional(
+            end: RemboSpace.lg,
             bottom: RemboSpace.lg,
             child: floatingActionButton!,
           ),
@@ -156,25 +157,27 @@ class _Header extends StatelessWidget {
         children: [
           if (logo)
             Align(
-              alignment: back ? Alignment.center : Alignment.centerLeft,
+              alignment: back
+                  ? Alignment.center
+                  : AlignmentDirectional.centerStart,
               child: Padding(
-                padding: const EdgeInsets.only(left: RemboSpace.md),
+                padding: const EdgeInsetsDirectional.only(start: RemboSpace.md),
                 child: RemboLogo(size: back ? 26 : 24),
               ),
             ),
           if (back)
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: IconButton(
                 key: const ValueKey('page-back'),
-                tooltip: 'Retour',
+                tooltip: tr('Retour'),
                 icon: const Icon(Icons.arrow_back_rounded),
                 color: RemboColors.night,
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
             ),
           if (trailing != null)
-            Align(alignment: Alignment.centerRight, child: trailing),
+            Align(alignment: AlignmentDirectional.centerEnd, child: trailing),
         ],
       ),
     ),
@@ -550,7 +553,7 @@ Future<T?> showRemboSheet<T>(
               children: [
                 Expanded(child: Text(title, style: RemboText.title)),
                 IconButton(
-                  tooltip: 'Fermer',
+                  tooltip: tr('Fermer'),
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(context).pop(),
                 ),

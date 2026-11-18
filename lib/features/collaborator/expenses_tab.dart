@@ -17,13 +17,13 @@ class _ExpensesTabState extends State<ExpensesTab> {
   final _search = TextEditingController();
   ExpenseStatus? _filter;
 
-  static const _filters = <(ExpenseStatus?, String)>[
-    (null, 'Toutes'),
-    (ExpenseStatus.draft, 'Brouillons'),
-    (ExpenseStatus.needsReview, 'À examiner'),
-    (ExpenseStatus.approved, 'Validées'),
-    (ExpenseStatus.rejected, 'Rejetées'),
-    (ExpenseStatus.exported, 'Exportées'),
+  static List<(ExpenseStatus?, String)> get _filters => [
+    (null, tr('Toutes')),
+    (ExpenseStatus.draft, tr('Brouillons')),
+    (ExpenseStatus.needsReview, tr('À examiner')),
+    (ExpenseStatus.approved, tr('Validées')),
+    (ExpenseStatus.rejected, tr('Rejetées')),
+    (ExpenseStatus.exported, tr('Exportées')),
   ];
 
   @override
@@ -50,7 +50,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
       onRefresh: state.refresh,
       floatingActionButton: FloatingActionButton(
         key: const ValueKey('expenses-add'),
-        tooltip: 'Nouvelle dépense',
+        tooltip: tr('Nouvelle dépense'),
         backgroundColor: RemboColors.indigo,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
@@ -58,19 +58,19 @@ class _ExpensesTabState extends State<ExpensesTab> {
         child: const Icon(Icons.add_rounded),
       ),
       children: [
-        const RemboHero(title: 'Mes dépenses'),
+        RemboHero(title: tr('Mes dépenses')),
         TextField(
           key: const ValueKey('expenses-search'),
           controller: _search,
           onChanged: (_) => setState(() {}),
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText: 'Rechercher une dépense…',
+            hintText: tr('Rechercher une dépense…'),
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon: query.isEmpty
                 ? null
                 : IconButton(
-                    tooltip: 'Effacer',
+                    tooltip: tr('Effacer'),
                     icon: const Icon(Icons.close_rounded),
                     onPressed: () => setState(_search.clear),
                   ),
@@ -83,7 +83,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
             children: [
               for (final (status, label) in _filters)
                 Padding(
-                  padding: const EdgeInsets.only(right: RemboSpace.sm),
+                  padding: const EdgeInsetsDirectional.only(end: RemboSpace.sm),
                   child: ChoiceChip(
                     key: ValueKey('filter-${status?.name ?? 'all'}'),
                     label: Text(label),
@@ -110,16 +110,18 @@ class _ExpensesTabState extends State<ExpensesTab> {
                 const SizedBox(height: RemboSpace.lg),
                 Text(
                   state.mine.isEmpty
-                      ? 'Aucune dépense pour le moment'
-                      : 'Aucune dépense ne correspond',
+                      ? tr('Aucune dépense pour le moment')
+                      : tr('Aucune dépense ne correspond'),
                   style: RemboText.subtitle,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: RemboSpace.xs),
                 Text(
                   state.mine.isEmpty
-                      ? 'Ajoutez votre premier justificatif avec le bouton +.'
-                      : 'Modifiez la recherche ou le filtre.',
+                      ? tr(
+                          'Ajoutez votre premier justificatif avec le bouton +.',
+                        )
+                      : tr('Modifiez la recherche ou le filtre.'),
                   style: RemboText.caption,
                   textAlign: TextAlign.center,
                 ),

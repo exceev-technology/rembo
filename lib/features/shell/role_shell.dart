@@ -192,7 +192,7 @@ class _RoleShellState extends State<RoleShell>
                     key: ValueKey('tab-${t.tab.name}'),
                     icon: _TabIcon(t, state, selected: false),
                     selectedIcon: _TabIcon(t, state, selected: true),
-                    label: t.label,
+                    label: tr(t.label),
                   ),
               ],
             ),
@@ -250,7 +250,7 @@ class _DemoBanner extends StatelessWidget {
             const SizedBox(width: RemboSpace.sm),
             Expanded(
               child: Text(
-                'Démonstration · données fictives',
+                tr('Démonstration · données fictives'),
                 style: RemboText.caption.copyWith(color: Colors.white),
               ),
             ),

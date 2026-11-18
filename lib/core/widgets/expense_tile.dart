@@ -5,6 +5,7 @@ import '../format/formatters.dart';
 import '../theme/rembo_tokens.dart';
 import 'rembo_page.dart';
 import 'status_badge.dart';
+import '../l10n/l10n.dart';
 
 IconData categoryIcon(String category) => switch (category) {
   'Repas' => Icons.restaurant_rounded,
@@ -41,7 +42,7 @@ class ExpenseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = expense.date;
-    final when = date == null ? 'Date à compléter' : formatDayShort(date);
+    final when = date == null ? tr('Date à compléter') : formatDayShort(date);
     return Padding(
       padding: const EdgeInsets.only(bottom: RemboSpace.sm),
       child: RemboCard(
@@ -79,7 +80,7 @@ class ExpenseTile extends StatelessWidget {
                           ),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
+                            alignment: AlignmentDirectional.centerEnd,
                             child: Text(
                               formatMad(expense.amountCents),
                               style: RemboText.amount,
