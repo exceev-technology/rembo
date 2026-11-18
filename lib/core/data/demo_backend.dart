@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:cryptography/cryptography.dart' as cg;
 
 import '../format/formatters.dart';
 import 'backend.dart';
@@ -225,7 +226,30 @@ class LocalBackend extends RemboBackend {
     );
   }
 
-  static String _hash(String password, String salt) {
+  /// PBKDF2-HMAC-SHA256 rounds for a password kept on this phone.
+  static const passwordRounds = 120000;
+  static const _scheme = 'pbkdf2-sha256';
+
+  /// « pbkdf2-sha256$rounds$salt$hash », salt and hash in base64.
+  static Future<String> _hash(
+    String password, {
+    List<int>? salt,
+    int rounds = passwordRounds,
+  }) async {
+    final random = Random.secure();
+    final nonce = salt ?? List.generate(16, (_) => random.nextInt(256));
+    final key = await cg.Pbkdf2(
+      macAlgorithm: cg.Hmac.sha256(),
+      iterations: rounds,
+      bits: 256,
+    ).deriveKeyFromPassword(password: password, nonce: nonce);
+    final hash = base64Encode(await key.extractBytes());
+    return '$_scheme\$$rounds\$${base64Encode(nonce)}\$$hash';
+  }
+
+  /// How passwords were kept before PBKDF2: « salt:sha256 », hashed 5 000
+  /// times. Still checked, and replaced at the next sign-in.
+  static String _legacyHash(String password, String salt) {
     var digest = sha256.convert(utf8.encode('$salt:$password'));
     for (var i = 0; i < 5000; i++) {
       digest = sha256.convert(digest.bytes);
@@ -238,11 +262,36 @@ class LocalBackend extends RemboBackend {
     return List.generate(16, (_) => r.nextInt(16).toRadixString(16)).join();
   }
 
+  /// Compares in a time that does not depend on where they differ.
+  static bool _same(String a, String b) {
+    if (a.length != b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return diff == 0;
+  }
+
   /// The demo accepts any password; real accounts check theirs.
-  bool _passwordMatches(AppUser user, String password) {
+  Future<bool> _passwordMatches(AppUser user, String password) async {
     final stored = _passwords[user.id] ?? '';
+    if (stored.startsWith('$_scheme\$')) {
+      final parts = stored.split('\$');
+      if (parts.length != 4) return false;
+      final again = await _hash(
+        password,
+        salt: base64Decode(parts[2]),
+        rounds: int.parse(parts[1]),
+      );
+      return _same(again, stored);
+    }
     final salt = stored.split(':').first;
-    return stored.isNotEmpty && _hash(password, salt) == stored;
+    if (stored.isEmpty || !_same(_legacyHash(password, salt), stored)) {
+      return false;
+    }
+    // Right password kept the old way: kept from now on with PBKDF2.
+    _passwords[user.id] = await _hash(password);
+    return true;
   }
 
   Future<void> _latency() async {
@@ -277,7 +326,7 @@ class LocalBackend extends RemboBackend {
   Future<AppUser> signIn(String email, String password) async {
     await _latency();
     final found = _users.where((u) => u.email == email.trim().toLowerCase());
-    if (found.isEmpty || !_passwordMatches(found.first, password)) {
+    if (found.isEmpty || !await _passwordMatches(found.first, password)) {
       throw RemboException(tr('E-mail ou mot de passe incorrect.'));
     }
     _user = found.first;
@@ -304,7 +353,7 @@ class LocalBackend extends RemboBackend {
       fullName: fullName.trim(),
     );
     _users.add(user);
-    _passwords[user.id] = _hash(password, _newSalt());
+    _passwords[user.id] = await _hash(password);
     _user = user;
     await _save();
     return user;
@@ -801,7 +850,8 @@ class DemoBackend extends LocalBackend {
   bool get isLocal => false;
 
   @override
-  bool _passwordMatches(AppUser user, String password) => password.isNotEmpty;
+  Future<bool> _passwordMatches(AppUser user, String password) async =>
+      password.isNotEmpty;
 
   /// A code shown as in the real app; no message is received in the demo,
   /// so it never links a number.
