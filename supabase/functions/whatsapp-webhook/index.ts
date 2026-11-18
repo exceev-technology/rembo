@@ -75,16 +75,22 @@ const today = () =>
 
 // --- WhatsApp Cloud API -----------------------------------------------------
 
+// Best effort: a reply that cannot be sent is logged and never fails the
+// handling, whose writes in the database are already done.
 async function reply(to: string, body: string) {
-  const res = await fetch(`${GRAPH}/${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
-  });
-  if (!res.ok) console.error("reply failed", res.status, await res.text());
+  try {
+    const res = await fetch(`${GRAPH}/${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
+    });
+    if (!res.ok) console.error("reply failed", res.status, await res.text());
+  } catch (e) {
+    console.error("reply failed", e);
+  }
 }
 
 async function downloadMedia(
@@ -184,17 +190,25 @@ async function handle(message: any) {
   const { error: seen } = await db.from("whatsapp_messages").insert({ id: message.id });
   if (seen?.code === "23505") return;
   if (seen) throw seen;
+  const state: Handling = { wrote: false };
   try {
-    await answer(message);
+    await answer(message, state);
   } catch (e) {
-    // Not handled: forget the message so that the next delivery retries it.
-    await db.from("whatsapp_messages").delete().eq("id", message.id);
+    // Forgotten only when nothing was written, so that the next delivery
+    // retries it. Once an expense is created or submitted, handling the
+    // message again would create or submit a second one.
+    if (!state.wrote) {
+      await db.from("whatsapp_messages").delete().eq("id", message.id);
+    }
     throw e;
   }
 }
 
+/** Set once the handling of a message has written an expense. */
+type Handling = { wrote: boolean };
+
 // deno-lint-ignore no-explicit-any
-async function answer(message: any) {
+async function answer(message: any, state: Handling) {
   const from = `+${message.from}`;
   const owner = await ownerOf(from);
   if (!owner) {
@@ -208,9 +222,10 @@ async function answer(message: any) {
 
   if (message.type === "text") {
     const text = String(message.text?.body ?? "");
-    if (isYes(text)) return confirmLatest(owner, message.from);
+    if (isYes(text)) return confirmLatest(owner, message.from, state);
     const parsed = parseMessage(text);
     await createDraft(owner, parsed, { transcript: text.slice(0, 500) });
+    state.wrote = true;
     await reply(
       message.from,
       `${summary(parsed)}\nRépondez « oui » pour confirmer, ou complétez dans l’application.`,
@@ -229,6 +244,7 @@ async function answer(message: any) {
     const text = voice ? await transcribe(media.bytes, media.type) : "";
     const parsed = parseMessage(text || String(message.image?.caption ?? ""));
     const id = await createDraft(owner, parsed, { transcript: text || null });
+    state.wrote = true;
     const path = `${owner.profile_id}/${id}${voice ? "-voice" : ""}`;
     // The draft exists from here on: a file that cannot be kept (refused
     // type, storage down) is said to the person instead of being dropped.
@@ -262,7 +278,7 @@ async function answer(message: any) {
   await reply(message.from, "Envoyez un message, une note vocale ou la photo d’un ticket.");
 }
 
-async function confirmLatest(owner: Owner, to: string) {
+async function confirmLatest(owner: Owner, to: string, state: Handling) {
   const { data: draft, error: draftError } = await db.from("expenses").select("id")
     .eq("employee_id", owner.profile_id).eq("source", "whatsapp").eq("status", "draft")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -280,6 +296,7 @@ async function confirmLatest(owner: Owner, to: string) {
     await reply(to, `${error.message}\nComplétez la dépense dans l’application.`);
     return;
   }
+  state.wrote = true;
   await reply(
     to,
     data.status === "approved"
@@ -316,20 +333,22 @@ if (import.meta.main) {
       console.error("webhook payload", e);
       return new Response("ok");
     }
-    try {
-      for (const entry of payload.entry ?? []) {
-        for (const change of entry.changes ?? []) {
-          for (const message of change.value?.messages ?? []) {
+    // One message that fails does not stop the others. Meta then delivers
+    // the payload again: the messages already handled are skipped (see
+    // handle) and the failed one is tried again.
+    let failed = false;
+    for (const entry of payload.entry ?? []) {
+      for (const change of entry.changes ?? []) {
+        for (const message of change.value?.messages ?? []) {
+          try {
             await handle(message);
+          } catch (e) {
+            console.error("webhook error", message?.id, e);
+            failed = true;
           }
         }
       }
-    } catch (e) {
-      // A message that failed was forgotten (see handle): Meta delivers the
-      // payload again and the messages already handled are skipped.
-      console.error("webhook error", e);
-      return new Response("retry", { status: 500 });
     }
-    return new Response("ok");
+    return failed ? new Response("retry", { status: 500 }) : new Response("ok");
   });
 }
