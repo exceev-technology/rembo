@@ -31,6 +31,10 @@ class AppState extends ChangeNotifier {
   List<ExportBatch> exports = const [];
   bool loading = false;
 
+  /// The company that invited the person, while they belong to none: shown
+  /// to them, joined only with [acceptInvitation].
+  CompanyInvitation? invitation;
+
   /// Last loading problem, shown by the tabs with a retry.
   RemboException? loadError;
   final _read = <String>{};
@@ -49,7 +53,8 @@ class AppState extends ChangeNotifier {
       user = null;
     }
     notifyListeners();
-    if (user?.companyId == null) return;
+    if (user == null) return;
+    if (user!.companyId == null) return _loadInvitation();
     final loaded = refresh();
     if (wait) await loaded;
   }
@@ -57,7 +62,25 @@ class AppState extends ChangeNotifier {
   Future<void> signIn(String email, String password) async {
     user = await backend.signIn(email, password);
     notifyListeners();
-    if (user!.companyId != null) await refresh();
+    user!.companyId != null ? await refresh() : await _loadInvitation();
+  }
+
+  Future<void> _loadInvitation() async {
+    try {
+      invitation = await backend.pendingInvitation();
+    } on RemboException {
+      // Not reachable now: the person can still create a company.
+      invitation = null;
+    }
+    notifyListeners();
+  }
+
+  /// Joins the company of [invitation], on the person's answer.
+  Future<void> acceptInvitation() async {
+    user = await backend.acceptInvitation();
+    invitation = null;
+    notifyListeners();
+    await refresh();
   }
 
   /// Returns false when the address must be confirmed before signing in.
@@ -74,7 +97,7 @@ class AppState extends ChangeNotifier {
     if (created == null) return false;
     user = created;
     notifyListeners();
-    if (created.companyId != null) await refresh();
+    created.companyId != null ? await refresh() : await _loadInvitation();
     return true;
   }
 
@@ -84,6 +107,7 @@ class AppState extends ChangeNotifier {
     String city = '',
   }) async {
     user = await backend.createCompany(name: name, ice: ice, city: city);
+    invitation = null;
     notifyListeners();
     await refresh();
   }
@@ -91,6 +115,7 @@ class AppState extends ChangeNotifier {
   Future<void> signOut() async {
     await backend.signOut();
     user = null;
+    invitation = null;
     expenses = const [];
     members = const [];
     membersLoaded = false;

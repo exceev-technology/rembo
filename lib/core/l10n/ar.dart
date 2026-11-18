@@ -19,6 +19,11 @@ const arabic = <String, String>{
   'Dépense introuvable.': 'المصروف غير موجود.',
   'Créez ou rejoignez d’abord une entreprise.':
       'أنشئ شركة أو انضم إلى شركة أولا.',
+  '{company} vous invite': '{company} تدعوك',
+  'Votre rôle : {role}.': 'دورك: {role}.',
+  'Rejoindre l’entreprise': 'الانضمام إلى الشركة',
+  'Ou créez votre propre entreprise :': 'أو أنشئ شركتك الخاصة:',
+  'Cette invitation n’est plus valable.': 'لم تعد هذه الدعوة صالحة.',
   'Cette dépense ne peut plus être modifiée.':
       'لم يعد ممكنا تعديل هذا المصروف.',
   'Ce justificatif est verrouillé : la dépense a été soumise.':

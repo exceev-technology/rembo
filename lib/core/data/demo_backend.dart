@@ -296,16 +296,13 @@ class LocalBackend extends RemboBackend {
     if (_users.any((u) => u.email == address)) {
       throw RemboException(tr('Un compte existe déjà pour cet e-mail.'));
     }
-    final invited = _invitations.where((i) => i.email == address).firstOrNull;
+    // An invitation to this address waits for the person's answer
+    // (acceptInvitation): the account starts without a company.
     final user = AppUser(
       id: 'u-${_users.length + 1}-${_newSalt().substring(0, 6)}',
       email: address,
       fullName: fullName.trim(),
-      role: invited?.role ?? UserRole.employee,
-      companyId: invited?.companyId,
-      companyName: invited?.companyName ?? '',
     );
-    _invitations.removeWhere((i) => i.email == address);
     _users.add(user);
     _passwords[user.id] = _hash(password, _newSalt());
     _user = user;
@@ -355,6 +352,45 @@ class LocalBackend extends RemboBackend {
         whatsappPhone: me.whatsappPhone,
       ),
     );
+    await _save();
+    return _user!;
+  }
+
+  _Invitation? _invitationOf(AppUser me) => me.companyId != null
+      ? null
+      : _invitations.where((i) => i.email == me.email).firstOrNull;
+
+  @override
+  Future<CompanyInvitation?> pendingInvitation() async {
+    final invited = _invitationOf(_me);
+    return invited == null
+        ? null
+        : CompanyInvitation(
+            companyName: invited.companyName,
+            role: invited.role,
+          );
+  }
+
+  @override
+  Future<AppUser> acceptInvitation() async {
+    await _latency();
+    final me = _me;
+    final invited = _invitationOf(me);
+    if (invited == null) {
+      throw RemboException(tr('Cette invitation n’est plus valable.'));
+    }
+    _replaceMe(
+      AppUser(
+        id: me.id,
+        email: me.email,
+        fullName: me.fullName,
+        role: invited.role,
+        companyId: invited.companyId,
+        companyName: invited.companyName,
+        whatsappPhone: me.whatsappPhone,
+      ),
+    );
+    _invitations.removeWhere((i) => i.email == me.email);
     await _save();
     return _user!;
   }

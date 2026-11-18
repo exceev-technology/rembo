@@ -50,12 +50,14 @@ Future<LocalBackend> _company(LocalStore store) async {
     password: 'Secret#2',
     fullName: 'Omar',
   );
+  await b.acceptInvitation();
   await b.signOut();
   await b.signUp(
     email: 'lina@exemple.ma',
     password: 'Secret#3',
     fullName: 'Lina',
   );
+  await b.acceptInvitation();
   await b.signOut();
   return b;
 }

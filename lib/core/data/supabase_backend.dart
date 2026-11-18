@@ -102,17 +102,12 @@ class SupabaseBackend extends RemboBackend {
   Future<AppUser?> _loadUser() async {
     final auth = _client.auth.currentUser;
     if (auth == null) return _user = null;
-    Future<Map<String, dynamic>?> membership() => _client
+    // An invitation is joined only on the person's answer (acceptInvitation).
+    final m = await _client
         .from('memberships')
         .select('role, company_id, companies(name)')
         .eq('profile_id', auth.id)
         .maybeSingle();
-    var m = await membership();
-    if (m == null) {
-      // Joins the company that invited this (confirmed) address, if any.
-      final joined = await _client.rpc<dynamic>('accept_invitation');
-      if (joined == true) m = await membership();
-    }
     final link = await _client
         .from('whatsapp_links')
         .select('phone')
@@ -180,6 +175,26 @@ class SupabaseBackend extends RemboBackend {
       'create_company',
       params: {'p_name': name.trim(), 'p_ice': ice, 'p_city': city},
     );
+    return (await _loadUser())!;
+  });
+
+  @override
+  Future<CompanyInvitation?> pendingInvitation() => _guard(() async {
+    final rows = await _client.rpc<dynamic>('my_invitation') as List? ?? [];
+    if (rows.isEmpty) return null;
+    final row = Map<String, dynamic>.from(rows.first as Map);
+    return CompanyInvitation(
+      companyName: row['company_name'] as String,
+      role: UserRole.parse(row['role'] as String?),
+    );
+  });
+
+  @override
+  Future<AppUser> acceptInvitation() => _guard(() async {
+    final joined = await _client.rpc<dynamic>('accept_invitation');
+    if (joined != true) {
+      throw RemboException(tr('Cette invitation n’est plus valable.'));
+    }
     return (await _loadUser())!;
   });
 
