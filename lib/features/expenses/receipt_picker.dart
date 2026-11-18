@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/data/models.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/log.dart';
 
 class PickedReceipt {
   const PickedReceipt(this.bytes, this.name);
@@ -27,7 +28,8 @@ Future<PickedReceipt?> pickWithDevice({required bool camera}) async {
       maxHeight: 2000,
       imageQuality: 85,
     );
-  } catch (_) {
+  } catch (e, st) {
+    logFailure('image picker', e, st);
     throw RemboException(
       camera
           ? tr('L’appareil photo n’est pas disponible sur cet appareil.')

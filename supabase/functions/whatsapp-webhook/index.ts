@@ -127,7 +127,8 @@ async function transcribe(audio: Uint8Array<ArrayBuffer>, type: string): Promise
     });
     if (!res.ok) return "";
     return String((await res.json()).text ?? "").slice(0, 500);
-  } catch {
+  } catch (e) {
+    console.error("transcription failed", e);
     return "";
   }
 }

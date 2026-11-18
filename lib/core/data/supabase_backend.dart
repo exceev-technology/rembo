@@ -10,6 +10,7 @@ import 'csv_export.dart';
 import 'ids.dart';
 import 'models.dart';
 import '../l10n/l10n.dart';
+import '../log.dart';
 
 /// Real backend. Rights are enforced by the database (row level security)
 /// and every decision is taken by an SQL function: see supabase/migrations.
@@ -163,7 +164,8 @@ class SupabaseBackend extends RemboBackend {
     _user = null;
     try {
       await _client.auth.signOut();
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('sign out on the server', e, st);
       // The local session is cleared even when the server is unreachable.
     }
   }
@@ -280,7 +282,8 @@ class SupabaseBackend extends RemboBackend {
     if (e.hasReceipt) {
       try {
         await _client.storage.from(_bucket).remove([e.receiptPath!]);
-      } catch (_) {
+      } catch (e, st) {
+        logFailure('orphan receipt not removed', e, st);
         // An orphan picture is harmless; the row is gone.
       }
     }
@@ -329,7 +332,8 @@ class SupabaseBackend extends RemboBackend {
         amountCents: (data['amount_cents'] as num?)?.toInt(),
         vatCents: (data['vat_cents'] as num?)?.toInt(),
       );
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('receipt reading', e, st);
       return null; // No reading: the person types the values.
     }
   }
@@ -341,7 +345,8 @@ class SupabaseBackend extends RemboBackend {
       return await _client.storage
           .from(_bucket)
           .createSignedUrl(expense.receiptPath!, 300);
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('receipt link', e, st);
       return null;
     }
   }
@@ -353,7 +358,8 @@ class SupabaseBackend extends RemboBackend {
       return await _client.storage
           .from(_bucket)
           .createSignedUrl(expense.voicePath!, 300);
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('voice note link', e, st);
       return null;
     }
   }
