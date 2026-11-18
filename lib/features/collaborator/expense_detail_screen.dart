@@ -255,24 +255,42 @@ class _Timeline extends StatelessWidget {
     ExpenseStatus.exported => 'Exportée en comptabilité',
   };
 
+  /// What the manager wrote with a decision, so the history reads alone.
+  static String? _note(ExpenseEvent ev) {
+    final text = ev.reason?.trim() ?? '';
+    if (text.isEmpty || ev.byAgent) return null;
+    return switch (ev.status) {
+      ExpenseStatus.rejected => 'Motif : $text',
+      ExpenseStatus.approved => 'Commentaire : $text',
+      _ => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     String at(DateTime d) => '${formatWeekday(d)} · ${formatTime(d)}';
-    final steps = <(String, String, bool, bool)>[
+    final steps = <(String, String, bool, bool, String?)>[
       (
         expense.fromWhatsApp ? 'Reçue par WhatsApp' : 'Capturée',
         at(expense.createdAt),
         true,
         false,
+        null,
       ),
       for (final ev in expense.events)
-        (_label(ev), at(ev.at), true, ev.status == ExpenseStatus.rejected),
+        (
+          _label(ev),
+          at(ev.at),
+          true,
+          ev.status == ExpenseStatus.rejected,
+          _note(ev),
+        ),
       if (expense.status == ExpenseStatus.draft)
-        ('Soumission', 'À faire', false, false),
+        ('Soumission', 'À faire', false, false, null),
       if (expense.status == ExpenseStatus.needsReview)
-        ('Décision du responsable', 'En attente', false, false),
+        ('Décision du responsable', 'En attente', false, false, null),
       if (expense.status == ExpenseStatus.approved)
-        ('Export', 'À préparer', false, false),
+        ('Export', 'À préparer', false, false, null),
     ];
     return Column(
       children: [
@@ -316,6 +334,14 @@ class _Timeline extends StatelessWidget {
                       children: [
                         Text(steps[i].$1, style: RemboText.subtitle),
                         Text(steps[i].$2, style: RemboText.caption),
+                        if (steps[i].$5 != null) ...[
+                          const SizedBox(height: RemboSpace.xs),
+                          Text(
+                            steps[i].$5!,
+                            key: ValueKey('timeline-note-$i'),
+                            style: RemboText.body,
+                          ),
+                        ],
                       ],
                     ),
                   ),
