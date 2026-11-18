@@ -137,12 +137,16 @@ async function validSignature(raw: string, header: string | null): Promise<boole
 
 type Owner = { profile_id: string; company_id: string };
 
+// A database failure is thrown, never read as « no account »: the person
+// would be told their number is not linked when it is.
 async function ownerOf(phone: string): Promise<Owner | null> {
-  const { data: link } = await db.from("whatsapp_links").select("profile_id")
-    .eq("phone", phone).maybeSingle();
+  const { data: link, error: linkError } = await db.from("whatsapp_links")
+    .select("profile_id").eq("phone", phone).maybeSingle();
+  if (linkError) throw linkError;
   if (!link) return null;
-  const { data: member } = await db.from("memberships").select("company_id")
-    .eq("profile_id", link.profile_id).maybeSingle();
+  const { data: member, error: memberError } = await db.from("memberships")
+    .select("company_id").eq("profile_id", link.profile_id).maybeSingle();
+  if (memberError) throw memberError;
   return member ? { profile_id: link.profile_id, company_id: member.company_id } : null;
 }
 
@@ -173,11 +177,23 @@ const summary = (p: Parsed) =>
 
 // deno-lint-ignore no-explicit-any
 async function handle(message: any) {
-  const from = `+${message.from}`;
-  // First writer wins: a message delivered twice is handled once.
+  // First writer wins: a message delivered twice is handled once. Only a
+  // duplicate id (23505) means « already seen »; any other error is thrown.
   const { error: seen } = await db.from("whatsapp_messages").insert({ id: message.id });
-  if (seen) return;
+  if (seen?.code === "23505") return;
+  if (seen) throw seen;
+  try {
+    await answer(message);
+  } catch (e) {
+    // Not handled: forget the message so that the next delivery retries it.
+    await db.from("whatsapp_messages").delete().eq("id", message.id);
+    throw e;
+  }
+}
 
+// deno-lint-ignore no-explicit-any
+async function answer(message: any) {
+  const from = `+${message.from}`;
   const owner = await ownerOf(from);
   if (!owner) {
     await reply(
@@ -245,9 +261,10 @@ async function handle(message: any) {
 }
 
 async function confirmLatest(owner: Owner, to: string) {
-  const { data: draft } = await db.from("expenses").select("id")
+  const { data: draft, error: draftError } = await db.from("expenses").select("id")
     .eq("employee_id", owner.profile_id).eq("source", "whatsapp").eq("status", "draft")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (draftError) throw draftError;
   if (!draft) {
     await reply(to, "Aucune dépense en attente de confirmation.");
     return;
@@ -289,8 +306,15 @@ if (import.meta.main) {
     if (!(await validSignature(raw, req.headers.get("x-hub-signature-256")))) {
       return new Response("bad signature", { status: 401 });
     }
+    let payload;
     try {
-      const payload = JSON.parse(raw);
+      payload = JSON.parse(raw);
+    } catch (e) {
+      // Sending it again would not make it readable: no retry.
+      console.error("webhook payload", e);
+      return new Response("ok");
+    }
+    try {
       for (const entry of payload.entry ?? []) {
         for (const change of entry.changes ?? []) {
           for (const message of change.value?.messages ?? []) {
@@ -299,9 +323,11 @@ if (import.meta.main) {
         }
       }
     } catch (e) {
+      // A message that failed was forgotten (see handle): Meta delivers the
+      // payload again and the messages already handled are skipped.
       console.error("webhook error", e);
+      return new Response("retry", { status: 500 });
     }
-    // Always 200 once the signature is valid, or Meta retries for days.
     return new Response("ok");
   });
 }
