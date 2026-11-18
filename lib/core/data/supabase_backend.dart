@@ -359,25 +359,15 @@ class SupabaseBackend extends RemboBackend {
   }
 
   @override
-  Future<AppUser> linkWhatsApp(String? phone) => _guard(() async {
-    if (phone == null) {
-      await _client.from('whatsapp_links').delete().eq('profile_id', _uid);
-    } else {
-      try {
-        await _client.from('whatsapp_links').upsert({
-          'profile_id': _uid,
-          'phone': phone,
-        });
-      } on PostgrestException catch (e) {
-        if (e.code == '23505') {
-          throw RemboException(
-            tr('Ce numéro est déjà relié à un autre compte.'),
-          );
-        }
-        rethrow;
-      }
-    }
-    return _user = _user!.withWhatsApp(phone);
+  Future<WhatsAppLinkCode> requestWhatsAppCode() => _guard(() async {
+    final row = await _client.rpc<dynamic>('create_whatsapp_link_code');
+    return WhatsAppLinkCode.fromJson(Map<String, dynamic>.from(row as Map));
+  });
+
+  @override
+  Future<AppUser> unlinkWhatsApp() => _guard(() async {
+    await _client.from('whatsapp_links').delete().eq('profile_id', _uid);
+    return _user = _user!.withWhatsApp(null);
   });
 
   // Company ---------------------------------------------------------------

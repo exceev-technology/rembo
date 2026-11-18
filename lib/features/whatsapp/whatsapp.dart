@@ -38,73 +38,17 @@ class _WhatsAppForm extends StatefulWidget {
 }
 
 class _WhatsAppFormState extends State<_WhatsAppForm> {
-  late PhoneCountry _country;
-  late final TextEditingController _phone;
-  final _countryLabel = TextEditingController();
+  WhatsAppLinkCode? _code;
   String? _error;
   bool _loading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // A linked number comes back as +212…: show it the way its country
-    // writes it, or as it is when the country is not in the list.
-    final linked = AppScope.read(context).user?.whatsappPhone;
-    final known = linked == null ? null : countryOf(linked);
-    _country = known ?? morocco;
-    _showCountry();
-    _phone = TextEditingController(
-      text: known == null ? linked ?? '' : known.toNational(linked!),
-    );
-  }
-
-  void _showCountry() => _countryLabel.text =
-      '${_country.localName} (${ltr('+${_country.dial}')})';
-
-  Future<void> _pickCountry() async {
-    final picked = await showRemboSheet<PhoneCountry>(
-      context,
-      title: tr('Pays du numéro'),
-      builder: (_) => _CountryList(selected: _country),
-    );
-    if (picked == null || !mounted) return;
-    setState(() {
-      _country = picked;
-      _showCountry();
-      _error = null;
-    });
-  }
-
-  @override
-  void dispose() {
-    _phone.dispose();
-    _countryLabel.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save({bool unlink = false}) async {
-    final phone = unlink ? null : parsePhone(_phone.text, country: _country);
-    if (!unlink && phone == null) {
-      setState(
-        () => _error = tr(
-          'Numéro invalide pour {country}. Exemple : {example}.',
-          {'country': _country.localName, 'example': _country.example},
-        ),
-      );
-      return;
-    }
+  Future<void> _run(Future<void> Function(AppState state) action) async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      await AppScope.read(context).linkWhatsApp(phone);
-      if (!mounted) return;
-      if (unlink) _phone.clear();
-      showRemboSnackBar(
-        context,
-        unlink ? tr('Numéro retiré.') : tr('Numéro WhatsApp enregistré.'),
-      );
+      await action(AppScope.read(context));
     } on RemboException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -112,76 +56,138 @@ class _WhatsAppFormState extends State<_WhatsAppForm> {
     }
   }
 
+  Future<void> _requestCode() => _run((state) async {
+    final code = await state.requestWhatsAppCode();
+    if (mounted) setState(() => _code = code);
+  });
+
+  /// The number is linked by the server when the code arrives from it.
+  Future<void> _check() => _run((state) async {
+    await state.checkWhatsAppLink();
+    if (!mounted) return;
+    if (state.user?.whatsappPhone == null) {
+      setState(
+        () =>
+            _error = tr('Pas encore reçu. Envoyez le message, puis réessayez.'),
+      );
+      return;
+    }
+    setState(() => _code = null);
+    showRemboSnackBar(context, tr('Numéro WhatsApp enregistré.'));
+  });
+
+  Future<void> _unlink() => _run((state) async {
+    await state.unlinkWhatsApp();
+    if (mounted) showRemboSnackBar(context, tr('Numéro retiré.'));
+  });
+
+  Future<void> _send(WhatsAppLinkCode code) async {
+    final text = Uri.encodeComponent(code.message);
+    final ok = await _open('https://wa.me/$remboWhatsAppNumber?text=$text');
+    if (!ok && mounted) {
+      showRemboSnackBar(
+        context,
+        tr('WhatsApp n’a pas pu être ouvert.'),
+        tone: MessageTone.error,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final linked = state.user?.whatsappPhone;
+    final code = _code;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Step('1', tr('Reliez votre numéro WhatsApp à votre compte.')),
+        _Step('1', tr('Obtenez un code à usage unique.')),
         _Step(
           '2',
+          tr(
+            'Envoyez « LIER » suivi du code depuis votre WhatsApp : '
+            'ce numéro est relié.',
+          ),
+        ),
+        _Step(
+          '3',
           tr('Dites par exemple : « Taxi, 45 dirhams, client Atlas ».'),
         ),
-        _Step('3', tr('Répondez « oui », ou confirmez dans l’application.')),
+        _Step('4', tr('Répondez « oui », ou confirmez dans l’application.')),
         const SizedBox(height: RemboSpace.lg),
-        RemboTextField(
-          fieldKey: const ValueKey('whatsapp-country'),
-          label: tr('Pays'),
-          icon: Icons.public_rounded,
-          controller: _countryLabel,
-          readOnly: true,
-          onTap: _pickCountry,
-          suffix: const Icon(Icons.expand_more_rounded),
-          helper: tr('Autre pays : écrivez le numéro complet, avec le +.'),
-        ),
-        const SizedBox(height: RemboSpace.md),
-        RemboTextField(
-          fieldKey: const ValueKey('whatsapp-phone'),
-          label: tr('Votre numéro WhatsApp'),
-          hint: _country.example,
-          icon: Icons.phone_iphone_rounded,
-          controller: _phone,
-          errorText: _error,
-          keyboardType: TextInputType.phone,
-          helper: linked == null
-              ? null
-              : tr('Numéro relié : {linked}', {'linked': ltr(linked)}),
-        ),
-        const SizedBox(height: RemboSpace.lg),
-        RemboPrimaryButton(
-          key: const ValueKey('whatsapp-save'),
-          label: linked == null ? tr('Relier mon numéro') : tr('Mettre à jour'),
-          loading: _loading,
-          onPressed: _save,
-        ),
         if (linked != null) ...[
-          const SizedBox(height: RemboSpace.sm),
-          if (remboWhatsAppNumber.isNotEmpty)
+          Text(
+            tr('Numéro relié : {linked}', {'linked': ltr(linked)}),
+            key: const ValueKey('whatsapp-linked'),
+            style: RemboText.subtitle,
+          ),
+          const SizedBox(height: RemboSpace.md),
+        ],
+        if (_error != null) ...[
+          RemboMessage(
+            key: const ValueKey('whatsapp-error'),
+            tone: MessageTone.error,
+            title: _error!,
+          ),
+          const SizedBox(height: RemboSpace.md),
+        ],
+        if (code == null)
+          RemboPrimaryButton(
+            key: const ValueKey('whatsapp-request'),
+            label: tr('Obtenir un code'),
+            loading: _loading,
+            onPressed: _requestCode,
+          )
+        else ...[
+          RemboCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr('Envoyez ce message depuis votre WhatsApp :'),
+                  style: RemboText.body,
+                ),
+                const SizedBox(height: RemboSpace.sm),
+                Text(
+                  ltr(code.message),
+                  key: const ValueKey('whatsapp-code'),
+                  style: RemboText.amount.copyWith(fontSize: 26),
+                ),
+                const SizedBox(height: RemboSpace.xs),
+                Text(
+                  tr('Valable jusqu’à {time}.', {
+                    'time': formatTime(code.expiresAt),
+                  }),
+                  style: RemboText.caption,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: RemboSpace.md),
+          if (remboWhatsAppNumber.isNotEmpty) ...[
             RemboSecondaryButton(
               key: const ValueKey('whatsapp-open'),
-              label: tr('Ouvrir WhatsApp'),
+              label: tr('Envoyer par WhatsApp'),
               icon: Icons.chat_outlined,
-              onPressed: () async {
-                final ok = await _open('https://wa.me/$remboWhatsAppNumber');
-                if (!ok && context.mounted) {
-                  showRemboSnackBar(
-                    context,
-                    tr('WhatsApp n’a pas pu être ouvert.'),
-                    tone: MessageTone.error,
-                  );
-                }
-              },
+              onPressed: () => _send(code),
             ),
+            const SizedBox(height: RemboSpace.sm),
+          ],
+          RemboPrimaryButton(
+            key: const ValueKey('whatsapp-check'),
+            label: tr('J’ai envoyé le code'),
+            loading: _loading,
+            onPressed: _check,
+          ),
+        ],
+        if (linked != null)
           Center(
             child: TextButton(
               key: const ValueKey('whatsapp-unlink'),
-              onPressed: _loading ? null : () => _save(unlink: true),
+              onPressed: _loading ? null : _unlink,
               child: Text(tr('Retirer mon numéro')),
             ),
           ),
-        ],
         const SizedBox(height: RemboSpace.sm),
         InfoStrip(
           state.isDemo
@@ -203,86 +209,6 @@ class _WhatsAppFormState extends State<_WhatsAppForm> {
                         'numero': ltr('+$remboWhatsAppNumber'),
                       })),
         ),
-      ],
-    );
-  }
-}
-
-/// Searchable list of countries; pops the one chosen.
-class _CountryList extends StatefulWidget {
-  const _CountryList({required this.selected});
-  final PhoneCountry selected;
-
-  @override
-  State<_CountryList> createState() => _CountryListState();
-}
-
-class _CountryListState extends State<_CountryList> {
-  String _query = '';
-
-  /// « Algérie » is found by typing « algerie », and any country by its code.
-  static String _plain(String text) {
-    const from = 'àâäéèêëîïôöùûüç’';
-    const to = 'aaaeeeeiioouuuc\'';
-    var out = text.toLowerCase();
-    for (var i = 0; i < from.length; i++) {
-      out = out.replaceAll(from[i], to[i]);
-    }
-    return out;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final q = _plain(_query.trim().replaceAll('+', ''));
-    final found = [
-      for (final c in phoneCountries)
-        if (q.isEmpty ||
-            _plain(c.name).contains(q) ||
-            c.nameAr.contains(q) ||
-            c.dial.startsWith(q))
-          c,
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RemboTextField(
-          fieldKey: const ValueKey('country-search'),
-          label: tr('Rechercher'),
-          hint: tr('Pays ou indicatif'),
-          icon: Icons.search_rounded,
-          onChanged: (text) => setState(() => _query = text),
-        ),
-        const SizedBox(height: RemboSpace.sm),
-        if (found.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: RemboSpace.lg),
-            child: Text(
-              tr(
-                'Aucun pays trouvé. Fermez et écrivez le numéro complet, avec '
-                'le +.',
-              ),
-              style: RemboText.body.copyWith(color: RemboColors.muted),
-            ),
-          ),
-        for (final c in found)
-          ListTile(
-            key: ValueKey('country-${c.iso}'),
-            contentPadding: EdgeInsets.zero,
-            title: Text(c.localName, style: RemboText.body),
-            trailing: Text(
-              ltr('+${c.dial}'),
-              style: RemboText.label.copyWith(color: RemboColors.muted),
-            ),
-            leading: Icon(
-              c.iso == widget.selected.iso
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_unchecked_rounded,
-              color: c.iso == widget.selected.iso
-                  ? RemboColors.indigo
-                  : RemboColors.muted,
-            ),
-            onTap: () => Navigator.of(context).pop(c),
-          ),
       ],
     );
   }

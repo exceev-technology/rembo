@@ -476,6 +476,15 @@ const arabic = <String, String>{
   'Ouvrir WhatsApp': 'فتح واتساب',
   'WhatsApp n’a pas pu être ouvert.': 'تعذر فتح واتساب.',
   'Retirer mon numéro': 'حذف رقمي',
+  'Obtenez un code à usage unique.': 'احصل على رمز يُستعمل مرة واحدة.',
+  'Envoyez « LIER » suivi du code depuis votre WhatsApp : ce numéro est relié.':
+      'أرسل «LIER» متبوعة بالرمز من واتساب: يُربط هذا الرقم.',
+  'Obtenir un code': 'الحصول على رمز',
+  'Envoyez ce message depuis votre WhatsApp :': 'أرسل هذه الرسالة من واتساب:',
+  'Valable jusqu’à {time}.': 'صالح حتى {time}.',
+  'J’ai envoyé le code': 'أرسلت الرمز',
+  'Pas encore reçu. Envoyez le message, puis réessayez.':
+      'لم يصل بعد. أرسل الرسالة ثم أعد المحاولة.',
   'Démonstration : aucun message n’est réellement reçu. Une dépense d’exemple vous attend sur l’accueil.':
       'عرض تجريبي: لا تستقبل أي رسالة فعليا. ينتظرك مصروف نموذجي في الرئيسية.',
   'WhatsApp demande un serveur : il sera disponible quand votre entreprise sera connectée à REMBO en ligne.': 'واتساب يحتاج إلى خادم: سيصبح متاحا عندما تتصل شركتك بـREMBO عبر الإنترنت.',
