@@ -21,6 +21,12 @@ class RemboTextField extends StatelessWidget {
     this.autofillHints,
     this.fieldKey,
     this.maxLines = 1,
+    this.icon,
+    this.enabled = true,
+    this.readOnly = false,
+    this.onTap,
+    this.maxLength,
+    this.required = false,
   });
   final String label;
   final TextEditingController? controller;
@@ -36,16 +42,40 @@ class RemboTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final Key? fieldKey;
   final int maxLines;
+  final IconData? icon;
+  final bool enabled;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final int? maxLength;
+
+  /// Adds the red asterisk of mandatory fields.
+  final bool required;
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: RemboText.caption.copyWith(color: RemboColors.ink)),
+      Text.rich(
+        TextSpan(
+          text: label,
+          children: [
+            if (required)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: RemboColors.danger),
+              ),
+          ],
+        ),
+        style: RemboText.subtitle.copyWith(fontSize: 15),
+      ),
       const SizedBox(height: RemboSpace.sm),
       TextField(
         key: fieldKey,
         controller: controller,
+        enabled: enabled,
+        readOnly: readOnly,
+        onTap: onTap,
+        maxLength: maxLength,
         obscureText: obscureText,
         keyboardType: keyboardType,
         textInputAction: textInputAction,
@@ -61,6 +91,17 @@ class RemboTextField extends StatelessWidget {
           errorText: errorText,
           errorMaxLines: 3,
           suffixIcon: suffix,
+          prefixIcon: icon == null
+              ? null
+              : Icon(
+                  icon,
+                  color: errorText == null
+                      ? RemboColors.night
+                      : RemboColors.danger,
+                ),
+          fillColor: errorText != null
+              ? RemboColors.dangerTint
+              : (enabled ? RemboColors.card : RemboColors.surface),
         ),
       ),
     ],

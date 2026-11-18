@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../demo/demo_expenses.dart';
+import '../data/models.dart';
 import '../theme/rembo_tokens.dart';
 
 enum BadgeTone { neutral, info, success, warning, danger }
@@ -56,24 +56,40 @@ class RemboBadge extends StatelessWidget {
 
 /// Badge for an expense status, with the French wording used everywhere.
 class StatusBadge extends StatelessWidget {
-  const StatusBadge({super.key, required this.status});
-  final DemoExpenseStatus status;
+  const StatusBadge({super.key, required this.status, this.byAgent = false});
 
-  static String labelOf(DemoExpenseStatus status) => switch (status) {
-    DemoExpenseStatus.draft => 'Brouillon',
-    DemoExpenseStatus.submitted => 'Soumise',
-    DemoExpenseStatus.approved => 'Approuvée',
-    DemoExpenseStatus.rejected => 'Rejetée',
+  StatusBadge.of(Expense expense, {Key? key})
+    : this(
+        key: key,
+        status: expense.status,
+        byAgent:
+            expense.status == ExpenseStatus.approved && expense.approvedByAgent,
+      );
+
+  final ExpenseStatus status;
+
+  /// Approved by the automatic control rather than by a manager.
+  final bool byAgent;
+
+  static BadgeTone toneOf(ExpenseStatus status) => switch (status) {
+    ExpenseStatus.draft => BadgeTone.neutral,
+    ExpenseStatus.submitted => BadgeTone.info,
+    ExpenseStatus.needsReview => BadgeTone.warning,
+    ExpenseStatus.approved => BadgeTone.success,
+    ExpenseStatus.rejected => BadgeTone.danger,
+    ExpenseStatus.exported => BadgeTone.info,
   };
 
-  static BadgeTone toneOf(DemoExpenseStatus status) => switch (status) {
-    DemoExpenseStatus.draft => BadgeTone.neutral,
-    DemoExpenseStatus.submitted => BadgeTone.info,
-    DemoExpenseStatus.approved => BadgeTone.success,
-    DemoExpenseStatus.rejected => BadgeTone.danger,
+  static IconData? iconOf(ExpenseStatus status) => switch (status) {
+    ExpenseStatus.approved => Icons.check_circle_rounded,
+    ExpenseStatus.rejected => Icons.cancel_rounded,
+    _ => null,
   };
 
   @override
-  Widget build(BuildContext context) =>
-      RemboBadge(label: labelOf(status), tone: toneOf(status));
+  Widget build(BuildContext context) => RemboBadge(
+    label: byAgent ? 'Validée par l’agent' : status.label,
+    tone: toneOf(status),
+    icon: iconOf(status),
+  );
 }

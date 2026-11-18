@@ -1,0 +1,519 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:rembo/app/app_routes.dart';
+import 'package:rembo/app/rembo_app.dart';
+import 'package:rembo/core/data/app_state.dart';
+import 'package:rembo/core/data/demo_backend.dart';
+import 'package:rembo/core/data/models.dart';
+import 'package:rembo/core/format/formatters.dart';
+
+late DemoBackend backend;
+late AppState state;
+
+/// Tall screen: every part of a page is laid out and can be tapped.
+Future<void> _start(
+  WidgetTester tester, {
+  String route = AppRoutes.home,
+  Size size = const Size(420, 2600),
+  double textScale = 1,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(tester.view.reset);
+  addTearDown(tester.platformDispatcher.clearAllTestValues);
+  backend = DemoBackend(latency: Duration.zero);
+  state = AppState(backend);
+  await tester.pumpWidget(RemboApp(state: state, initialRoute: route));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tap(WidgetTester tester, String key) async {
+  await tester.tap(find.byKey(ValueKey(key)));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _type(WidgetTester tester, String key, String text) async {
+  await tester.enterText(find.byKey(ValueKey(key)), text);
+  await tester.pump();
+}
+
+Future<void> _signInAs(WidgetTester tester, UserRole role) =>
+    _tap(tester, 'demo-${role.name}');
+
+/// Without the login screen, whose demo buttons may be scrolled away.
+Future<void> _signInDirectly(WidgetTester tester, UserRole role) async {
+  final email = switch (role) {
+    UserRole.employee => DemoBackend.marius.email,
+    UserRole.manager => DemoBackend.salma.email,
+    UserRole.accountant => DemoBackend.nadia.email,
+  };
+  final done = state.signIn(email, 'x');
+  await tester.pumpAndSettle();
+  await done;
+  await tester.pumpAndSettle();
+}
+
+Future<void> _signOut(WidgetTester tester) async {
+  await _tap(tester, 'tab-profile');
+  await _tap(tester, 'profile-signout');
+}
+
+/// Fills the manual form and goes to the summary.
+Future<void> _declare(
+  WidgetTester tester, {
+  required String amount,
+  String category = 'Transport',
+}) async {
+  await _tap(tester, 'home-add');
+  await _tap(tester, 'capture-manual');
+  await _type(tester, 'form-supplier', 'Taxi Vert');
+  await _type(tester, 'form-amount', amount);
+  await _tap(tester, 'form-category');
+  await tester.tap(find.text(category).last);
+  await tester.pumpAndSettle();
+  await _type(tester, 'form-reason', 'Rendez-vous client');
+  await _tap(tester, 'form-continue');
+}
+
+void main() {
+  testWidgets('Login checks its fields and reports wrong credentials', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _tap(tester, 'login-submit');
+    expect(find.text('Saisissez votre adresse e-mail.'), findsOneWidget);
+    expect(find.text('Saisissez votre mot de passe.'), findsOneWidget);
+
+    await _type(tester, 'login-email', 'inconnu@exemple.ma');
+    await _type(tester, 'login-password', 'secret');
+    await _tap(tester, 'login-submit');
+    expect(find.text('E-mail ou mot de passe incorrect.'), findsOneWidget);
+
+    await _type(tester, 'login-email', DemoBackend.marius.email);
+    await _tap(tester, 'login-submit');
+    expect(find.text('Bonjour\nMarius,'), findsOneWidget);
+  });
+
+  testWidgets('Password reset never claims an e-mail was sent in demo', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _tap(tester, 'login-forgot');
+    await _type(tester, 'reset-email', 'pas-un-email');
+    await _tap(tester, 'reset-submit');
+    expect(find.text('Adresse e-mail invalide.'), findsOneWidget);
+    await _type(tester, 'reset-email', 'marius@atlas-conseil.ma');
+    await _tap(tester, 'reset-submit');
+    expect(find.text('Démonstration : aucun e-mail envoyé'), findsOneWidget);
+  });
+
+  testWidgets('A new account without invitation creates its company', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _tap(tester, 'login-signup');
+    await _type(tester, 'signup-email', 'lina@exemple.ma');
+    await _type(tester, 'signup-first', 'Lina');
+    await _type(tester, 'signup-last', 'Amrani');
+    await _type(tester, 'signup-password', 'court');
+    await _tap(tester, 'signup-submit');
+    expect(
+      find.text('Le mot de passe ne respecte pas les règles.'),
+      findsOneWidget,
+    );
+    await _type(tester, 'signup-password', 'Secret12!');
+    await _tap(tester, 'signup-submit');
+    expect(find.text('Votre entreprise'), findsOneWidget);
+
+    await _type(tester, 'company-ice', '123');
+    await _tap(tester, 'company-submit');
+    expect(find.text('Saisissez le nom de l’entreprise.'), findsOneWidget);
+    expect(find.text('L’ICE compte 15 chiffres.'), findsOneWidget);
+    await _type(tester, 'company-name', 'Amrani Études');
+    await _type(tester, 'company-ice', '');
+    await _tap(tester, 'company-submit');
+    // First expense screen, as the first manager of the new company.
+    expect(find.text('Votre première dépense commence ici.'), findsOneWidget);
+    expect(state.role, UserRole.manager);
+  });
+
+  testWidgets('Collaborator: a compliant expense is validated automatically', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-manual');
+    await _type(tester, 'form-amount', '-24');
+    await _tap(tester, 'form-continue');
+    expect(find.text('Renseignez le fournisseur.'), findsOneWidget);
+    expect(
+      find.text('Saisissez un montant positif, ex. 240,00.'),
+      findsOneWidget,
+    );
+    expect(find.text('Choisissez une catégorie.'), findsOneWidget);
+    await _tap(tester, 'page-back');
+    await _tap(tester, 'page-back');
+
+    // Fournitures needs no receipt: nothing to flag.
+    await _declare(tester, amount: '45,50', category: 'Fournitures');
+    expect(find.text('Tout est correct ?'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('summary-amount'))).data,
+      contains('45,50'),
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.descendant(
+              of: find.byKey(const ValueKey('summary-submit')),
+              matching: find.byType(FilledButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    await _tap(tester, 'summary-check');
+    await _tap(tester, 'summary-submit');
+    expect(find.text('Dépense validée'), findsOneWidget);
+    expect(find.text('Validée par l’agent'), findsWidgets);
+
+    await _tap(tester, 'result-home');
+    final created = state.mine.first;
+    expect(created.supplier, 'Taxi Vert');
+    expect(created.amountCents, 4550);
+    expect(created.status, ExpenseStatus.approved);
+    expect(find.byKey(ValueKey('home-expense-${created.id}')), findsOneWidget);
+  });
+
+  testWidgets(
+    'Exception: manager rejects, collaborator corrects and resubmits',
+    (tester) async {
+      await _start(tester);
+      await _signInAs(tester, UserRole.employee);
+      // A meal without a receipt: the control sends it to a manager.
+      await _declare(tester, amount: '120', category: 'Repas');
+      await _tap(tester, 'summary-check');
+      await _tap(tester, 'summary-submit');
+      expect(find.text('Transmise à votre responsable'), findsOneWidget);
+      expect(find.textContaining('Justificatif manquant'), findsOneWidget);
+      await _tap(tester, 'result-home');
+      final id = state.mine.first.id;
+      await _signOut(tester);
+
+      await _signInAs(tester, UserRole.manager);
+      await _tap(tester, 'tab-exceptions');
+      await _tap(tester, 'exception-$id');
+      expect(find.text('Décision nécessaire'), findsOneWidget);
+      await _tap(tester, 'decision-reject');
+      await _tap(tester, 'reject-confirm');
+      expect(find.text('Le motif du rejet est obligatoire.'), findsOneWidget);
+      await _type(tester, 'reject-reason', 'Merci de joindre le reçu.');
+      await _tap(tester, 'reject-confirm');
+      expect(find.byKey(ValueKey('exception-$id')), findsNothing);
+      expect(state.byId(id)!.status, ExpenseStatus.rejected);
+      // Let the confirmation message leave the screen.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await _signOut(tester);
+
+      await _signInAs(tester, UserRole.employee);
+      expect(find.textContaining('rejetée'), findsWidgets);
+      await _tap(tester, 'home-expense-$id');
+      expect(find.text('Merci de joindre le reçu.'), findsOneWidget);
+      await _tap(tester, 'detail-correct');
+      expect(find.text('Corriger ma dépense'), findsOneWidget);
+      await _tap(tester, 'form-category');
+      await tester.tap(find.text('Fournitures').last);
+      await tester.pumpAndSettle();
+      await _tap(tester, 'form-continue');
+      await _tap(tester, 'summary-check');
+      await _tap(tester, 'summary-submit');
+      expect(find.text('Dépense validée'), findsOneWidget);
+      expect(state.byId(id)!.status, ExpenseStatus.approved);
+    },
+  );
+
+  testWidgets('A manager cannot decide on their own expense', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _declare(tester, amount: '900');
+    await _tap(tester, 'summary-check');
+    await _tap(tester, 'summary-submit');
+    await _tap(tester, 'result-home');
+    final own = state.mine.first;
+    expect(own.status, ExpenseStatus.needsReview);
+    // Not offered in the list of exceptions to decide.
+    await _tap(tester, 'tab-exceptions');
+    expect(find.byKey(ValueKey('exception-${own.id}')), findsNothing);
+  });
+
+  testWidgets('Duplicate: same day and amount is announced before submitting', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    final twin = state.byId('EXP-1041')!;
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-manual');
+    await _type(tester, 'form-supplier', 'Taxi Bleu');
+    await _type(tester, 'form-amount', '85');
+    final d = twin.date!;
+    await _type(
+      tester,
+      'form-date',
+      '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/${d.year}',
+    );
+    await _tap(tester, 'form-category');
+    await tester.tap(find.text('Transport').last);
+    await tester.pumpAndSettle();
+    await _type(tester, 'form-reason', 'Retour');
+    await _tap(tester, 'form-continue');
+    expect(find.text('Doublon possible'), findsOneWidget);
+    await _tap(tester, 'duplicate-keep-draft');
+    expect(find.text('Doublon possible'), findsNothing);
+    expect(state.mine.first.status, ExpenseStatus.draft);
+  });
+
+  testWidgets('Interrupted sending keeps the expense and can be retried', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    final before = state.mine.length;
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-manual');
+    await _type(tester, 'form-supplier', 'Bureau Plus');
+    await _type(tester, 'form-amount', '60');
+    await _tap(tester, 'form-category');
+    await tester.tap(find.text('Fournitures').last);
+    await tester.pumpAndSettle();
+    await _type(tester, 'form-reason', 'Papier');
+    backend.offline = true;
+    await _tap(tester, 'form-continue');
+    expect(find.text('Envoi interrompu'), findsOneWidget);
+    await _tap(tester, 'interrupted-retry');
+    expect(find.text('Toujours pas de connexion.'), findsOneWidget);
+    expect(state.mine.length, before);
+    backend.offline = false;
+    await _tap(tester, 'interrupted-retry');
+    expect(find.text('Tout est correct ?'), findsOneWidget);
+    expect(state.mine.length, before + 1);
+  });
+
+  testWidgets('Accountant: selection, total, export and history', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.accountant);
+    await _tap(tester, 'tab-exports');
+    final ready = state.toExport;
+    expect(ready.length, 3);
+    expect(find.text('3 dépenses sélectionnées'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('export-EXP-1035')),
+        matching: find.byType(Checkbox),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('2 dépenses sélectionnées'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('export-total'))).data,
+      contains('445,00'),
+    );
+
+    await _tap(tester, 'export-prepare');
+    await _tap(tester, 'export-generate');
+    expect(find.text('Export prêt'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('export-summary'))).data,
+      allOf(contains('2 dépenses'), contains('445,00')),
+    );
+    await _tap(tester, 'export-done');
+    // The one left was unticked earlier and stays so.
+    expect(find.text('0 dépenses sélectionnées'), findsOneWidget);
+    expect(state.byId('EXP-1041')!.status, ExpenseStatus.exported);
+    expect(state.byId('EXP-1035')!.status, ExpenseStatus.approved);
+    expect(state.exports.length, 2);
+  });
+
+  testWidgets('Manager: invite a member and change a rule', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-team');
+    expect(find.text('Ahmed El Fassi'), findsOneWidget);
+    await _tap(tester, 'team-invite');
+    await _type(tester, 'invite-email', 'karim@exemple.ma');
+    await _tap(tester, 'invite-submit');
+    // No e-mail is sent: the screen says what really happened.
+    expect(find.text('Invitation enregistrée'), findsOneWidget);
+    expect(find.textContaining('n’envoie pas encore d’e-mail'), findsOneWidget);
+    await tester.tap(find.text('Terminer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Invitation en attente'), findsOneWidget);
+    await _tap(tester, 'page-back');
+
+    await _tap(tester, 'profile-rules');
+    await _tap(tester, 'rule-toggle-Repas');
+    await _type(tester, 'rule-limit-Repas', '0');
+    await _tap(tester, 'rule-save-Repas');
+    expect(find.textContaining('plafond positif'), findsOneWidget);
+    await _type(tester, 'rule-limit-Repas', '350');
+    await _tap(tester, 'rule-save-Repas');
+    expect(state.policyOf('Repas')!.limitCents, 35000);
+  });
+
+  testWidgets('WhatsApp: the author confirms what was understood', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-whatsapp');
+    expect(find.text('Dépense reçue via WhatsApp'), findsOneWidget);
+    expect(find.text('« Taxi, 45 dirhams, client Atlas. »'), findsOneWidget);
+    expect(find.text('Client Atlas'), findsOneWidget);
+    // Nothing was submitted by merely receiving the message.
+    expect(state.byId('EXP-1034')!.status, ExpenseStatus.draft);
+    await _tap(tester, 'whatsapp-confirm');
+    expect(find.text('Dépense validée'), findsOneWidget);
+    expect(state.byId('EXP-1034')!.status, ExpenseStatus.approved);
+    await _tap(tester, 'result-home');
+    expect(find.byKey(const ValueKey('home-whatsapp')), findsNothing);
+  });
+
+  testWidgets('WhatsApp: a person links and removes their number', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-whatsapp');
+    await _type(tester, 'whatsapp-phone', '12');
+    await _tap(tester, 'whatsapp-save');
+    expect(find.textContaining('Numéro invalide'), findsOneWidget);
+    await _type(tester, 'whatsapp-phone', '06 12 34 56 78');
+    await _tap(tester, 'whatsapp-save');
+    expect(state.user!.whatsappPhone, '+212612345678');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'whatsapp-unlink');
+    expect(state.user!.whatsappPhone, isNull);
+  });
+
+  testWidgets('Accountant overview adds up the validated expenses', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.accountant);
+    final now = DateTime.now();
+    final month = state.expenses.where(
+      (e) => e.date!.year == now.year && e.date!.month == now.month,
+    );
+    final total = month.fold<int>(0, (s, e) => s + e.amountCents);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('overview-total')),
+        matching: find.text(formatMad(total)),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('overview-to-export')),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
+    await _tap(tester, 'overview-export');
+    expect(find.text('3 dépenses sélectionnées'), findsOneWidget);
+  });
+
+  testWidgets('Routes are guarded by session and role', (tester) async {
+    await _start(tester, route: AppRoutes.manager);
+    expect(find.byKey(const ValueKey('login-submit')), findsOneWidget);
+
+    await _signInAs(tester, UserRole.employee);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.pushNamed(AppRoutes.rules);
+    await tester.pumpAndSettle();
+    expect(find.text('Accès réservé'), findsOneWidget);
+    expect(find.text('Votre rôle : Collaborateur'), findsOneWidget);
+    await _tap(tester, 'back-to-my-space');
+    expect(find.text('Bonjour\nMarius,'), findsOneWidget);
+
+    navigator.pushNamed('/inconnue');
+    await tester.pumpAndSettle();
+    expect(find.text('Page introuvable'), findsOneWidget);
+  });
+
+  testWidgets('Activity lists status changes and marks them read', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    expect(state.unreadCount, greaterThan(0));
+    await _tap(tester, 'home-bell');
+    expect(find.text('Correction demandée'), findsOneWidget);
+    await _tap(tester, 'activity-read-all');
+    expect(state.unreadCount, 0);
+  });
+
+  for (final role in UserRole.values) {
+    testWidgets('${role.label}: every tab fits a narrow phone, large text', (
+      tester,
+    ) async {
+      await _start(tester, size: const Size(320, 640), textScale: 2);
+      await _signInDirectly(tester, role);
+      for (final tab in [
+        role == UserRole.accountant ? 'tab-overview' : 'tab-home',
+        if (role == UserRole.employee) 'tab-expenses',
+        if (role == UserRole.manager) 'tab-exceptions',
+        if (role == UserRole.accountant) 'tab-exports',
+        'tab-activity',
+        'tab-profile',
+      ]) {
+        await _tap(tester, tab);
+        expect(tester.takeException(), isNull, reason: tab);
+      }
+    });
+  }
+
+  testWidgets('Entry and form screens fit a narrow phone, large text', (
+    tester,
+  ) async {
+    for (final route in [
+      AppRoutes.login,
+      AppRoutes.signup,
+      AppRoutes.forgotPassword,
+    ]) {
+      await _start(
+        tester,
+        route: route,
+        size: const Size(320, 640),
+        textScale: 2,
+      );
+      expect(tester.takeException(), isNull, reason: route);
+    }
+    await _start(tester, size: const Size(320, 640), textScale: 2);
+    await _signInDirectly(tester, UserRole.manager);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    for (final route in [
+      AppRoutes.capture,
+      AppRoutes.review,
+      AppRoutes.team,
+      AppRoutes.rules,
+    ]) {
+      navigator.pushNamed(route);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: route);
+      navigator.pop();
+      await tester.pumpAndSettle();
+    }
+  });
+}

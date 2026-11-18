@@ -1,0 +1,474 @@
+/// Shared REMBO domain model. Amounts are integer centimes of MAD and dates
+/// are civil days; the JSON shape matches the Supabase tables.
+library;
+
+enum UserRole {
+  employee('Collaborateur'),
+  manager('Responsable'),
+  accountant('Comptable');
+
+  const UserRole(this.label);
+  final String label;
+
+  static UserRole parse(String? name) =>
+      values.firstWhere((r) => r.name == name, orElse: () => employee);
+}
+
+/// Life cycle of an expense. Only the server moves an expense past `draft`.
+enum ExpenseStatus {
+  draft('draft', 'Brouillon'),
+  submitted('submitted', 'Soumise'),
+  needsReview('needs_review', 'À examiner'),
+  approved('approved', 'Validée'),
+  rejected('rejected', 'Rejetée'),
+  exported('exported', 'Exportée');
+
+  const ExpenseStatus(this.code, this.label);
+  final String code;
+  final String label;
+
+  static ExpenseStatus parse(String? code) =>
+      values.firstWhere((s) => s.code == code, orElse: () => draft);
+
+  /// The owner may still edit the expense.
+  bool get editable => this == draft || this == rejected;
+}
+
+/// How the expense reached REMBO.
+enum ExpenseSource {
+  app,
+  whatsapp;
+
+  static ExpenseSource parse(String? name) =>
+      name == 'whatsapp' ? whatsapp : app;
+}
+
+enum FlagKind {
+  policy('Écart aux règles'),
+  ambiguity('Ambiguïté'),
+  duplicate('Doublon possible');
+
+  const FlagKind(this.label);
+  final String label;
+
+  static FlagKind parse(String? name) =>
+      values.firstWhere((k) => k.name == name, orElse: () => ambiguity);
+}
+
+/// Why the automatic control sent an expense to a manager.
+class ExpenseFlag {
+  const ExpenseFlag(this.kind, this.message);
+  final FlagKind kind;
+  final String message;
+
+  factory ExpenseFlag.fromJson(Map<String, dynamic> json) => ExpenseFlag(
+    FlagKind.parse(json['kind'] as String?),
+    '${json['message']}',
+  );
+}
+
+/// One step of the status history, written by the server.
+class ExpenseEvent {
+  const ExpenseEvent({
+    required this.status,
+    required this.at,
+    required this.actorName,
+    this.byAgent = false,
+    this.reason,
+  });
+  final ExpenseStatus status;
+  final DateTime at;
+  final String actorName;
+  final bool byAgent;
+  final String? reason;
+
+  factory ExpenseEvent.fromJson(Map<String, dynamic> json) => ExpenseEvent(
+    status: ExpenseStatus.parse(json['to_status'] as String?),
+    at: DateTime.parse(json['created_at'] as String).toLocal(),
+    actorName: (json['actor_name'] as String?) ?? '',
+    byAgent: json['actor_kind'] == 'agent',
+    reason: json['reason'] as String?,
+  );
+}
+
+const expenseCategories = [
+  'Repas',
+  'Transport',
+  'Hébergement',
+  'Fournitures',
+  'Autre',
+];
+
+class Expense {
+  const Expense({
+    required this.id,
+    required this.employeeId,
+    required this.employeeName,
+    this.supplier = '',
+    this.supplierIce = '',
+    this.date,
+    this.amountCents = 0,
+    this.vatCents = 0,
+    this.category = '',
+    this.project = '',
+    this.reason = '',
+    this.status = ExpenseStatus.draft,
+    this.receiptPath,
+    this.flags = const [],
+    this.events = const [],
+    this.source = ExpenseSource.app,
+    this.transcript,
+    this.voicePath,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String employeeId;
+  final String employeeName;
+  final String supplier;
+  final String supplierIce;
+  final DateTime? date;
+  final int amountCents;
+  final int vatCents;
+  final String category;
+  final String project;
+  final String reason;
+  final ExpenseStatus status;
+  final String? receiptPath;
+  final List<ExpenseFlag> flags;
+  final List<ExpenseEvent> events;
+  final ExpenseSource source;
+
+  /// Text of the WhatsApp message, or transcription of the voice note.
+  final String? transcript;
+
+  /// Voice note kept next to the receipts, when there is one.
+  final String? voicePath;
+  final DateTime createdAt;
+
+  bool get fromWhatsApp => source == ExpenseSource.whatsapp;
+  bool get hasVoice => voicePath != null && voicePath!.isNotEmpty;
+
+  bool get hasReceipt => receiptPath != null && receiptPath!.isNotEmpty;
+
+  /// What lists show: the reason when given, else the supplier.
+  String get title => supplier.isNotEmpty
+      ? supplier
+      : (reason.isNotEmpty ? reason : 'Dépense sans titre');
+
+  /// The fields a submission needs; empty when the draft is complete.
+  List<String> get missingFields => [
+    if (supplier.trim().isEmpty) 'fournisseur',
+    if (date == null) 'date',
+    if (amountCents <= 0) 'montant',
+    if (category.trim().isEmpty) 'catégorie',
+    if (reason.trim().isEmpty) 'motif',
+  ];
+
+  ExpenseEvent? get lastDecision {
+    for (final e in events.reversed) {
+      if (e.status == ExpenseStatus.approved ||
+          e.status == ExpenseStatus.rejected) {
+        return e;
+      }
+    }
+    return null;
+  }
+
+  bool get approvedByAgent => lastDecision?.byAgent ?? false;
+
+  Expense copyWith({
+    String? id,
+    String? supplier,
+    String? supplierIce,
+    DateTime? date,
+    int? amountCents,
+    int? vatCents,
+    String? category,
+    String? project,
+    String? reason,
+    ExpenseStatus? status,
+    String? receiptPath,
+    List<ExpenseFlag>? flags,
+    List<ExpenseEvent>? events,
+  }) => Expense(
+    id: id ?? this.id,
+    employeeId: employeeId,
+    employeeName: employeeName,
+    supplier: supplier ?? this.supplier,
+    supplierIce: supplierIce ?? this.supplierIce,
+    date: date ?? this.date,
+    amountCents: amountCents ?? this.amountCents,
+    vatCents: vatCents ?? this.vatCents,
+    category: category ?? this.category,
+    project: project ?? this.project,
+    reason: reason ?? this.reason,
+    status: status ?? this.status,
+    receiptPath: receiptPath ?? this.receiptPath,
+    flags: flags ?? this.flags,
+    events: events ?? this.events,
+    source: source,
+    transcript: transcript,
+    voicePath: voicePath,
+    createdAt: createdAt,
+  );
+
+  factory Expense.fromJson(Map<String, dynamic> json) {
+    final events = [
+      for (final e in (json['status_events'] as List? ?? const []))
+        ExpenseEvent.fromJson(Map<String, dynamic>.from(e as Map)),
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    return Expense(
+      id: json['id'] as String,
+      employeeId: json['employee_id'] as String,
+      employeeName:
+          (json['employee_name'] as String?) ??
+          ((json['profiles'] as Map?)?['full_name'] as String?) ??
+          '',
+      supplier: (json['supplier_name'] as String?) ?? '',
+      supplierIce: (json['supplier_ice'] as String?) ?? '',
+      date: json['expense_date'] == null
+          ? null
+          : DateTime.parse(json['expense_date'] as String),
+      amountCents: (json['amount_cents'] as num?)?.toInt() ?? 0,
+      vatCents: (json['vat_cents'] as num?)?.toInt() ?? 0,
+      category: (json['category'] as String?) ?? '',
+      project: (json['project'] as String?) ?? '',
+      reason: (json['reason'] as String?) ?? '',
+      status: ExpenseStatus.parse(json['status'] as String?),
+      receiptPath: json['receipt_path'] as String?,
+      flags: [
+        for (final f in (json['flags'] as List? ?? const []))
+          ExpenseFlag.fromJson(Map<String, dynamic>.from(f as Map)),
+      ],
+      events: events,
+      source: ExpenseSource.parse(json['source'] as String?),
+      transcript: json['transcript'] as String?,
+      voicePath: json['voice_path'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+    );
+  }
+
+  /// Columns the owner is allowed to write. Status, flags and history are
+  /// never sent: the server owns them.
+  Map<String, dynamic> toWritableJson() => {
+    'supplier_name': supplier.trim(),
+    'supplier_ice': supplierIce.trim(),
+    'expense_date': date == null ? null : isoDay(date!),
+    'amount_cents': amountCents,
+    'vat_cents': vatCents,
+    'category': category,
+    'project': project.trim(),
+    'reason': reason.trim(),
+  };
+}
+
+String isoDay(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+class AppUser {
+  const AppUser({
+    required this.id,
+    required this.email,
+    required this.fullName,
+    this.role = UserRole.employee,
+    this.companyId,
+    this.companyName = '',
+    this.whatsappPhone,
+  });
+  final String id;
+  final String email;
+  final String fullName;
+  final UserRole role;
+
+  /// Null until the account creates or joins a company.
+  final String? companyId;
+  final String companyName;
+
+  /// Number allowed to send expenses by WhatsApp, as +212600000000.
+  final String? whatsappPhone;
+
+  AppUser withWhatsApp(String? phone) => AppUser(
+    id: id,
+    email: email,
+    fullName: fullName,
+    role: role,
+    companyId: companyId,
+    companyName: companyName,
+    whatsappPhone: phone,
+  );
+
+  String get firstName => fullName.trim().split(RegExp(r'\s+')).first;
+  String get initial =>
+      fullName.trim().isEmpty ? '?' : fullName.trim()[0].toUpperCase();
+}
+
+class Member {
+  const Member({
+    required this.name,
+    required this.email,
+    required this.role,
+    this.pending = false,
+  });
+  final String name;
+  final String email;
+  final UserRole role;
+
+  /// Invited, has not created an account yet.
+  final bool pending;
+}
+
+/// Reimbursement rule of one category.
+class PolicyRule {
+  const PolicyRule({
+    required this.category,
+    required this.limitCents,
+    this.receiptRequired = true,
+  });
+  final String category;
+  final int limitCents;
+  final bool receiptRequired;
+
+  factory PolicyRule.fromJson(Map<String, dynamic> json) => PolicyRule(
+    category: json['category'] as String,
+    limitCents: (json['limit_cents'] as num).toInt(),
+    receiptRequired: (json['receipt_required'] as bool?) ?? true,
+  );
+}
+
+class ExportBatch {
+  const ExportBatch({
+    required this.id,
+    required this.fileName,
+    required this.createdAt,
+    required this.count,
+    required this.totalCents,
+    this.csv,
+  });
+  final String id;
+  final String fileName;
+  final DateTime createdAt;
+  final int count;
+  final int totalCents;
+
+  /// File content, available for the batch created in this session.
+  final String? csv;
+
+  factory ExportBatch.fromJson(Map<String, dynamic> json, {String? csv}) =>
+      ExportBatch(
+        id: json['id'] as String,
+        fileName: json['file_name'] as String,
+        createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+        count: (json['expense_count'] as num).toInt(),
+        totalCents: (json['total_cents'] as num).toInt(),
+        csv: csv,
+      );
+}
+
+/// Values read on a receipt, when a reader is available.
+class ReceiptReading {
+  const ReceiptReading({
+    this.supplier,
+    this.supplierIce,
+    this.date,
+    this.amountCents,
+    this.vatCents,
+    this.unreadable = false,
+    this.simulated = false,
+  });
+  final String? supplier;
+  final String? supplierIce;
+  final DateTime? date;
+  final int? amountCents;
+  final int? vatCents;
+  final bool unreadable;
+
+  /// Demo values, not read from the picture.
+  final bool simulated;
+}
+
+/// A problem the user can act on; [message] is shown as is.
+class RemboException implements Exception {
+  const RemboException(this.message, {this.network = false});
+  final String message;
+
+  /// The request did not reach the server: the action can be retried.
+  final bool network;
+
+  @override
+  String toString() => message;
+}
+
+// --- Full JSON, used by the on-device store --------------------------------
+
+extension ExpenseStorage on Expense {
+  /// Every field, in the shape [Expense.fromJson] reads.
+  Map<String, dynamic> toJson() => {
+    ...toWritableJson(),
+    'id': id,
+    'employee_id': employeeId,
+    'employee_name': employeeName,
+    'status': status.code,
+    'receipt_path': receiptPath,
+    'flags': [
+      for (final f in flags) {'kind': f.kind.name, 'message': f.message},
+    ],
+    'status_events': [
+      for (final e in events)
+        {
+          'to_status': e.status.code,
+          'created_at': e.at.toUtc().toIso8601String(),
+          'actor_name': e.actorName,
+          'actor_kind': e.byAgent ? 'agent' : 'user',
+          'reason': e.reason,
+        },
+    ],
+    'source': source.name,
+    'transcript': transcript,
+    'voice_path': voicePath,
+    'created_at': createdAt.toUtc().toIso8601String(),
+  };
+}
+
+extension AppUserStorage on AppUser {
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'email': email,
+    'full_name': fullName,
+    'role': role.name,
+    'company_id': companyId,
+    'company_name': companyName,
+    'whatsapp_phone': whatsappPhone,
+  };
+}
+
+AppUser appUserFromJson(Map<String, dynamic> json) => AppUser(
+  id: json['id'] as String,
+  email: json['email'] as String,
+  fullName: (json['full_name'] as String?) ?? '',
+  role: UserRole.parse(json['role'] as String?),
+  companyId: json['company_id'] as String?,
+  companyName: (json['company_name'] as String?) ?? '',
+  whatsappPhone: json['whatsapp_phone'] as String?,
+);
+
+extension PolicyRuleStorage on PolicyRule {
+  Map<String, dynamic> toJson() => {
+    'category': category,
+    'limit_cents': limitCents,
+    'receipt_required': receiptRequired,
+  };
+}
+
+extension ExportBatchStorage on ExportBatch {
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'file_name': fileName,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'expense_count': count,
+    'total_cents': totalCents,
+    'csv': csv,
+  };
+}

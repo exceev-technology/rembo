@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
-import 'auth_validation.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key, this.initialEmail = ''});
-  final String initialEmail;
+  const ForgotPasswordScreen({super.key});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  late final _email = TextEditingController(text: widget.initialEmail);
+  final _email = TextEditingController();
   String? _error;
+  String? _failure;
   bool _loading = false;
-  String? _sentTo;
+  bool _sent = false;
 
   @override
   void dispose() {
@@ -24,81 +24,85 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _send() async {
-    setState(() => _error = AuthValidation.email(_email.text));
-    if (_error != null) return;
-    FocusScope.of(context).unfocus();
-    setState(() => _loading = true);
-    await Future<void>.delayed(AuthValidation.simulatedDelay);
-    if (!mounted) return;
     setState(() {
-      _loading = false;
-      _sentTo = _email.text.trim();
+      _failure = null;
+      _error = isValidEmail(_email.text) ? null : 'Adresse e-mail invalide.';
     });
+    if (_error != null) return;
+    setState(() => _loading = true);
+    try {
+      await AppScope.read(context).backend
+          .sendPasswordReset(_email.text.trim());
+      if (mounted) setState(() => _sent = true);
+    } on RemboException catch (e) {
+      if (mounted) setState(() => _failure = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final sentTo = _sentTo;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mot de passe oublié')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(RemboSpace.xl),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Réinitialiser le mot de passe',
-                    style: RemboText.title,
-                  ),
-                  const SizedBox(height: RemboSpace.sm),
-                  const Text(
-                    'Indiquez votre adresse e-mail : nous vous enverrons un '
-                    'lien pour choisir un nouveau mot de passe.',
-                    style: RemboText.body,
-                  ),
-                  const SizedBox(height: RemboSpace.xl),
-                  if (sentTo == null) ...[
-                    RemboTextField(
-                      fieldKey: const ValueKey('forgot-email'),
-                      label: 'Adresse e-mail professionnelle',
-                      controller: _email,
-                      errorText: _error,
-                      keyboardType: TextInputType.emailAddress,
-                      onSubmitted: (_) => _send(),
-                    ),
-                    const SizedBox(height: RemboSpace.xl),
-                    RemboPrimaryButton(
-                      key: const ValueKey('forgot-submit'),
-                      label: 'Envoyer le lien',
-                      loading: _loading,
-                      onPressed: _send,
-                    ),
-                  ] else ...[
-                    RemboMessage(
-                      tone: MessageTone.success,
-                      title: 'Lien envoyé',
-                      message:
-                          'Si un compte existe pour $sentTo, vous recevrez '
-                          'un e-mail dans quelques minutes. Pensez à vérifier '
-                          'vos courriers indésirables.',
-                    ),
-                    const SizedBox(height: RemboSpace.xl),
-                    RemboPrimaryButton(
-                      key: const ValueKey('forgot-back'),
-                      label: 'Retour à la connexion',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    final demo = AppScope.of(context).isDemo;
+    return RemboPage(
+      children: [
+        const SizedBox(height: RemboSpace.sm),
+        const Center(child: HeroArt(height: 190, art: RemboArt.envelope)),
+        const SizedBox(height: RemboSpace.xl),
+        Semantics(
+          header: true,
+          child: Text('Mot de passe\noublié ?', style: RemboText.display),
+        ),
+        const SizedBox(height: RemboSpace.sm),
+        Text(
+          'Recevez un lien par e-mail pour réinitialiser votre mot de passe.',
+          style: RemboText.body.copyWith(color: RemboColors.muted),
+        ),
+        const SizedBox(height: RemboSpace.xl),
+        if (_sent)
+          RemboMessage(
+            key: const ValueKey('reset-sent'),
+            tone: demo ? MessageTone.info : MessageTone.success,
+            title: demo
+                ? 'Démonstration : aucun e-mail envoyé'
+                : 'Demande envoyée',
+            message: demo
+                ? 'Avec un serveur configuré, un lien serait envoyé à '
+                      '${_email.text.trim()}.'
+                : 'Si un compte existe pour ${_email.text.trim()}, vous '
+                      'recevrez un lien dans quelques minutes.',
+          )
+        else ...[
+          if (_failure != null) ...[
+            RemboMessage(tone: MessageTone.error, title: _failure!),
+            const SizedBox(height: RemboSpace.lg),
+          ],
+          RemboTextField(
+            fieldKey: const ValueKey('reset-email'),
+            label: 'Adresse e-mail',
+            hint: 'votre@email.com',
+            icon: Icons.mail_outline_rounded,
+            controller: _email,
+            errorText: _error,
+            keyboardType: TextInputType.emailAddress,
+            onSubmitted: (_) => _send(),
+          ),
+          const SizedBox(height: RemboSpace.xl),
+          RemboPrimaryButton(
+            key: const ValueKey('reset-submit'),
+            label: 'Envoyer le lien',
+            loading: _loading,
+            onPressed: _send,
+          ),
+        ],
+        const SizedBox(height: RemboSpace.sm),
+        Center(
+          child: TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Text('Retour à la connexion'),
           ),
         ),
-      ),
+      ],
     );
   }
 }
