@@ -315,6 +315,14 @@ class AppUser {
       fullName.trim().isEmpty ? '?' : fullName.trim()[0].toUpperCase();
 }
 
+/// A company waiting for the signed-in person to join it, with the role
+/// it gives them. Joined only when the person accepts.
+class CompanyInvitation {
+  const CompanyInvitation({required this.companyName, required this.role});
+  final String companyName;
+  final UserRole role;
+}
+
 /// One-time code that links a WhatsApp number: the person sends
 /// « LIER [code] » from that number before [expiresAt].
 class WhatsAppLinkCode {

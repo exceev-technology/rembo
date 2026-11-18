@@ -48,10 +48,16 @@ export type Parsed = {
   reason: string;
 };
 
+/** An amount as people type it: 45, 45.5, 45,50. */
+const NUMBER = String.raw`(\d{1,7})(?:[.,](\d{1,2}))?`;
+
 /** Reads what it can from a short sentence; missing parts stay empty. */
 export function parseMessage(text: string): Parsed {
   const clean = text.trim().replace(/\s+/g, " ");
-  const amount = clean.match(/(\d{1,7})(?:[.,](\d{1,2}))?\s*(?:dhs?|dirhams?|mad|درهم)?/i);
+  // The number written with a currency is the amount (« 2 taxis, 45 dh »
+  // costs 45); without one, the first number.
+  const amount = clean.match(new RegExp(`${NUMBER}\\s*(?:dhs?|dirhams?|mad|درهم)(?![a-z])`, "i")) ??
+    clean.match(new RegExp(NUMBER));
   const amountCents = amount
     ? parseInt(amount[1], 10) * 100 + parseInt((amount[2] ?? "0").padEnd(2, "0"), 10)
     : 0;
@@ -121,7 +127,8 @@ async function transcribe(audio: Uint8Array<ArrayBuffer>, type: string): Promise
     });
     if (!res.ok) return "";
     return String((await res.json()).text ?? "").slice(0, 500);
-  } catch {
+  } catch (e) {
+    console.error("transcription failed", e);
     return "";
   }
 }

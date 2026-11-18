@@ -16,10 +16,10 @@
 //   RECEIPT_DAILY_LIMIT optional, readings per person per day (default 40)
 // Deploy: supabase functions deploy read-receipt
 
-import Anthropic from "npm:@anthropic-ai/sdk";
-import { zodOutputFormat } from "npm:@anthropic-ai/sdk/helpers/zod";
+import Anthropic from "npm:@anthropic-ai/sdk@1";
+import { zodOutputFormat } from "npm:@anthropic-ai/sdk@1/helpers/zod";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { z } from "npm:zod";
+import { z } from "npm:zod@4";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
 const MODEL = env("RECEIPT_MODEL") || "claude-opus-5-5";
@@ -158,15 +158,14 @@ if (import.meta.main) {
       env("SUPABASE_SERVICE_ROLE_KEY"),
       { auth: { persistSession: false } },
     );
-    const since = new Date(Date.now() - 86_400_000).toISOString();
-    const { count, error: countError } = await admin
-      .from("receipt_readings")
-      .select("id", { count: "exact", head: true })
-      .eq("profile_id", user.id)
-      .gte("created_at", since);
-    if (countError) return json({ error: "server" }, 500);
-    if ((count ?? 0) >= DAILY_LIMIT) return json({ error: "daily_limit" }, 429);
-    await admin.from("receipt_readings").insert({ profile_id: user.id });
+    // Counted and recorded in one step (see take_receipt_reading): requests
+    // sent at the same time cannot all pass under the limit.
+    const { data: allowed, error: quotaError } = await admin.rpc(
+      "take_receipt_reading",
+      { p_profile: user.id, p_limit: DAILY_LIMIT },
+    );
+    if (quotaError) return json({ error: "server" }, 500);
+    if (allowed !== true) return json({ error: "daily_limit" }, 429);
 
     const client = new Anthropic();
     try {

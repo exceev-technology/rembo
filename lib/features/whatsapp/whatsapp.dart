@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
+import '../../core/log.dart';
 
 /// WhatsApp number of the company's REMBO line, digits only, given at
 /// build time (REMBO_WHATSAPP_NUMBER). Empty until the line exists.
@@ -14,7 +15,8 @@ Future<bool> _open(String url) async {
       Uri.parse(url),
       mode: LaunchMode.externalApplication,
     );
-  } catch (_) {
+  } catch (e, st) {
+    logFailure('link not opened', e, st);
     return false;
   }
 }

@@ -18,8 +18,9 @@ abstract class RemboBackend {
   Future<AppUser?> restoreSession();
   Future<AppUser> signIn(String email, String password);
 
-  /// Creates the account. Joins the company that invited [email], if any.
-  /// Returns null when the address must be confirmed before signing in.
+  /// Creates the account. An invitation to [email] is joined only later,
+  /// with [acceptInvitation]. Returns null when the address must be
+  /// confirmed before signing in.
   Future<AppUser?> signUp({
     required String email,
     required String password,
@@ -34,6 +35,13 @@ abstract class RemboBackend {
     String ice = '',
     String city = '',
   });
+
+  /// The company that invited the signed-in person, while they belong to
+  /// none. Null when nothing waits.
+  Future<CompanyInvitation?> pendingInvitation();
+
+  /// Joins the company of [pendingInvitation], with the role it gives.
+  Future<AppUser> acceptInvitation();
 
   // Expenses --------------------------------------------------------------
   /// Every expense the current user is allowed to see.

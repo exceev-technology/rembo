@@ -6,7 +6,7 @@ import 'package:rembo/features/expenses/receipt_picker.dart';
 import 'package:rembo/app/app_routes.dart';
 import 'package:rembo/app/rembo_app.dart';
 import 'package:rembo/core/data/app_state.dart';
-import 'package:rembo/core/data/demo_backend.dart';
+import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/format/formatters.dart';
 import 'package:rembo/features/auth/login_screen.dart';
@@ -20,6 +20,7 @@ Future<void> _start(
   String route = AppRoutes.login,
   Size size = const Size(420, 2600),
   double textScale = 1,
+  ReceiptPicker receiptPicker = pickWithDevice,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -31,7 +32,9 @@ Future<void> _start(
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   backend = DemoBackend(latency: Duration.zero);
   state = AppState(backend);
-  await tester.pumpWidget(RemboApp(state: state, initialRoute: route));
+  await tester.pumpWidget(
+    RemboApp(state: state, initialRoute: route, receiptPicker: receiptPicker),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -565,13 +568,14 @@ void main() {
   testWidgets(
     'Receipt read: the values are proposed, the VAT can be corrected',
     (tester) async {
-      await _start(tester);
+      // No camera in tests: a picture is handed over in its place.
+      await _start(
+        tester,
+        receiptPicker: ({required bool camera}) async =>
+            PickedReceipt(Uint8List.fromList([1, 2, 3]), 'ticket.jpg'),
+      );
       await _signInAs(tester, UserRole.employee);
       await _tap(tester, 'home-add');
-      // No camera in tests: a picture is handed over in its place.
-      receiptPicker = ({required bool camera}) async =>
-          PickedReceipt(Uint8List.fromList([1, 2, 3]), 'ticket.jpg');
-      addTearDown(() => receiptPicker = pickWithDevice);
       await _tap(tester, 'capture-photo');
       await tester.pumpAndSettle();
       expect(find.text('Vérifier les informations'), findsOneWidget);

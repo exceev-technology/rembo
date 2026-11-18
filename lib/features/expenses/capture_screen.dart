@@ -7,6 +7,7 @@ import '../whatsapp/whatsapp.dart';
 import 'expense_form_screen.dart';
 import 'receipt_picker.dart';
 import 'unreadable_screen.dart';
+import '../../core/data/demo_build.dart';
 
 /// « Nouvelle dépense » : photograph, import or type an expense.
 class CaptureScreen extends StatefulWidget {
@@ -23,14 +24,15 @@ class _CaptureScreenState extends State<CaptureScreen> {
     if (_busy) return;
     final state = AppScope.read(context);
     final navigator = Navigator.of(context);
+    final picker = ReceiptPickerScope.read(context);
     PickedReceipt? picked;
     try {
-      picked = unreadable
+      picked = demoAllowed && unreadable
           ? await sampleReceipt(unreadable: true)
-          : await receiptPicker(camera: camera);
+          : await picker(camera: camera);
     } on RemboException catch (e) {
       if (!mounted) return;
-      if (state.isDemo) {
+      if (demoAllowed && state.isDemo) {
         picked = await sampleReceipt();
         if (!mounted) return;
         showRemboSnackBar(
@@ -76,7 +78,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final demo = AppScope.of(context).isDemo;
+    final demo = demoAllowed && AppScope.of(context).isDemo;
     return RemboPage(
       children: [
         RemboHero(title: tr('Nouvelle dépense')),

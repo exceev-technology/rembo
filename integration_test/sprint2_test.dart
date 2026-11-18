@@ -127,11 +127,13 @@ void main() {
     final run = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final supplier = 'Café Test $run';
     final picture = await _drawReceipt();
-    receiptPicker = ({required bool camera}) async =>
-        PickedReceipt(picture, 'ticket-test.png');
-    addTearDown(() => receiptPicker = pickWithDevice);
-
-    app.main();
+    // The app as main() starts it, with the drawn picture as the gallery.
+    runApp(
+      app.RemboBoot(
+        receiptPicker: ({required bool camera}) async =>
+            PickedReceipt(picture, 'ticket-test.png'),
+      ),
+    );
     // The app is built behind the opening: wait until the logo is gone.
     await tester.pump(const Duration(seconds: 1));
     final opened = DateTime.now().add(const Duration(seconds: 40));

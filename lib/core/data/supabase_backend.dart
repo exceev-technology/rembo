@@ -10,6 +10,7 @@ import 'csv_export.dart';
 import 'ids.dart';
 import 'models.dart';
 import '../l10n/l10n.dart';
+import '../log.dart';
 
 /// Real backend. Rights are enforced by the database (row level security)
 /// and every decision is taken by an SQL function: see supabase/migrations.
@@ -101,17 +102,12 @@ class SupabaseBackend extends RemboBackend {
   Future<AppUser?> _loadUser() async {
     final auth = _client.auth.currentUser;
     if (auth == null) return _user = null;
-    Future<Map<String, dynamic>?> membership() => _client
+    // An invitation is joined only on the person's answer (acceptInvitation).
+    final m = await _client
         .from('memberships')
         .select('role, company_id, companies(name)')
         .eq('profile_id', auth.id)
         .maybeSingle();
-    var m = await membership();
-    if (m == null) {
-      // Joins the company that invited this (confirmed) address, if any.
-      final joined = await _client.rpc<dynamic>('accept_invitation');
-      if (joined == true) m = await membership();
-    }
     final link = await _client
         .from('whatsapp_links')
         .select('phone')
@@ -163,7 +159,8 @@ class SupabaseBackend extends RemboBackend {
     _user = null;
     try {
       await _client.auth.signOut();
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('sign out on the server', e, st);
       // The local session is cleared even when the server is unreachable.
     }
   }
@@ -178,6 +175,26 @@ class SupabaseBackend extends RemboBackend {
       'create_company',
       params: {'p_name': name.trim(), 'p_ice': ice, 'p_city': city},
     );
+    return (await _loadUser())!;
+  });
+
+  @override
+  Future<CompanyInvitation?> pendingInvitation() => _guard(() async {
+    final rows = await _client.rpc<dynamic>('my_invitation') as List? ?? [];
+    if (rows.isEmpty) return null;
+    final row = Map<String, dynamic>.from(rows.first as Map);
+    return CompanyInvitation(
+      companyName: row['company_name'] as String,
+      role: UserRole.parse(row['role'] as String?),
+    );
+  });
+
+  @override
+  Future<AppUser> acceptInvitation() => _guard(() async {
+    final joined = await _client.rpc<dynamic>('accept_invitation');
+    if (joined != true) {
+      throw RemboException(tr('Cette invitation n’est plus valable.'));
+    }
     return (await _loadUser())!;
   });
 
@@ -280,7 +297,8 @@ class SupabaseBackend extends RemboBackend {
     if (e.hasReceipt) {
       try {
         await _client.storage.from(_bucket).remove([e.receiptPath!]);
-      } catch (_) {
+      } catch (e, st) {
+        logFailure('orphan receipt not removed', e, st);
         // An orphan picture is harmless; the row is gone.
       }
     }
@@ -329,7 +347,8 @@ class SupabaseBackend extends RemboBackend {
         amountCents: (data['amount_cents'] as num?)?.toInt(),
         vatCents: (data['vat_cents'] as num?)?.toInt(),
       );
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('receipt reading', e, st);
       return null; // No reading: the person types the values.
     }
   }
@@ -341,7 +360,8 @@ class SupabaseBackend extends RemboBackend {
       return await _client.storage
           .from(_bucket)
           .createSignedUrl(expense.receiptPath!, 300);
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('receipt link', e, st);
       return null;
     }
   }
@@ -353,7 +373,8 @@ class SupabaseBackend extends RemboBackend {
       return await _client.storage
           .from(_bucket)
           .createSignedUrl(expense.voicePath!, 300);
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('voice note link', e, st);
       return null;
     }
   }
