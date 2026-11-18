@@ -1,6 +1,12 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  language:
+    # No silent cast from dynamic (JSON, platform answers): every one is
+    # written, so a wrong type fails where it is read.
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
   exclude:
     - build/**
     - android/**
