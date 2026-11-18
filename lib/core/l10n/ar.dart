@@ -395,9 +395,6 @@ const arabic = <String, String>{
   'Dépense traitée': 'مصروف معالج',
   'Le contrôle automatique a relevé un point.': 'رصدت المراقبة الآلية نقطة.',
   'Statut actuel : {label}.': 'الحالة الحالية: {label}.',
-  'C’est votre dépense': 'هذا مصروفك',
-  'Un autre responsable doit prendre la décision.':
-      'يجب أن يتخذ القرار مسؤول آخر.',
   'Règle interne {category} : {limitCents}':
       'القاعدة الداخلية {category}: {limitCents}',
   'Justification de la décision': 'تعليل القرار',
