@@ -32,6 +32,9 @@ class AppState extends ChangeNotifier {
 
   /// The control approves compliant expenses itself (company setting).
   bool autoApprove = false;
+
+  /// Accounting account of each category (company setting).
+  Map<String, String> accounts = const {};
   bool loading = false;
 
   /// The company that invited the person, while they belong to none: shown
@@ -124,6 +127,7 @@ class AppState extends ChangeNotifier {
     membersLoaded = false;
     exports = const [];
     policies = const [];
+    accounts = const {};
     _read.clear();
     notifyListeners();
   }
@@ -143,6 +147,7 @@ class AppState extends ChangeNotifier {
         autoApprove = await backend.fetchAutoApprove();
       }
       if (role == UserRole.accountant) exports = await backend.fetchExports();
+      if (role != UserRole.employee) accounts = await backend.fetchAccounts();
     } on RemboException catch (e) {
       loadError = e;
     } finally {
@@ -259,6 +264,12 @@ class AppState extends ChangeNotifier {
     final n = await backend.approveCompliant(ids);
     await refresh();
     return n;
+  }
+
+  Future<void> saveAccount(String category, String code) async {
+    await backend.saveAccount(category, code);
+    accounts = await backend.fetchAccounts();
+    notifyListeners();
   }
 
   Future<void> setAutoApprove(bool on) async {

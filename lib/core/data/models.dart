@@ -447,6 +447,7 @@ class ExportBatch {
     required this.createdAt,
     required this.count,
     required this.totalCents,
+    this.vatCents = 0,
     this.csv,
   });
   final String id;
@@ -454,6 +455,9 @@ class ExportBatch {
   final DateTime createdAt;
   final int count;
   final int totalCents;
+
+  /// VAT total recorded by the server for the batch.
+  final int vatCents;
 
   /// File content, available for the batch created in this session.
   final String? csv;
@@ -465,6 +469,7 @@ class ExportBatch {
         createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
         count: (json['expense_count'] as num).toInt(),
         totalCents: (json['total_cents'] as num).toInt(),
+        vatCents: (json['vat_cents'] as num?)?.toInt() ?? 0,
         csv: csv,
       );
 }
@@ -622,6 +627,7 @@ extension ExportBatchStorage on ExportBatch {
     'created_at': createdAt.toUtc().toIso8601String(),
     'expense_count': count,
     'total_cents': totalCents,
+    'vat_cents': vatCents,
     'csv': csv,
   };
 }

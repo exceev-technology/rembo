@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/agents/export_agent.dart';
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import 'export_tab.dart';
@@ -13,8 +14,11 @@ import '../../core/log.dart';
 
 /// « Export prêt » : the file exists; save or share it.
 class ExportReadyScreen extends StatelessWidget {
-  const ExportReadyScreen({super.key, required this.batch});
+  const ExportReadyScreen({super.key, required this.batch, this.expected});
   final ExportBatch batch;
+
+  /// The totals the export agent prepared, checked against the batch.
+  final ExportCheck? expected;
 
   /// Writes the CSV (UTF-8 with BOM, so spreadsheets read the accents)
   /// and opens the system share sheet, which also offers « Enregistrer ».
@@ -94,6 +98,27 @@ class ExportReadyScreen extends StatelessWidget {
             ],
           ),
         ),
+        if (expected != null) ...[
+          const SizedBox(height: RemboSpace.md),
+          expected!.matches(batch)
+              ? InfoStrip(
+                  key: const ValueKey('export-totals-ok'),
+                  tr(
+                    'Totaux contrôlés : le fichier contient exactement le '
+                    'nombre, le TTC et la TVA du lot enregistré.',
+                  ),
+                  icon: Icons.verified_outlined,
+                )
+              : RemboMessage(
+                  key: const ValueKey('export-totals-differ'),
+                  tone: MessageTone.error,
+                  title: tr('Les totaux du lot diffèrent de ceux préparés.'),
+                  message: tr(
+                    'Ne l’importez pas : rechargez les dépenses et '
+                    'vérifiez le lot.',
+                  ),
+                ),
+        ],
         const SizedBox(height: RemboSpace.lg),
         RemboPrimaryButton(
           key: const ValueKey('export-share'),

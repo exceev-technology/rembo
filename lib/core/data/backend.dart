@@ -113,4 +113,11 @@ abstract class RemboBackend {
     String delimiter = ';',
   });
   Future<List<ExportBatch>> fetchExports();
+
+  /// Accounting account of each category, as the company set it.
+  Future<Map<String, String>> fetchAccounts();
+
+  /// Sets (or, with an empty [code], removes) the account of [category].
+  /// Accountants and managers only.
+  Future<void> saveAccount(String category, String code);
 }

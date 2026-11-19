@@ -451,8 +451,19 @@ void main() {
     );
 
     await _tap(tester, 'export-prepare');
+    // The export agent adds up the batch and asks for the missing accounts.
+    expect(find.byKey(const ValueKey('export-agent')), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-accounts')), findsOneWidget);
+    await _tap(tester, 'export-accounts');
+    await _type(tester, 'account-Transport', '6142');
+    await _tap(tester, 'accounts-save');
+    expect(state.accounts['Transport'], '6142');
+    // Let the confirmation message leave the button free.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
     await _tap(tester, 'export-generate');
     expect(find.text('Export prêt'), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-totals-ok')), findsOneWidget);
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('export-summary'))).data,
       allOf(contains('2 dépenses'), contains('445,00')),

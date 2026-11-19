@@ -79,6 +79,9 @@ class LocalBackend extends RemboBackend {
 
   /// Companies that let the control approve compliant expenses itself.
   final _autoApprove = <String>{};
+
+  /// Accounting account of each category, by company.
+  final _accounts = <String, Map<String, String>>{};
   AppUser? _user;
   var _nextId = 1;
 
@@ -139,6 +142,11 @@ class LocalBackend extends RemboBackend {
           ExportBatch.fromJson(b, csv: b['csv'] as String?),
       ];
     });
+    (data['accounts'] as Map? ?? const {}).forEach((company, map) {
+      _accounts['$company'] = {
+        for (final e in (map as Map).entries) '${e.key}': '${e.value}',
+      };
+    });
     _autoApprove.addAll([
       for (final c in (data['auto_approve'] as List? ?? const [])) '$c',
     ]);
@@ -176,6 +184,7 @@ class LocalBackend extends RemboBackend {
             x.key: [for (final b in x.value) b.toJson()],
         },
         'auto_approve': _autoApprove.toList(),
+        'accounts': _accounts,
       }),
     );
   }
@@ -784,7 +793,13 @@ class LocalBackend extends RemboBackend {
       createdAt: _now,
       count: chosen.length,
       totalCents: chosen.fold(0, (s, e) => s + e.amountCents),
-      csv: CsvExport.build(chosen, batchId: batchId, delimiter: delimiter),
+      vatCents: chosen.fold(0, (s, e) => s + e.vatCents),
+      csv: CsvExport.build(
+        chosen,
+        batchId: batchId,
+        delimiter: delimiter,
+        accounts: _accounts[me.companyId!] ?? const {},
+      ),
     );
     for (final e in chosen) {
       _expenses[_indexOf(e.id)] = e.copyWith(
@@ -809,5 +824,31 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final company = _me.companyId;
     return company == null ? [] : List.of(_exportsOf(company));
+  }
+
+  @override
+  Future<Map<String, String>> fetchAccounts() async {
+    await _latency();
+    return Map.of(_accounts[_me.companyId] ?? const {});
+  }
+
+  @override
+  Future<void> saveAccount(String category, String code) async {
+    await _latency();
+    final me = _me;
+    if (me.companyId == null || me.role == UserRole.employee) {
+      throw RemboException(
+        tr('Cette action est réservée aux comptables et aux responsables.'),
+      );
+    }
+    final clean = code.trim();
+    if (clean.isNotEmpty && !RegExp(r'^\d{3,10}$').hasMatch(clean)) {
+      throw RemboException(
+        tr('Un compte comptable est fait de 3 à 10 chiffres.'),
+      );
+    }
+    final map = _accounts.putIfAbsent(me.companyId!, () => {});
+    clean.isEmpty ? map.remove(category) : map[category] = clean;
+    await _save();
   }
 }

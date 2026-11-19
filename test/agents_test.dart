@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rembo/core/agents/agent_metrics.dart';
 import 'package:rembo/core/agents/classification_agent.dart';
 import 'package:rembo/core/agents/compliance_agent.dart';
+import 'package:rembo/core/agents/export_agent.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/ocr/receipt_parser.dart';
 
@@ -280,6 +281,80 @@ void main() {
         metrics.medianDeclare(assisted: false),
         const Duration(seconds: 200),
       );
+    });
+  });
+
+  group('Export agent', () {
+    Expense approved(
+      String id,
+      int cents,
+      int vat, {
+      String ice = '',
+      String category = 'Repas',
+      String currency = 'MAD',
+    }) => Expense(
+      id: id,
+      employeeId: 'u1',
+      employeeName: 'Omar',
+      supplier: 'Fournisseur $id',
+      supplierIce: ice,
+      amountCents: cents,
+      vatCents: vat,
+      currency: currency,
+      foreignAmountCents: currency == 'MAD' ? null : 1000,
+      category: category,
+      status: ExpenseStatus.approved,
+      receiptPath: 'u1/$id',
+      createdAt: _today,
+    );
+
+    test('it adds up the batch and checks it against the server batch', () {
+      final check = prepareExport(
+        [
+          approved('a', 24000, 2182, ice: '001234567000089'),
+          approved('b', 4500, 0, category: 'Transport'),
+        ],
+        accounts: {'Repas': '6143'},
+      );
+      expect(check.count, 2);
+      expect(check.totalCents, 28500);
+      expect(check.vatCents, 2182);
+      expect(check.netCents, 26318);
+      expect(check.missingAccounts, {'Transport'});
+      expect(check.issues, isEmpty);
+      final batch = ExportBatch(
+        id: 'B1',
+        fileName: 'x.csv',
+        createdAt: _today,
+        count: 2,
+        totalCents: 28500,
+        vatCents: 2182,
+      );
+      expect(check.matches(batch), isTrue);
+      expect(
+        check.matches(
+          ExportBatch(
+            id: 'B1',
+            fileName: 'x.csv',
+            createdAt: _today,
+            count: 2,
+            totalCents: 28400,
+            vatCents: 2182,
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('it points out what an accountant would stop on', () {
+      final check = prepareExport(
+        [approved('a', 24000, 2182), approved('b', 22000, 0, currency: 'EUR')],
+        accounts: {'Repas': '6143'},
+      );
+      expect(check.issues.map((i) => i.message), [
+        'TVA non récupérable : ICE du fournisseur absent',
+        'Payée en devise : conversion à reporter',
+      ]);
     });
   });
 }

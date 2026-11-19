@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../accountant/accounts_screen.dart';
 import '../manager/agent_metrics_screen.dart';
 
 import '../../app/app_routes.dart';
@@ -114,6 +115,13 @@ class ProfileTab extends StatelessWidget {
                   onTap: () => Navigator.of(context).pushNamed(AppRoutes.rules),
                 ),
               ],
+              if (manager || state.role == UserRole.accountant)
+                _Entry(
+                  key: const ValueKey('profile-accounts'),
+                  Icons.account_balance_outlined,
+                  tr('Comptes comptables'),
+                  onTap: () => AccountsScreen.open(context),
+                ),
               if (manager || state.role == UserRole.accountant)
                 _Entry(
                   key: const ValueKey('profile-metrics'),

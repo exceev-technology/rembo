@@ -524,14 +524,42 @@ class SupabaseBackend extends RemboBackend {
         .select(_expenseColumns)
         .eq('export_batch_id', batch['id'] as String)
         .order('expense_date');
+    final accounts = await fetchAccounts();
     return ExportBatch.fromJson(
       batch,
       csv: CsvExport.build(
         [for (final r in rows) Expense.fromJson(r)],
         batchId: batch['id'] as String,
         delimiter: delimiter,
+        accounts: accounts,
       ),
     );
+  });
+
+  @override
+  Future<Map<String, String>> fetchAccounts() => _guard(() async {
+    final rows = await _client.from('category_accounts').select();
+    return {
+      for (final r in rows)
+        r['category'] as String: r['account_code'] as String,
+    };
+  });
+
+  @override
+  Future<void> saveAccount(String category, String code) => _guard(() async {
+    if (code.trim().isEmpty) {
+      await _client
+          .from('category_accounts')
+          .delete()
+          .eq('company_id', _companyId)
+          .eq('category', category);
+      return;
+    }
+    await _client.from('category_accounts').upsert({
+      'company_id': _companyId,
+      'category': category,
+      'account_code': code.trim(),
+    }, onConflict: 'company_id,category');
   });
 
   @override

@@ -125,7 +125,7 @@ Expense status flow (draft): `draft` → `submitted` → `needs_review` (escalat
 > ⚠️ **Draft – to be validated in Sprint 6** with the accountants we interview.
 
 - One row per approved expense, UTF-8, header row, `;` separator, decimal point `.`, dates `YYYY-MM-DD`
-- The approved total must equal the exported total (checked in the [Testing Protocol](Testing-Protocol))
+- The approved total must equal the exported total (checked in the [Testing Protocol](Testing-Protocol)). The export agent adds the batch up before the export, the server records its count, total and VAT, and the app compares them after the export
 - The format is documented in the repository so any accounting software or ERP can map it
 
 | Column | Example | Notes |
@@ -136,6 +136,7 @@ Expense status flow (draft): `draft` → `submitted` → `needs_review` (escalat
 | `supplier_name` | `Café Atlas` | |
 | `supplier_ice` | `001234567000089` | When printed on the receipt |
 | `category` | `Meals` | |
+| `account` | `6143` | Accounting account of the category, set by the company's accountant (« Comptes comptables »); empty when not set |
 | `allocation` | `Client Atlas` | Client or project |
 | `amount_ttc_mad` | `380.00` | Amount including VAT, in MAD: what is reimbursed |
 | `vat_rate` | `10` | Percent printed on the receipt (20, 14, 10, 7 or 0); empty when unknown |

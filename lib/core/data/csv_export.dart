@@ -10,6 +10,7 @@ abstract final class CsvExport {
     'supplier_name',
     'supplier_ice',
     'category',
+    'account',
     'allocation',
     'amount_ttc_mad',
     'vat_rate',
@@ -29,6 +30,7 @@ abstract final class CsvExport {
     List<Expense> expenses, {
     required String batchId,
     String delimiter = ';',
+    Map<String, String> accounts = const {},
   }) {
     final rows = <List<String>>[
       columns,
@@ -40,6 +42,7 @@ abstract final class CsvExport {
           e.supplier,
           e.supplierIce,
           e.category,
+          accounts[e.category] ?? '',
           e.project,
           _amount(e.amountCents),
           e.vatRate?.toString() ?? '',

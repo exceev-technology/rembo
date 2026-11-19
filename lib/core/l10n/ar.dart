@@ -625,12 +625,45 @@ const arabic = <String, String>{
       'يمكنك التصحيح قبل الإرسال، وإلا فسيقرر مسؤولك.',
   'Montant payé': 'المبلغ المدفوع',
   'Mesures des agents': 'مؤشرات الوكلاء',
-  'Ce que les personnes ont gardé des propositions des agents, sur les dépenses soumises.': 'ما احتفظ به المستخدمون من اقتراحات الوكلاء في المصاريف المرسلة.',
-  'Aucune dépense soumise avec une proposition d’agent pour l’instant.': 'لا يوجد بعد أي مصروف مرسل يتضمن اقتراحاً من وكيل.',
-  'des champs proposés gardés tels quels': 'من الحقول المقترحة احتُفظ بها كما هي',
+  'Ce que les personnes ont gardé des propositions des agents, sur les dépenses soumises.':
+      'ما احتفظ به المستخدمون من اقتراحات الوكلاء في المصاريف المرسلة.',
+  'Aucune dépense soumise avec une proposition d’agent pour l’instant.':
+      'لا يوجد بعد أي مصروف مرسل يتضمن اقتراحاً من وكيل.',
+  'des champs proposés gardés tels quels':
+      'من الحقول المقترحة احتُفظ بها كما هي',
   'champs corrigés sur {count}': 'حقلاً مصحَّحاً من أصل {count}',
   'reçus sans aucune correction': 'وصلاً دون أي تصحيح',
-  'temps médian de déclaration avec lecture': 'الوقت الوسيط للتصريح مع القراءة الآلية',
+  'temps médian de déclaration avec lecture':
+      'الوقت الوسيط للتصريح مع القراءة الآلية',
   'Par champ': 'حسب الحقل',
-  'Temps médian sans lecture automatique : {time}.': 'الوقت الوسيط دون قراءة آلية: {time}.',
+  'Temps médian sans lecture automatique : {time}.':
+      'الوقت الوسيط دون قراءة آلية: {time}.',
+  'Cette action est réservée aux comptables et aux responsables.':
+      'هذا الإجراء مخصص للمحاسبين والمسؤولين.',
+  'Un compte comptable est fait de 3 à 10 chiffres.':
+      'يتكون الحساب المحاسبي من 3 إلى 10 أرقام.',
+  'Comptes enregistrés.': 'تم حفظ الحسابات.',
+  'Enregistrer les comptes': 'حفظ الحسابات',
+  'Comptes comptables': 'الحسابات المحاسبية',
+  'Le compte de chaque catégorie figure dans l’export.':
+      'يظهر حساب كل فئة في ملف التصدير.',
+  'Compte choisi par votre comptable': 'حساب يختاره محاسبك',
+  'Proposé : {code}': 'مقترح: {code}',
+  'Les comptes proposés suivent le plan comptable marocain (CGNC) : faites-les valider par votre comptable.': 'الحسابات المقترحة تتبع المدونة العامة للمحاسبة المغربية (CGNC): اطلب من محاسبك المصادقة عليها.',
+  'Agent d’export': 'وكيل التصدير',
+  'Total TTC': 'المجموع شامل الضريبة',
+  'Dont TVA': 'منها الضريبة',
+  'Total HT': 'المجموع دون الضريبة',
+  'Compte comptable manquant : {categories}': 'حساب محاسبي ناقص: {categories}',
+  'Renseigner les comptes': 'إدخال الحسابات',
+  'TVA non récupérable : ICE du fournisseur absent':
+      'الضريبة غير قابلة للاسترجاع: رقم ICE للمورد غير موجود',
+  'Sans justificatif': 'دون وثيقة إثبات',
+  'Payée en devise : conversion à reporter':
+      'مدفوع بعملة أجنبية: يجب نقل قيمة التحويل',
+  'Totaux contrôlés : le fichier contient exactement le nombre, le TTC et la TVA du lot enregistré.': 'تم التحقق من المجاميع: يتضمن الملف بالضبط عدد المصاريف والمبلغ شامل الضريبة والضريبة المسجلة في الدفعة.',
+  'Les totaux du lot diffèrent de ceux préparés.':
+      'مجاميع الدفعة تختلف عن المجاميع المُعدّة.',
+  'Ne l’importez pas : rechargez les dépenses et vérifiez le lot.':
+      'لا تستورده: أعد تحميل المصاريف وتحقق من الدفعة.',
 };
