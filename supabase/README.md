@@ -86,7 +86,22 @@ Ce que la fonction comprend aujourd’hui :
 - Pas de réponse vocale de l’agent.
 
 ## Pas encore en place
-- **Lecture automatique des reçus** : aucune Edge Function n’est fournie. L’application appelle `read-receipt` seulement si `REMBO_OCR=true` (contrat décrit dans `lib/core/data/supabase_backend.dart`) ; sinon la saisie est manuelle, photo jointe.
+- **Lecture automatique des reçus** : le téléphone lit d’abord le reçu lui-même (Google ML Kit, hors ligne). Quand il n’y arrive pas (reçu en arabe, manuscrit), l’application appelle `functions/read-receipt`, si `REMBO_OCR=true`.
+
+## Lecteur de reçus côté serveur (`read-receipt`)
+
+Il parle l’API « chat completions » d’OpenAI, que proposent la plupart des moteurs. Deux façons de le brancher :
+
+| Choix | Secrets | Données |
+|---|---|---|
+| **Modèle hébergé par l’entreprise** (recommandé) : Ollama avec un modèle de vision, ex. `ollama pull qwen2.5vl:7b` | `RECEIPT_API_URL=http://<serveur>:11434/v1`, `RECEIPT_MODEL=qwen2.5vl:7b` | La photo ne quitte pas les serveurs de l’entreprise. Gratuit. |
+| **Modèle en ligne gratuit**, ex. Gemini | `RECEIPT_API_URL=https://generativelanguage.googleapis.com/v1beta/openai`, `RECEIPT_MODEL=gemini-2.5-flash`, `RECEIPT_API_KEY=…`, **`RECEIPT_SHARED_ENGINE=fictitious-data-only`** | Une offre gratuite peut réutiliser ce qu’on lui envoie : réservé aux projets de démonstration ou de tests utilisateurs, avec des reçus **fictifs**. Sans la dernière variable, la fonction refuse ce moteur. |
+
+```bash
+supabase secrets set RECEIPT_API_URL=… RECEIPT_MODEL=…
+supabase functions deploy read-receipt
+```
+Puis `REMBO_OCR=true` dans `.env`. Chaque lecture est journalisée dans `receipt_readings` (moteur, modèle, durée, résultat, nombre de champs trouvés), jamais le contenu du reçu ; 40 lectures par personne et par jour (`RECEIPT_DAILY_LIMIT`). Tests : `deno test supabase/functions/read-receipt/`.
 - **E-mails d’invitation** : l’invitation est enregistrée, aucun e-mail n’est envoyé.
 - **CSV** : généré sur le téléphone à partir des lignes que le serveur vient de marquer exportées (le wiki prévoit une Edge Function).
 - **Tests RLS automatisés** (pgTAP) : à écrire ; exigés par la Definition of Done.
