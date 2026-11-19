@@ -2,13 +2,26 @@
 
 L’application fonctionne sans serveur en **mode démonstration** (données fictives). Pour de vrais comptes et de vraies données, reliez-la à un projet Supabase.
 
-> ⚠️ Les deux migrations de `migrations/` et la fonction `functions/whatsapp-webhook` ont été relues mais **n’ont pas encore été exécutées** (ni PostgreSQL, ni Deno, ni compte WhatsApp sur la machine de développement). Appliquez-la d’abord sur un projet de test et déroulez la vérification ci-dessous avant toute donnée réelle.
+> Les migrations et les tests SQL (`supabase test db`) tournent en local avec la CLI Supabase.
+> Pour des données d’essai, `supabase db reset` charge `seed.sql` (voir plus bas).
 
 ## 1. Créer le projet et appliquer le schéma
 1. Créez un projet sur <https://supabase.com> (région la plus proche).
-2. **SQL Editor** → exécutez, dans l’ordre, `migrations/20261111000000_rembo_core.sql` puis `migrations/20261111010000_whatsapp.sql`.
+2. **SQL Editor** → exécutez, dans l’ordre de leur nom, les fichiers de `migrations/`.
    Avec la CLI : `supabase link --project-ref <ref>` puis `supabase db push`.
 3. **Authentication → Sign In / Providers → Email** : laissez « Confirm email » **activé**. Une invitation n’est acceptée que pour une adresse confirmée.
+
+## Données d’essai en local
+`supabase start` puis `supabase db reset` applique les migrations et charge `seed.sql` : deux entreprises fictives, une personne par rôle et des dépenses dans chaque statut. Tous les comptes ont le mot de passe `Rembo-2026!` :
+
+| Compte | Rôle |
+|---|---|
+| `sara@atlas.test`, `karim@atlas.test` | Responsables d’Atlas Conseil |
+| `omar@atlas.test`, `salma@atlas.test` | Collaborateurs d’Atlas Conseil |
+| `lina@atlas.test` | Comptable d’Atlas Conseil |
+| `zed@autre.test` | Responsable d’Autre SARL (autre entreprise) |
+
+`seed.sql` est réservé à un projet **local** : ne l’exécutez jamais sur un projet qui contient des données réelles.
 
 ## 2. Relier l’application
 ```bash

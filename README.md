@@ -54,12 +54,13 @@ It is built for Morocco (amounts in **MAD**, Moroccan VAT rates and ICE) and it 
 
 | Feature | Description | Status |
 | --- | --- | --- |
-| Accounts and roles | Employee, manager and accountant roles per company, enforced by Row Level Security | 🚧 Sprint 1 · built |
-| Expense entry | Category, reason, client or project (free text), receipt upload to private storage | 🗓️ Sprint 2 · built |
-| Receipt capture and OCR | Text recognition on the phone (Latin script) fills a review and correction screen | 🗓️ Sprint 3 · built |
-| Approval workflow | Submit, approve or reject with a reason, expense policy, status history, no self-approval | 🗓️ Sprint 4 · built |
-| Mobile MVP | The full journey on **Android and iOS**, in French or Arabic | 🗓️ Sprint 5 · in progress |
+| Accounts and roles | Employee, manager and accountant roles per company, enforced by Row Level Security | ✅ Sprint 1 |
+| Expense entry | Category, reason, client or project (free text), receipt upload to private storage | ✅ Sprint 2 |
+| Receipt capture and OCR | Text recognition on the phone (Latin script) fills a review and correction screen | ✅ Sprint 3 |
+| Approval workflow | Submit, approve or reject with a reason, expense policy, status history, no self-approval | ✅ Sprint 4 |
+| Mobile MVP | The full journey on **Android and iOS**, in French or Arabic | 🚧 Sprint 5 |
 | CSV accounting export | Approved expenses exported as a CSV; the format is still to be validated with accountants | 🗓️ Sprint 6 · built |
+| Arabic interface | The whole app in Arabic, right to left, chosen by each person | ✅ Ahead of plan |
 | WhatsApp messages and voice notes | A linked number sends expenses as drafts; voice notes are transcribed only when a speech-to-text service is configured | 💡 Built, not yet run against WhatsApp |
 
 Out of scope for the MVP: web app and PWA, desktop apps, direct ERP connectors (Sage, etc.), bank transfers, payment cards, payroll, legally binding archiving and full offline sync. See the [Roadmap](https://github.com/exceev-technology/rembo/wiki/Roadmap).
