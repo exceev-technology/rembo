@@ -363,6 +363,21 @@ void main() {
     expect(find.byKey(const ValueKey('form-pdf-pages')), findsOneWidget);
   });
 
+  testWidgets('The OCR bench lists its 30 receipts', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-bench');
+    expect(find.text('Banc d’essai OCR'), findsWidgets);
+    // No ML Kit in tests: the screen says to run it on a phone.
+    expect(
+      find.text(
+        'Pas de lecteur sur cet appareil : lancez le banc sur un téléphone.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('The manager reads the measures of the agents', (tester) async {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);

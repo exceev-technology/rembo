@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../accountant/accounts_screen.dart';
 import '../manager/agent_metrics_screen.dart';
+import 'bench_screen.dart';
 
 import '../../app/app_routes.dart';
 import '../../core/data/app_state.dart';
@@ -137,6 +138,12 @@ class ProfileTab extends StatelessWidget {
                     ? tr('Non relié')
                     : ltr(user.whatsappPhone!),
                 onTap: () => showWhatsAppSheet(context),
+              ),
+              _Entry(
+                key: const ValueKey('profile-bench'),
+                Icons.document_scanner_outlined,
+                tr('Banc d’essai OCR'),
+                onTap: () => BenchScreen.open(context),
               ),
               _Entry(
                 key: const ValueKey('profile-language'),

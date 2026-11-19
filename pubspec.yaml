@@ -39,6 +39,8 @@ flutter:
 
   assets:
     - assets/images/
+    # 30 fictional receipts of the OCR bench (tool/bench/generate_receipts.py).
+    - assets/bench/
 
   # Charter fonts, variable files under the SIL Open Font License
   # (see assets/fonts/*_OFL.txt).

@@ -1,0 +1,830 @@
+{
+ "version": 1,
+ "receipts": [
+  {
+   "file": "r01.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "CAFE ATLAS",
+    "Casablanca",
+    "ICE : 001234567000089",
+    "Ticket N° 2051",
+    "Date : 10/11/2026 13:32",
+    "Tajine poulet             108,00",
+    "Eau minérale               24,00",
+    "Thé à la menthe            48,00",
+    "Salade marocaine           60,00",
+    "TOTAL HT                  218,18",
+    "TVA 10%                    21,82",
+    "TOTAL TTC           240,00 DH",
+    "Espèces                   300,00",
+    "Rendu                      60,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "CAFE ATLAS",
+    "ice": "001234567000089",
+    "date": "2026-11-10",
+    "amount": 24000,
+    "vat": 2182,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r02.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "PETIT TAXI CASA",
+    "Casablanca",
+    "Ticket N° 8485",
+    "Date : 11/11/2026 18:55",
+    "Course                     45,00",
+    "TOTAL TTC            45,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      55,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "PETIT TAXI CASA",
+    "ice": null,
+    "date": "2026-11-11",
+    "amount": 4500,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r03.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "LIBRAIRIE NATIONALE",
+    "Casablanca",
+    "ICE : 002345678000012",
+    "Facture N° 1781",
+    "Date : 09/11/2026 11:57",
+    "Cahiers A4                 72,00",
+    "Stylos                     36,00",
+    "Classeurs                  72,00",
+    "TOTAL HT                  150,00",
+    "TVA 20%                    30,00",
+    "TOTAL TTC           180,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "LIBRAIRIE NATIONALE",
+    "ice": "002345678000012",
+    "date": "2026-11-09",
+    "amount": 18000,
+    "vat": 3000,
+    "rate": 20,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r04.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "STATION AFRIQUIA MAARIF",
+    "Casablanca",
+    "ICE : 003456789000034",
+    "Ticket N° 9947",
+    "Date : 08/11/2026 17:35",
+    "Course                    498,75",
+    "TOTAL HT                  437,50",
+    "TVA 14%                    61,25",
+    "TOTAL TTC           498,75 DH",
+    "Espèces                   500,00",
+    "Rendu                       1,25",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "STATION AFRIQUIA MAARIF",
+    "ice": "003456789000034",
+    "date": "2026-11-08",
+    "amount": 49875,
+    "vat": 6125,
+    "rate": 14,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r05.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "HOTEL FARAH TANGER",
+    "Casablanca",
+    "ICE : 004567890000056",
+    "Facture N° 6991",
+    "Date : 05/11/2026 20:36",
+    "Nuitée chambre double     855,00",
+    "Taxe de séjour             95,00",
+    "TOTAL HT                  863,64",
+    "TVA 10%                    86,36",
+    "TOTAL TTC           950,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "HOTEL FARAH TANGER",
+    "ice": "004567890000056",
+    "date": "2026-11-05",
+    "amount": 95000,
+    "vat": 8636,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Hébergement"
+   }
+  },
+  {
+   "file": "r06.jpg",
+   "quality": "blur",
+   "language": "fr",
+   "lines": [
+    "RESTAURANT LE JARDIN",
+    "Casablanca",
+    "ICE : 005678901000078",
+    "Ticket N° 9075",
+    "Date : 06/11/2026 21:46",
+    "Tajine poulet             144,00",
+    "Eau minérale               32,00",
+    "Thé à la menthe            64,00",
+    "Salade marocaine           80,00",
+    "TOTAL HT                  290,91",
+    "TVA 10%                    29,09",
+    "TOTAL TTC           320,00 DH",
+    "Espèces                   400,00",
+    "Rendu                      80,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "RESTAURANT LE JARDIN",
+    "ice": "005678901000078",
+    "date": "2026-11-06",
+    "amount": 32000,
+    "vat": 2909,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r07.jpg",
+   "quality": "blur",
+   "language": "fr",
+   "lines": [
+    "PATISSERIE BENNIS",
+    "Casablanca",
+    "Ticket N° 8142",
+    "Date : 12/11/2026 20:49",
+    "Tajine poulet              15,75",
+    "Eau minérale                3,50",
+    "Thé à la menthe             7,00",
+    "Salade marocaine            8,75",
+    "TOTAL TTC            35,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      65,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "PATISSERIE BENNIS",
+    "ice": null,
+    "date": "2026-11-12",
+    "amount": 3500,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r08.jpg",
+   "quality": "blur",
+   "language": "fr",
+   "lines": [
+    "PAPETERIE AGDAL",
+    "Casablanca",
+    "ICE : 006789012000090",
+    "Facture N° 9709",
+    "Date : 04/11/2026 15:15",
+    "Cahiers A4                105,60",
+    "Stylos                     52,80",
+    "Classeurs                 105,60",
+    "TOTAL HT                  220,00",
+    "TVA 20%                    44,00",
+    "TOTAL TTC           264,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "PAPETERIE AGDAL",
+    "ice": "006789012000090",
+    "date": "2026-11-04",
+    "amount": 26400,
+    "vat": 4400,
+    "rate": 20,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r09.jpg",
+   "quality": "faded",
+   "language": "fr",
+   "lines": [
+    "SNACK EL BAHJA",
+    "Casablanca",
+    "Ticket N° 141",
+    "Date : 07/11/2026 17:05",
+    "Tajine poulet              30,60",
+    "Eau minérale                6,80",
+    "Thé à la menthe            13,60",
+    "Salade marocaine           17,00",
+    "TOTAL TTC            68,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      32,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "SNACK EL BAHJA",
+    "ice": null,
+    "date": "2026-11-07",
+    "amount": 6800,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r10.jpg",
+   "quality": "faded",
+   "language": "fr",
+   "lines": [
+    "ONCF GARE CASA PORT",
+    "Casablanca",
+    "ICE : 007890123000012",
+    "Ticket N° 1914",
+    "Date : 03/11/2026 12:52",
+    "Course                    249,00",
+    "TOTAL HT                  218,42",
+    "TVA 14%                    30,58",
+    "TOTAL TTC           249,00 DH",
+    "Espèces                   300,00",
+    "Rendu                      51,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "ONCF GARE CASA PORT",
+    "ice": "007890123000012",
+    "date": "2026-11-03",
+    "amount": 24900,
+    "vat": 3058,
+    "rate": 14,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r11.jpg",
+   "quality": "faded",
+   "language": "fr",
+   "lines": [
+    "MARJANE CALIFORNIE",
+    "Casablanca",
+    "ICE : 008901234000034",
+    "Ticket N° 1706",
+    "Date : 02/11/2026 15:00",
+    "Cahiers A4                 62,56",
+    "Stylos                     31,28",
+    "Classeurs                  62,56",
+    "TOTAL HT                  130,33",
+    "TVA 20%                    26,07",
+    "TOTAL TTC           156,40 DH",
+    "Espèces                   200,00",
+    "Rendu                      43,60",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "MARJANE CALIFORNIE",
+    "ice": "008901234000034",
+    "date": "2026-11-02",
+    "amount": 15640,
+    "vat": 2607,
+    "rate": 20,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r12.jpg",
+   "quality": "tilt",
+   "language": "fr",
+   "lines": [
+    "CAFE DE FRANCE",
+    "Casablanca",
+    "Ticket N° 8132",
+    "Date : 13/11/2026 18:20",
+    "Tajine poulet              18,90",
+    "Eau minérale                4,20",
+    "Thé à la menthe             8,40",
+    "Salade marocaine           10,50",
+    "TOTAL TTC            42,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      58,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "CAFE DE FRANCE",
+    "ice": null,
+    "date": "2026-11-13",
+    "amount": 4200,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r13.jpg",
+   "quality": "tilt",
+   "language": "fr",
+   "lines": [
+    "RIAD SALAM MARRAKECH",
+    "Casablanca",
+    "ICE : 009012345000056",
+    "Facture N° 6608",
+    "Date : 30/10/2026 12:22",
+    "Nuitée chambre double    1152,00",
+    "Taxe de séjour            128,00",
+    "TOTAL HT                 1163,64",
+    "TVA 10%                   116,36",
+    "TOTAL TTC          1280,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "RIAD SALAM MARRAKECH",
+    "ice": "009012345000056",
+    "date": "2026-10-30",
+    "amount": 128000,
+    "vat": 11636,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Hébergement"
+   }
+  },
+  {
+   "file": "r14.jpg",
+   "quality": "tilt",
+   "language": "fr",
+   "lines": [
+    "PARKING TWIN CENTER",
+    "Casablanca",
+    "Ticket N° 6266",
+    "Date : 14/11/2026 19:32",
+    "Course                     20,00",
+    "TOTAL TTC            20,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      80,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "PARKING TWIN CENTER",
+    "ice": null,
+    "date": "2026-11-14",
+    "amount": 2000,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r15.jpg",
+   "quality": "crumpled",
+   "language": "fr",
+   "lines": [
+    "PIZZERIA VENEZIA",
+    "Casablanca",
+    "ICE : 001122334000045",
+    "Ticket N° 5677",
+    "Date : 01/11/2026 09:35",
+    "Tajine poulet              96,75",
+    "Eau minérale               21,50",
+    "Thé à la menthe            43,00",
+    "Salade marocaine           53,75",
+    "TOTAL HT                  195,45",
+    "TVA 10%                    19,55",
+    "TOTAL TTC           215,00 DH",
+    "Espèces                   300,00",
+    "Rendu                      85,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "PIZZERIA VENEZIA",
+    "ice": "001122334000045",
+    "date": "2026-11-01",
+    "amount": 21500,
+    "vat": 1955,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r16.jpg",
+   "quality": "crumpled",
+   "language": "fr",
+   "lines": [
+    "STATION SHELL AIN SEBAA",
+    "Casablanca",
+    "ICE : 002233445000067",
+    "Ticket N° 4886",
+    "Date : 29/10/2026 12:29",
+    "Course                    600,00",
+    "TOTAL HT                  526,32",
+    "TVA 14%                    73,68",
+    "TOTAL TTC           600,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "STATION SHELL AIN SEBAA",
+    "ice": "002233445000067",
+    "date": "2026-10-29",
+    "amount": 60000,
+    "vat": 7368,
+    "rate": 14,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r17.jpg",
+   "quality": "crumpled",
+   "language": "fr",
+   "lines": [
+    "BIM HAY RIAD",
+    "Casablanca",
+    "Ticket N° 9560",
+    "Date : 15/11/2026 12:01",
+    "Cahiers A4                 35,72",
+    "Stylos                     17,86",
+    "Classeurs                  35,72",
+    "TOTAL TTC            89,30 DH",
+    "Espèces                   100,00",
+    "Rendu                      10,70",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "BIM HAY RIAD",
+    "ice": null,
+    "date": "2026-11-15",
+    "amount": 8930,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r18.jpg",
+   "quality": "shadow",
+   "language": "fr",
+   "lines": [
+    "BRASSERIE DU PORT",
+    "Casablanca",
+    "ICE : 003344556000089",
+    "Ticket N° 6143",
+    "Date : 28/10/2026 13:29",
+    "Tajine poulet             202,50",
+    "Eau minérale               45,00",
+    "Thé à la menthe            90,00",
+    "Salade marocaine          112,50",
+    "TOTAL HT                  409,09",
+    "TVA 10%                    40,91",
+    "TOTAL TTC           450,00 DH",
+    "Espèces                   500,00",
+    "Rendu                      50,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "BRASSERIE DU PORT",
+    "ice": "003344556000089",
+    "date": "2026-10-28",
+    "amount": 45000,
+    "vat": 4091,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r19.jpg",
+   "quality": "shadow",
+   "language": "fr",
+   "lines": [
+    "IMPRIMERIE ATLAS",
+    "Casablanca",
+    "ICE : 004455667000001",
+    "Facture N° 7017",
+    "Date : 27/10/2026 09:25",
+    "Cahiers A4                288,00",
+    "Stylos                    144,00",
+    "Classeurs                 288,00",
+    "TOTAL HT                  600,00",
+    "TVA 20%                   120,00",
+    "TOTAL TTC           720,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "IMPRIMERIE ATLAS",
+    "ice": "004455667000001",
+    "date": "2026-10-27",
+    "amount": 72000,
+    "vat": 12000,
+    "rate": 20,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r20.jpg",
+   "quality": "shadow",
+   "language": "fr",
+   "lines": [
+    "AUTOROUTES DU MAROC",
+    "Casablanca",
+    "Ticket N° 9696",
+    "Date : 16/11/2026 16:31",
+    "Course                     23,00",
+    "TOTAL TTC            23,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      77,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "AUTOROUTES DU MAROC",
+    "ice": null,
+    "date": "2026-11-16",
+    "amount": 2300,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r21.jpg",
+   "quality": "lowres",
+   "language": "fr",
+   "lines": [
+    "GLACIER OLIVERI",
+    "Casablanca",
+    "Ticket N° 2007",
+    "Date : 17/11/2026 14:32",
+    "Tajine poulet              25,20",
+    "Eau minérale                5,60",
+    "Thé à la menthe            11,20",
+    "Salade marocaine           14,00",
+    "TOTAL TTC            56,00 DH",
+    "Espèces                   100,00",
+    "Rendu                      44,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "GLACIER OLIVERI",
+    "ice": null,
+    "date": "2026-11-17",
+    "amount": 5600,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r22.jpg",
+   "quality": "lowres",
+   "language": "fr",
+   "lines": [
+    "IBIS RABAT AGDAL",
+    "Casablanca",
+    "ICE : 005566778000023",
+    "Facture N° 9933",
+    "Date : 26/10/2026 15:25",
+    "Nuitée chambre double     639,00",
+    "Taxe de séjour             71,00",
+    "TOTAL HT                  645,45",
+    "TVA 10%                    64,55",
+    "TOTAL TTC           710,00 DH",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "IBIS RABAT AGDAL",
+    "ice": "005566778000023",
+    "date": "2026-10-26",
+    "amount": 71000,
+    "vat": 6455,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Hébergement"
+   }
+  },
+  {
+   "file": "r23.jpg",
+   "quality": "lowres",
+   "language": "fr",
+   "lines": [
+    "CTM GARE ROUTIERE",
+    "Casablanca",
+    "Ticket N° 8695",
+    "Date : 18/11/2026 12:54",
+    "Course                    130,00",
+    "TOTAL TTC           130,00 DH",
+    "Espèces                   200,00",
+    "Rendu                      70,00",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "CTM GARE ROUTIERE",
+    "ice": null,
+    "date": "2026-11-18",
+    "amount": 13000,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r24.jpg",
+   "quality": "hand",
+   "language": "fr",
+   "lines": [
+    "Petit taxi n 1234",
+    "Le 12/11/2026",
+    "Total 30,00 DH",
+    "Merci"
+   ],
+   "expected": {
+    "supplier": "Petit taxi n 1234",
+    "ice": null,
+    "date": "2026-11-12",
+    "amount": 3000,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Transport"
+   }
+  },
+  {
+   "file": "r25.jpg",
+   "quality": "hand",
+   "language": "fr",
+   "lines": [
+    "Snack Chez Ali",
+    "Le 09/11/2026",
+    "Total 75,00 DH",
+    "Merci"
+   ],
+   "expected": {
+    "supplier": "Snack Chez Ali",
+    "ice": null,
+    "date": "2026-11-09",
+    "amount": 7500,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r26.jpg",
+   "quality": "hand",
+   "language": "fr",
+   "lines": [
+    "Souk Fournitures",
+    "Le 06/11/2026",
+    "Total 120,00 DH",
+    "Merci"
+   ],
+   "expected": {
+    "supplier": "Souk Fournitures",
+    "ice": null,
+    "date": "2026-11-06",
+    "amount": 12000,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r27.jpg",
+   "quality": "clean",
+   "language": "ar",
+   "lines": [
+    "مطعم الأندلس",
+    "الدار البيضاء",
+    "Date : 11/11/2026",
+    "ICE 006677889000045",
+    "TVA 10% 16,82",
+    "المجموع 185,00 درهم",
+    "شكرا لزيارتكم"
+   ],
+   "expected": {
+    "supplier": "مطعم الأندلس",
+    "ice": "006677889000045",
+    "date": "2026-11-11",
+    "amount": 18500,
+    "vat": 1682,
+    "rate": 10,
+    "currency": "MAD",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r28.jpg",
+   "quality": "faded",
+   "language": "ar",
+   "lines": [
+    "مكتبة الوحدة",
+    "الدار البيضاء",
+    "Date : 04/11/2026",
+    "المجموع 96,00 درهم",
+    "شكرا لزيارتكم"
+   ],
+   "expected": {
+    "supplier": "مكتبة الوحدة",
+    "ice": null,
+    "date": "2026-11-04",
+    "amount": 9600,
+    "vat": null,
+    "rate": null,
+    "currency": "MAD",
+    "category": "Fournitures"
+   }
+  },
+  {
+   "file": "r29.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "CAFE DE FLORE PARIS",
+    "Ticket N° 6980",
+    "Date : 25/10/2026 17:59",
+    "Tajine poulet               8,32",
+    "Eau minérale                1,85",
+    "Thé à la menthe             3,70",
+    "Salade marocaine            4,63",
+    "TOTAL HT                   16,82",
+    "TVA 10%                     1,68",
+    "TOTAL TTC            18,50 €",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "CAFE DE FLORE PARIS",
+    "ice": null,
+    "date": "2026-10-25",
+    "amount": 1850,
+    "vat": 168,
+    "rate": 10,
+    "currency": "EUR",
+    "category": "Repas"
+   }
+  },
+  {
+   "file": "r30.jpg",
+   "quality": "clean",
+   "language": "fr",
+   "lines": [
+    "UBER LONDON",
+    "Facture N° 7951",
+    "Date : 24/10/2026 16:33",
+    "Course                     22,40",
+    "TOTAL HT                   18,67",
+    "TVA 20%                     3,73",
+    "TOTAL TTC            22,40 GBP",
+    "Merci de votre visite"
+   ],
+   "expected": {
+    "supplier": "UBER LONDON",
+    "ice": null,
+    "date": "2026-10-24",
+    "amount": 2240,
+    "vat": 373,
+    "rate": 20,
+    "currency": "GBP",
+    "category": "Transport"
+   }
+  }
+ ]
+}
