@@ -571,4 +571,10 @@ const arabic = <String, String>{
   'Le contrôle signale les dépenses conformes ; vous les validez toutes en un geste. Aucun agent ne valide à votre place.': 'تشير المراقبة إلى المصاريف المطابقة، وتقبلها كلها بنقرة واحدة. لا يقبل أي وكيل نيابة عنك.',
   'Conforme aux règles': 'مطابق للقواعد',
   'Validation groupée des dépenses conformes': 'قبول جماعي للمصاريف المطابقة',
+  'Saisissez le montant payé, ex. 85,00.': 'أدخل المبلغ المدفوع، مثلاً 85,00.',
+  'Devise du reçu': 'عملة الوصل',
+  'Montant payé ({currency})': 'المبلغ المدفوع ({currency})',
+  'Le montant TTC en dirhams est celui remboursé : reportez la conversion de votre relevé.': 'المبلغ بالدرهم شامل الضريبة هو المبلغ المعوَّض: انقل قيمة التحويل من كشف حسابك.',
+  'Calculée': 'محسوبة',
+  'Taux de TVA': 'نسبة الضريبة على القيمة المضافة',
 };

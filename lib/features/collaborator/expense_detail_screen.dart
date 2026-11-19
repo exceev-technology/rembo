@@ -171,7 +171,14 @@ class ExpenseDetailScreen extends StatelessWidget {
                 DetailRow(
                   Icons.percent_rounded,
                   tr('TVA incluse'),
-                  formatMad(e.vatCents),
+                  formatVat(e.vatCents, e.vatRate),
+                  mono: true,
+                ),
+              if (e.foreignCurrency && e.foreignAmountCents != null)
+                DetailRow(
+                  Icons.currency_exchange_rounded,
+                  tr('Montant payé ({currency})', {'currency': e.currency}),
+                  formatMoney(e.foreignAmountCents!, e.currency),
                   mono: true,
                 ),
               DetailRow(

@@ -387,7 +387,7 @@ void main() {
       final row = csv.split('\r\n')[1];
       expect(row, contains('"A; B"'));
       expect(row, contains("'=SUM(A1)"));
-      expect(row, contains(';1100.00;100.00;1000.00;'));
+      expect(row, contains(';1100.00;;100.00;1000.00;MAD;;'));
       expect(row, contains('"Dîner ""client"""'));
     });
   });

@@ -477,6 +477,11 @@ class LocalBackend extends RemboBackend {
       date: draft.date,
       amountCents: draft.amountCents,
       vatCents: draft.vatCents,
+      vatRate: draft.vatRate,
+      currency: draft.currency,
+      foreignAmountCents: draft.foreignCurrency
+          ? draft.foreignAmountCents
+          : null,
       category: draft.category,
       project: draft.project.trim(),
       reason: draft.reason.trim(),

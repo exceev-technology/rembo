@@ -62,6 +62,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _date = TextEditingController();
   final _project = TextEditingController();
   final _reason = TextEditingController();
+  final _foreign = TextEditingController();
+  String _currency = 'MAD';
+  int? _vatRate;
   String? _category;
   final _errors = <String, String>{};
   final _proposed = <String>{};
@@ -96,14 +99,32 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       _project.text = e.project;
       _reason.text = e.reason;
       _category = e.category.isEmpty ? null : e.category;
+      _currency = e.currency;
+      _vatRate = e.vatRate;
+      if (e.foreignAmountCents != null) {
+        _foreign.text = amountInput(e.foreignAmountCents!);
+      }
     } else if (r != null) {
       if (r.supplier != null) {
         _supplier.text = r.supplier!;
         _proposed.add('supplier');
       }
-      if (r.amountCents != null) {
+      if (r.currency != null && r.currency != 'MAD') {
+        // Paid in another currency: what the receipt says is the amount
+        // paid in it; the person types what it cost in dirhams.
+        _currency = r.currency!;
+        _proposed.add('currency');
+        if (r.amountCents != null) {
+          _foreign.text = amountInput(r.amountCents!);
+          _proposed.add('foreign');
+        }
+      } else if (r.amountCents != null) {
         _amount.text = amountInput(r.amountCents!);
         _proposed.add('amount');
+      }
+      if (r.vatRate != null) {
+        _vatRate = r.vatRate;
+        _proposed.add('rate');
       }
       if (r.vatCents != null && r.vatCents! > 0) {
         _vat.text = amountInput(r.vatCents!);
@@ -120,7 +141,15 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
 
   @override
   void dispose() {
-    for (final c in [_supplier, _amount, _vat, _date, _project, _reason]) {
+    for (final c in [
+      _supplier,
+      _amount,
+      _vat,
+      _date,
+      _project,
+      _reason,
+      _foreign,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -144,6 +173,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             'vat': tr('Saisissez un montant, ex. 21,82, ou laissez vide.')
           else if (vat > 0 && vat >= (parseAmount(amount) ?? vat + 1))
             'vat': tr('La TVA doit être inférieure au montant TTC.'),
+          if (_currency != 'MAD' &&
+              (strict || _foreign.text.trim().isNotEmpty) &&
+              parseAmount(_foreign.text.trim()) == null)
+            'foreign': tr('Saisissez le montant payé, ex. 85,00.'),
           if ((strict || date.isNotEmpty) && parseDay(date) == null)
             'date': tr('Date invalide : JJ/MM/AAAA, pas dans le futur.'),
           if (strict && _category == null)
@@ -184,6 +217,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       date: parseDay(_date.text),
       amountCents: amount,
       vatCents: _vatCents ?? 0,
+      vatRate: _vatRate,
+      currency: _currency,
+      foreignAmountCents: _currency == 'MAD'
+          ? null
+          : parseAmount(_foreign.text.trim()),
       category: _category ?? '',
       project: _project.text,
       reason: _reason.text,
@@ -384,6 +422,24 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     }
   }
 
+  /// Choosing a rate fills an empty VAT from the amount with taxes.
+  void _pickRate(int? rate) {
+    setState(() {
+      _vatRate = rate;
+      _proposed.remove('rate');
+      final amount = parseAmount(_amount.text.trim());
+      if (rate != null &&
+          rate > 0 &&
+          _vat.text.trim().isEmpty &&
+          amount != null) {
+        _vat.text = amountInput((amount * rate / (100 + rate)).round());
+        _proposed
+          ..remove('vat')
+          ..add('vat-computed');
+      }
+    });
+  }
+
   Widget? _readBadge(String field) => _proposed.contains(field)
       ? Padding(
           padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
@@ -505,6 +561,52 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           textInputAction: TextInputAction.next,
           onChanged: (_) => setState(() => _proposed.remove('amount')),
         ),
+        const SizedBox(height: RemboSpace.sm),
+        Row(
+          children: [
+            Expanded(
+              child: Text(tr('Devise du reçu'), style: RemboText.caption),
+            ),
+            if (_proposed.contains('currency')) _readBadge('currency')!,
+            DropdownButton<String>(
+              key: const ValueKey('form-currency'),
+              value: _currency,
+              underline: const SizedBox.shrink(),
+              items: [
+                for (final c in receiptCurrencies)
+                  DropdownMenuItem(value: c, child: Text(c)),
+              ],
+              onChanged: (c) => setState(() {
+                _currency = c ?? 'MAD';
+                _proposed.remove('currency');
+                _errors.remove('foreign');
+              }),
+            ),
+          ],
+        ),
+        if (_currency != 'MAD') ...[
+          const SizedBox(height: RemboSpace.sm),
+          RemboTextField(
+            fieldKey: const ValueKey('form-foreign'),
+            label: tr('Montant payé ({currency})', {'currency': _currency}),
+            required: true,
+            hint: '0,00',
+            icon: Icons.currency_exchange_rounded,
+            controller: _foreign,
+            errorText: _errors['foreign'],
+            suffix: _readBadge('foreign'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            onChanged: (_) => setState(() => _proposed.remove('foreign')),
+          ),
+          const SizedBox(height: RemboSpace.sm),
+          InfoStrip(
+            tr(
+              'Le montant TTC en dirhams est celui remboursé : '
+              'reportez la conversion de votre relevé.',
+            ),
+          ),
+        ],
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-vat'),
@@ -513,10 +615,48 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           icon: Icons.percent_rounded,
           controller: _vat,
           errorText: _errors['vat'],
-          suffix: _readBadge('vat'),
+          suffix: _proposed.contains('vat-computed')
+              ? Padding(
+                  padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
+                  child: RemboBadge(
+                    label: tr('Calculée'),
+                    tone: BadgeTone.info,
+                    icon: Icons.calculate_outlined,
+                  ),
+                )
+              : _readBadge('vat'),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _proposed.remove('vat')),
+          onChanged: (_) => setState(() {
+            _proposed
+              ..remove('vat')
+              ..remove('vat-computed');
+          }),
+        ),
+        const SizedBox(height: RemboSpace.sm),
+        Row(
+          children: [
+            Text(tr('Taux de TVA'), style: RemboText.caption),
+            if (_proposed.contains('rate')) ...[
+              const SizedBox(width: RemboSpace.sm),
+              _readBadge('rate')!,
+            ],
+          ],
+        ),
+        const SizedBox(height: RemboSpace.xs),
+        Wrap(
+          spacing: RemboSpace.sm,
+          runSpacing: RemboSpace.xs,
+          children: [
+            for (final rate in vatRates)
+              ChoiceChip(
+                key: ValueKey('form-rate-$rate'),
+                label: Text('$rate %'),
+                selected: _vatRate == rate,
+                showCheckmark: false,
+                onSelected: (on) => _pickRate(on ? rate : null),
+              ),
+          ],
         ),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(

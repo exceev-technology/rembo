@@ -33,7 +33,58 @@ void main() {
     expect(r.date, DateTime(2026, 11, 10));
     expect(r.amountCents, 24000);
     expect(r.vatCents, 2182);
+    expect(r.vatRate, 10);
   });
+
+  test('the currency printed on the receipt, dirhams first', () {
+    ReceiptReading read(List<String> rows) =>
+        parseReceiptText(rows, today: _today);
+    expect(
+      read(['HOTEL FARAH', '10/11/2026', 'TOTAL 950,00 DH']).currency,
+      'MAD',
+    );
+    expect(
+      read(['CAFE DE FLORE', '10/11/2026', 'TOTAL 18,50 €']).currency,
+      'EUR',
+    );
+    expect(
+      read(['STARBUCKS NYC', '11/10/2026', 'TOTAL USD 12.40']).currency,
+      'USD',
+    );
+    expect(read(['PETIT TAXI', '10/11/2026', 'TOTAL 45,00']).currency, isNull);
+    expect(
+      read(['RIAD SALAM', '10/11/2026', 'Prix 90,00 EUR', 'TOTAL 980,00 MAD'])
+          .currency,
+      'MAD',
+    );
+  });
+
+  test(
+    'the VAT rate: printed, or the Moroccan rate VAT and total agree on',
+    () {
+      final printed = parseReceiptText([
+        'LIBRAIRIE NATIONALE',
+        'Date 09/11/2026',
+        'TVA 20% 30,00',
+        'TOTAL TTC 180,00',
+      ], today: _today);
+      expect(printed.vatRate, 20);
+      final computed = parseReceiptText([
+        'STATION AFRIQUIA',
+        'Date 09/11/2026',
+        'Montant TVA 61,25',
+        'TOTAL TTC 498,75',
+      ], today: _today);
+      expect(computed.vatCents, 6125);
+      expect(computed.vatRate, 14);
+      final none = parseReceiptText([
+        'PETIT TAXI',
+        'Date 09/11/2026',
+        'TOTAL 45,00',
+      ], today: _today);
+      expect(none.vatRate, isNull);
+    },
+  );
 
   test(
     'base and tax on the same line: the tax is the one matching the rate',

@@ -101,6 +101,16 @@ class ExpenseEvent {
   );
 }
 
+/// Moroccan VAT rates, in percent; 0 when the receipt says exempt.
+const vatRates = [20, 14, 10, 7, 0];
+
+/// Currencies a receipt can be paid in. The amount reimbursed is always in
+/// dirhams: another currency also keeps what was paid in it.
+const receiptCurrencies = ['MAD', 'EUR', 'USD', 'GBP'];
+
+/// Marks a field [Expense.copyWith] keeps; null means « clear it ».
+const _keep = Object();
+
 const expenseCategories = [
   'Repas',
   'Transport',
@@ -119,6 +129,9 @@ class Expense {
     this.date,
     this.amountCents = 0,
     this.vatCents = 0,
+    this.vatRate,
+    this.currency = 'MAD',
+    this.foreignAmountCents,
     this.category = '',
     this.project = '',
     this.reason = '',
@@ -140,6 +153,14 @@ class Expense {
   final DateTime? date;
   final int amountCents;
   final int vatCents;
+
+  /// VAT rate printed on the receipt, in percent (see [vatRates]).
+  final int? vatRate;
+
+  /// Currency of the receipt. [amountCents] stays in MAD; when the receipt
+  /// is in another currency, [foreignAmountCents] is what was paid in it.
+  final String currency;
+  final int? foreignAmountCents;
   final String category;
   final String project;
   final String reason;
@@ -160,6 +181,8 @@ class Expense {
   bool get hasVoice => voicePath != null && voicePath!.isNotEmpty;
 
   bool get hasReceipt => receiptPath != null && receiptPath!.isNotEmpty;
+
+  bool get foreignCurrency => currency != 'MAD';
 
   /// What lists show: the reason when given, else the supplier.
   String get title => supplier.isNotEmpty
@@ -199,6 +222,9 @@ class Expense {
     DateTime? date,
     int? amountCents,
     int? vatCents,
+    Object? vatRate = _keep,
+    String? currency,
+    Object? foreignAmountCents = _keep,
     String? category,
     String? project,
     String? reason,
@@ -215,6 +241,11 @@ class Expense {
     date: date ?? this.date,
     amountCents: amountCents ?? this.amountCents,
     vatCents: vatCents ?? this.vatCents,
+    vatRate: identical(vatRate, _keep) ? this.vatRate : vatRate as int?,
+    currency: currency ?? this.currency,
+    foreignAmountCents: identical(foreignAmountCents, _keep)
+        ? this.foreignAmountCents
+        : foreignAmountCents as int?,
     category: category ?? this.category,
     project: project ?? this.project,
     reason: reason ?? this.reason,
@@ -247,6 +278,9 @@ class Expense {
           : DateTime.parse(json['expense_date'] as String),
       amountCents: (json['amount_cents'] as num?)?.toInt() ?? 0,
       vatCents: (json['vat_cents'] as num?)?.toInt() ?? 0,
+      vatRate: (json['vat_rate'] as num?)?.toInt(),
+      currency: (json['currency'] as String?) ?? 'MAD',
+      foreignAmountCents: (json['foreign_amount_cents'] as num?)?.toInt(),
       category: (json['category'] as String?) ?? '',
       project: (json['project'] as String?) ?? '',
       reason: (json['reason'] as String?) ?? '',
@@ -272,6 +306,9 @@ class Expense {
     'expense_date': date == null ? null : isoDay(date!),
     'amount_cents': amountCents,
     'vat_cents': vatCents,
+    'vat_rate': vatRate,
+    'currency': currency,
+    'foreign_amount_cents': foreignCurrency ? foreignAmountCents : null,
     'category': category,
     'project': project.trim(),
     'reason': reason.trim(),
@@ -415,6 +452,8 @@ class ReceiptReading {
     this.date,
     this.amountCents,
     this.vatCents,
+    this.vatRate,
+    this.currency,
     this.unreadable = false,
     this.simulated = false,
   });
@@ -423,6 +462,12 @@ class ReceiptReading {
   final DateTime? date;
   final int? amountCents;
   final int? vatCents;
+
+  /// VAT rate printed on the receipt, in percent.
+  final int? vatRate;
+
+  /// Currency printed on the receipt (MAD, EUR, USD, GBP), when it says.
+  final String? currency;
   final bool unreadable;
 
   /// Demo values, not read from the picture.

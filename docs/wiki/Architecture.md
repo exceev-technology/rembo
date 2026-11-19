@@ -137,10 +137,12 @@ Expense status flow (draft): `draft` → `submitted` → `needs_review` (escalat
 | `supplier_ice` | `001234567000089` | When printed on the receipt |
 | `category` | `Meals` | |
 | `allocation` | `Client Atlas` | Client or project |
-| `amount_ttc_mad` | `380.00` | Amount including VAT, in MAD |
-| `vat_rate` | `10` | Percent |
+| `amount_ttc_mad` | `380.00` | Amount including VAT, in MAD: what is reimbursed |
+| `vat_rate` | `10` | Percent printed on the receipt (20, 14, 10, 7 or 0); empty when unknown |
 | `vat_amount_mad` | `34.55` | |
 | `amount_ht_mad` | `345.45` | Amount excluding VAT |
+| `currency` | `MAD` | Currency of the receipt (`MAD`, `EUR`, `USD`, `GBP`) |
+| `amount_paid` | `35.00` | Amount paid in that currency, when it is not MAD; empty otherwise |
 | `reason` | `Client lunch` | |
 | `approved_by` | `Manager name` | |
 | `approved_at` | `2026-11-13` | |

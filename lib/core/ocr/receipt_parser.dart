@@ -21,13 +21,59 @@ ReceiptReading parseReceiptText(List<String> rows, {DateTime? today}) {
   if (letters < 8 || (total == null && date == null)) {
     return const ReceiptReading(unreadable: true);
   }
+  final vat = total == null ? null : _vat(lines, total);
   return ReceiptReading(
     supplier: _supplier(lines),
     supplierIce: _ice(lines),
     date: date,
     amountCents: total,
-    vatCents: total == null ? null : _vat(lines, total),
+    vatCents: vat,
+    vatRate: _vatRate(lines, total, vat),
+    currency: _currency(lines),
   );
+}
+
+// Currency and VAT rate ----------------------------------------------------
+
+final _mad = RegExp(
+  r'\b(?:mad|dhs?|dirhams?)\b|درهم|د\.م',
+  caseSensitive: false,
+);
+final _foreign = <String, RegExp>{
+  'EUR': RegExp(r'€|\beur(?:os?)?\b', caseSensitive: false),
+  'USD': RegExp(r'\$|\busd\b', caseSensitive: false),
+  'GBP': RegExp(r'£|\bgbp\b', caseSensitive: false),
+};
+
+/// The currency the receipt prints. Dirhams win when they appear at all:
+/// a Moroccan receipt may quote a euro price as a reminder.
+String? _currency(List<String> lines) {
+  final text = lines.join(' ');
+  if (_mad.hasMatch(text)) return 'MAD';
+  for (final e in _foreign.entries) {
+    if (e.value.hasMatch(text)) return e.key;
+  }
+  return null;
+}
+
+/// The rate printed on the VAT lines, when there is a single one; else the
+/// Moroccan rate that the printed VAT and total agree on.
+int? _vatRate(List<String> lines, int? total, int? vat) {
+  final printed = <int>{};
+  for (final line in lines) {
+    if (!_vatLine.hasMatch(line)) continue;
+    for (final m in _rate.allMatches(line)) {
+      final r = int.parse(m[1]!);
+      if (vatRates.contains(r)) printed.add(r);
+    }
+  }
+  if (printed.length == 1) return printed.single;
+  if (total == null || vat == null || vat <= 0) return null;
+  for (final r in vatRates.where((r) => r > 0)) {
+    final expected = total * r / (100 + r);
+    if ((vat - expected).abs() <= (expected * .005).clamp(2, 100)) return r;
+  }
+  return null;
 }
 
 // Amounts ---------------------------------------------------------------

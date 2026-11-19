@@ -278,6 +278,44 @@ void main() {
     expect(await backend.fetchAutoApprove(), isTrue);
   });
 
+  testWidgets('A receipt in euros keeps what was paid; a rate fills the VAT', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-manual');
+    await _type(tester, 'form-supplier', 'Café de Flore');
+    await _type(tester, 'form-amount', '220,00');
+    await _tap(tester, 'form-rate-10');
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('form-vat')))
+          .controller!
+          .text,
+      '20,00',
+    );
+    expect(find.text('Calculée'), findsOneWidget);
+    await _tap(tester, 'form-currency');
+    await tester.tap(find.text('EUR').last);
+    await tester.pumpAndSettle();
+    await _tap(tester, 'form-category');
+    await tester.tap(find.text('Repas').last);
+    await tester.pumpAndSettle();
+    await _type(tester, 'form-reason', 'Déjeuner à Paris');
+    await _tap(tester, 'form-continue');
+    expect(find.text('Saisissez le montant payé, ex. 85,00.'), findsOneWidget);
+    await _type(tester, 'form-foreign', '20,00');
+    await _tap(tester, 'form-continue');
+    expect(find.text('Montant payé (EUR)'), findsOneWidget);
+    final draft = state.mine.first;
+    expect(draft.currency, 'EUR');
+    expect(draft.foreignAmountCents, 2000);
+    expect(draft.amountCents, 22000);
+    expect(draft.vatRate, 10);
+    expect(draft.vatCents, 2000);
+  });
+
   testWidgets('A manager cannot decide on their own expense', (tester) async {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);

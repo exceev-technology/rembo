@@ -12,8 +12,11 @@ abstract final class CsvExport {
     'category',
     'allocation',
     'amount_ttc_mad',
+    'vat_rate',
     'vat_amount_mad',
     'amount_ht_mad',
+    'currency',
+    'amount_paid',
     'reason',
     'approved_by',
     'approved_at',
@@ -39,8 +42,13 @@ abstract final class CsvExport {
           e.category,
           e.project,
           _amount(e.amountCents),
+          e.vatRate?.toString() ?? '',
           _amount(e.vatCents),
           _amount(e.amountCents - e.vatCents),
+          e.currency,
+          e.foreignCurrency && e.foreignAmountCents != null
+              ? _amount(e.foreignAmountCents!)
+              : '',
           e.reason,
           e.lastDecision == null
               ? ''
