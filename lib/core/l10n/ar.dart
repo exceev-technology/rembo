@@ -577,4 +577,35 @@ const arabic = <String, String>{
   'Le montant TTC en dirhams est celui remboursé : reportez la conversion de votre relevé.': 'المبلغ بالدرهم شامل الضريبة هو المبلغ المعوَّض: انقل قيمة التحويل من كشف حسابك.',
   'Calculée': 'محسوبة',
   'Taux de TVA': 'نسبة الضريبة على القيمة المضافة',
+  'Sûr': 'مؤكد',
+  'Probable': 'مرجّح',
+  'À vérifier': 'للتحقق',
+  'TVA': 'الضريبة على القيمة المضافة',
+  'Date imprimée sur le ticket': 'التاريخ مطبوع على الوصل',
+  'Première ligne du ticket qui ressemble à un nom':
+      'أول سطر في الوصل يشبه اسماً',
+  'Lu après la mention « ICE »': 'قُرئ بعد عبارة «ICE»',
+  'Devise imprimée sur le ticket': 'العملة مطبوعة على الوصل',
+  'Taux imprimé sur le ticket': 'النسبة مطبوعة على الوصل',
+  'Taux qui correspond à la TVA et au total imprimés':
+      'النسبة المتوافقة مع الضريبة والمجموع المطبوعين',
+  'Lu sur la ligne du total TTC ou du net à payer':
+      'قُرئ في سطر المجموع شامل الضريبة أو الصافي للأداء',
+  'Lu sur une ligne « total » sans mention TTC':
+      'قُرئ في سطر «المجموع» دون ذكر شمول الضريبة',
+  'Aucun total imprimé : plus grand montant du ticket':
+      'لا مجموع مطبوع: أكبر مبلغ في الوصل',
+  'Lu sur la ligne du total de TVA': 'قُرئ في سطر مجموع الضريبة',
+  'Somme des lignes de TVA du ticket': 'مجموع أسطر الضريبة في الوصل',
+  'Catégorie de vos dépenses précédentes chez ce fournisseur':
+      'صنف مصاريفك السابقة لدى هذا المورد',
+  'Type de fournisseur reconnu à son nom': 'نوع المورد معروف من اسمه',
+  'Projet de votre dernière dépense chez ce fournisseur':
+      'مشروع آخر مصروف لك لدى هذا المورد',
+  'Agent de lecture · serveur': 'وكيل القراءة · الخادم',
+  'Agent de lecture · sur le téléphone': 'وكيل القراءة · على الهاتف',
+  'À vérifier : {field} — {reason}': 'للتحقق: {field} — {reason}',
+  'Non lu : {fields}': 'لم يُقرأ: {fields}',
+  'Proposé par l’agent : {reason}': 'اقتراح الوكيل: {reason}',
+  'Lu par le lecteur du serveur': 'قرأه قارئ الخادم',
 };

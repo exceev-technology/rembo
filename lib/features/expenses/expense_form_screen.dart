@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../core/agents/classification_agent.dart';
 import '../../core/data/app_state.dart';
 import '../../core/data/ids.dart';
 import '../../core/widgets/rembo_widgets.dart';
@@ -66,6 +67,16 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   String _currency = 'MAD';
   int? _vatRate;
   String? _category;
+
+  /// Proposals of the classification agent still shown as such, and why.
+  final _agentNotes = <String, FieldNote>{};
+  bool _categoryTouched = false;
+  bool _projectTouched = false;
+  bool _classified = false;
+
+  /// Rebuilds the category field when the agent changes its value: the
+  /// field only reads its initial value.
+  int _categoryVersion = 0;
   final _errors = <String, String>{};
   final _proposed = <String>{};
   String? _failure;
@@ -136,6 +147,45 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       }
     } else {
       _date.text = formatDayInput(DateTime.now());
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_classified) return;
+    _classified = true;
+    if (widget.expense == null) _classify();
+  }
+
+  /// Asks the classification agent for a category and a project, without
+  /// ever overwriting what the person chose.
+  void _classify() {
+    final state = AppScope.read(context);
+    final result = classifyExpense(
+      supplier: _supplier.text,
+      ice: widget.reading?.supplierIce ?? _saved?.supplierIce ?? '',
+      history: state.mine,
+    );
+    if (!_categoryTouched) {
+      final proposed = result.category?.value ?? _category;
+      if (proposed != _category) _categoryVersion++;
+      _category = proposed;
+      if (result.category == null) {
+        _agentNotes.remove('category');
+      } else {
+        _agentNotes['category'] = result.category!.note;
+        _errors.remove('category');
+      }
+    }
+    if (!_projectTouched) {
+      if (result.project != null && _project.text.trim().isEmpty) {
+        _project.text = result.project!.value;
+        _agentNotes['project'] = result.project!.note;
+      } else if (result.project == null && _agentNotes.containsKey('project')) {
+        _project.clear();
+        _agentNotes.remove('project');
+      }
     }
   }
 
@@ -440,16 +490,111 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     });
   }
 
-  Widget? _readBadge(String field) => _proposed.contains(field)
-      ? Padding(
-          padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
-          child: RemboBadge(
-            label: tr('Reçu'),
-            tone: BadgeTone.info,
-            icon: Icons.receipt_long_outlined,
+  /// « Reçu » on a value read on the receipt; « À vérifier » when the
+  /// reader was not sure of it.
+  Widget? _readBadge(String field) {
+    if (!_proposed.contains(field)) return null;
+    final unsure = widget.reading?.notes[field]?.confidence == Confidence.low;
+    return Padding(
+      padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
+      child: RemboBadge(
+        label: unsure ? Confidence.low.label : tr('Reçu'),
+        tone: unsure ? BadgeTone.warning : BadgeTone.info,
+        icon: unsure
+            ? Icons.warning_amber_rounded
+            : Icons.receipt_long_outlined,
+      ),
+    );
+  }
+
+  /// What the reading agent found, what it is unsure of, what it missed.
+  Widget _readingReport(ReceiptReading reading) {
+    String name(String field) => switch (field) {
+      'supplier' => tr('fournisseur'),
+      'date' => tr('date'),
+      'amount' => tr('montant'),
+      'vat' => tr('TVA'),
+      _ => field,
+    };
+    final unsure = [
+      for (final e in reading.notes.entries)
+        if (e.value.confidence == Confidence.low && _proposed.contains(e.key))
+          e.key,
+    ];
+    final missing = reading.missing;
+    return RemboCard(
+      key: const ValueKey('form-reading-report'),
+      color: RemboColors.surface,
+      borderColor: RemboColors.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome_outlined,
+                size: 20,
+                color: RemboColors.indigo,
+              ),
+              const SizedBox(width: RemboSpace.sm),
+              Expanded(
+                child: Text(
+                  reading.engine == 'server'
+                      ? tr('Agent de lecture · serveur')
+                      : tr('Agent de lecture · sur le téléphone'),
+                  style: RemboText.subtitle,
+                ),
+              ),
+            ],
           ),
-        )
-      : null;
+          const SizedBox(height: RemboSpace.xs),
+          Text(
+            reading.simulated
+                ? tr('Démonstration : valeurs simulées, non lues sur la photo.')
+                : tr('Valeurs lues sur le ticket : vérifiez-les.'),
+            style: RemboText.caption,
+          ),
+          for (final field in unsure)
+            Padding(
+              padding: const EdgeInsets.only(top: RemboSpace.xs),
+              child: Text(
+                tr('À vérifier : {field} — {reason}', {
+                  'field': name(field),
+                  'reason': trData(reading.notes[field]!.reason),
+                }),
+                style: RemboText.caption.copyWith(
+                  color: RemboColors.warningText,
+                ),
+              ),
+            ),
+          if (missing.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: RemboSpace.xs),
+              child: Text(
+                tr('Non lu : {fields}', {
+                  'fields': missing.map(name).join(', '),
+                }),
+                style: RemboText.caption,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// « Proposé » on a value chosen by the classification agent.
+  Widget? _agentLine(String field) {
+    final note = _agentNotes[field];
+    if (note == null) return null;
+    return Padding(
+      padding: const EdgeInsets.only(top: RemboSpace.xs),
+      child: Text(
+        tr('Proposé par l’agent : {reason}', {'reason': trData(note.reason)}),
+        key: ValueKey('form-proposed-$field'),
+        style: RemboText.caption.copyWith(color: RemboColors.infoText),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -502,12 +647,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           const SizedBox(height: RemboSpace.lg),
         ],
         if (reading != null) ...[
-          InfoStrip(
-            reading.simulated
-                ? tr('Démonstration : valeurs simulées, non lues sur la photo.')
-                : tr('Valeurs lues sur le ticket : vérifiez-les.'),
-            icon: Icons.auto_awesome_outlined,
-          ),
+          _readingReport(reading),
           const SizedBox(height: RemboSpace.lg),
         ] else if (widget.readerMissing) ...[
           InfoStrip(
@@ -545,7 +685,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           errorText: _errors['supplier'],
           suffix: _readBadge('supplier'),
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _proposed.remove('supplier')),
+          onChanged: (_) => setState(() {
+            _proposed.remove('supplier');
+            _classify();
+          }),
         ),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
@@ -690,27 +833,33 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           style: RemboText.subtitle,
         ),
         const SizedBox(height: RemboSpace.sm),
-        DropdownButtonFormField<String>(
-          key: const ValueKey('form-category'),
-          initialValue: _category,
-          isExpanded: true,
-          hint: Text(tr('Choisir')),
-          decoration: InputDecoration(
-            prefixIcon: Icon(
-              categoryIcon(_category ?? ''),
-              color: RemboColors.night,
+        KeyedSubtree(
+          key: ValueKey('form-category-v$_categoryVersion'),
+          child: DropdownButtonFormField<String>(
+            key: const ValueKey('form-category'),
+            initialValue: _category,
+            isExpanded: true,
+            hint: Text(tr('Choisir')),
+            decoration: InputDecoration(
+              prefixIcon: Icon(
+                categoryIcon(_category ?? ''),
+                color: RemboColors.night,
+              ),
+              errorText: _errors['category'],
             ),
-            errorText: _errors['category'],
+            items: [
+              for (final c in expenseCategories)
+                DropdownMenuItem(value: c, child: Text(tr(c))),
+            ],
+            onChanged: (c) => setState(() {
+              _category = c;
+              _categoryTouched = true;
+              _agentNotes.remove('category');
+              _errors.remove('category');
+            }),
           ),
-          items: [
-            for (final c in expenseCategories)
-              DropdownMenuItem(value: c, child: Text(tr(c))),
-          ],
-          onChanged: (c) => setState(() {
-            _category = c;
-            _errors.remove('category');
-          }),
         ),
+        ?_agentLine('category'),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-project'),
@@ -719,7 +868,12 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           icon: Icons.work_outline_rounded,
           controller: _project,
           textInputAction: TextInputAction.next,
+          onChanged: (_) => setState(() {
+            _projectTouched = true;
+            _agentNotes.remove('project');
+          }),
         ),
+        ?_agentLine('project'),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-reason'),

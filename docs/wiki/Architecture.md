@@ -53,14 +53,14 @@ The client/project reference data is managed directly in Supabase for the MVP.
 
 > **Agents prepare, a human decides.**
 
-| Agent responsibility | What it does |
-|---|---|
-| Read | Extracts date, supplier, amount, currency, VAT and ICE from the receipt, and keeps the source of each field |
-| Classify | Suggests the category and the client/project allocation |
-| Check policy | Compares the expense with the company's rules (required fields, limits) |
-| Spot duplicates | Flags a receipt that looks already declared |
+| Agent | Where it runs | What it does | What it cannot do |
+|---|---|---|---|
+| **Read** | Phone first (Google ML Kit, offline), server reader only when the phone finds nothing | Extracts date, supplier, amount, currency, VAT, VAT rate and ICE. Each field carries **how it was found** and a **confidence** (sure, probable, to check); what it could not read is listed | Submit the expense |
+| **Classify** | Phone, no model | Proposes the category and the client/project: first from the person's own history with the same supplier (or ICE), then from Moroccan supplier names (petit taxi, ONCF, Afriquia, riad…). Says why | Overwrite a choice the person made |
+| **Check policy** | Server (SQL `control_expense`), previewed on the phone | Limits, missing receipt, missing fields, duplicates, ambiguities. Writes its reasons on the expense | Approve or reject, unless the company switched automatic validation on |
+| **Prepare export** | Phone and server | Builds the batch of approved expenses and checks its totals | Run the accounting import |
 
-**Escalation rule.** Policy-compliant expenses move forward without human work. A manager is asked to decide in only two cases:
+**Escalation rule.** By default the control only **marks** a compliant expense; a manager confirms all the compliant ones in one gesture, and decides alone on the others. A company may let the control approve compliant expenses itself (« Validation automatique des dépenses conformes »). A manager decides in every case where the control found:
 
 1. **An inconsistency** between the expense and the reimbursement policy
 2. **An ambiguity** the agent cannot resolve on its own
@@ -68,9 +68,9 @@ The client/project reference data is managed directly in Supabase for the MVP.
 **Guardrails**
 
 - An employee can never approve their own expense, whether a human or an agent does the approving.
-- Every agent action is written to an audit log: who or what acted, when, on which expense, and why.
-- Agents run server side only (Edge Functions). They use **MCP** to reach tools such as the Supabase database or a company's accounting tools.
-- The MVP delivers the read and review flow first ([Roadmap](Roadmap)). The full multi-agent setup is part of the [post-MVP vision](Product-Vision#vision-after-the-mvp).
+- Every agent action is written down: status changes carry who or what acted (`actor_kind` human or agent), when and why.
+- The agents are explainable code, not models: they run without cost or key, on the phone or in SQL. Only the optional server reader calls a vision model, whose key stays in Edge Function secrets.
+- **MCP** and a conversational assistant are part of the [post-MVP vision](Product-Vision#vision-after-the-mvp).
 
 ## Security model
 

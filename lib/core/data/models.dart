@@ -444,6 +444,33 @@ class ExportBatch {
       );
 }
 
+/// How sure an agent is of a value it proposes.
+enum Confidence {
+  high('Sûr'),
+  medium('Probable'),
+  low('À vérifier');
+
+  const Confidence(this._label);
+  final String _label;
+  String get label => tr(_label);
+
+  static Confidence parse(String? name) =>
+      values.firstWhere((c) => c.name == name, orElse: () => medium);
+}
+
+/// Why an agent proposes a value, and how sure it is. [reason] is French,
+/// shown through [trData].
+class FieldNote {
+  const FieldNote(this.confidence, this.reason);
+  final Confidence confidence;
+  final String reason;
+
+  Map<String, dynamic> toJson() => {
+    'confidence': confidence.name,
+    'reason': reason,
+  };
+}
+
 /// Values read on a receipt, when a reader is available.
 class ReceiptReading {
   const ReceiptReading({
@@ -456,6 +483,8 @@ class ReceiptReading {
     this.currency,
     this.unreadable = false,
     this.simulated = false,
+    this.notes = const {},
+    this.engine = 'device',
   });
   final String? supplier;
   final String? supplierIce;
@@ -472,6 +501,20 @@ class ReceiptReading {
 
   /// Demo values, not read from the picture.
   final bool simulated;
+
+  /// For each field read (supplier, ice, date, amount, vat, rate,
+  /// currency): how it was found and how sure the reader is.
+  final Map<String, FieldNote> notes;
+
+  /// Who read it: `device` (on the phone) or `server`.
+  final String engine;
+
+  /// The fields a submission needs that the reader could not find.
+  List<String> get missing => [
+    if (supplier == null) 'supplier',
+    if (date == null) 'date',
+    if (amountCents == null) 'amount',
+  ];
 }
 
 /// A problem the user can act on; [message] is shown as is.

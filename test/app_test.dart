@@ -670,6 +670,14 @@ void main() {
       expect(field('form-supplier'), 'Café Atlas');
       expect(field('form-amount'), '240,00');
       expect(field('form-vat'), '21,82');
+      // The reading agent explains itself; the classification agent
+      // proposes a category, which the person can still change.
+      expect(find.byKey(const ValueKey('form-reading-report')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('form-proposed-category')),
+        findsOneWidget,
+      );
+      expect(find.text('10 %'), findsOneWidget);
 
       // A VAT above the amount is refused, with the reason.
       await _tap(tester, 'form-category');

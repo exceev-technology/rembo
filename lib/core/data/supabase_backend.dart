@@ -346,7 +346,8 @@ class SupabaseBackend extends RemboBackend {
           .timeout(const Duration(seconds: 30));
       final data = response.data;
       if (data is! Map) return null;
-      return ReceiptReading(
+      const note = FieldNote(Confidence.medium, 'Lu par le lecteur du serveur');
+      final reading = ReceiptReading(
         unreadable: data['unreadable'] == true,
         supplier: data['supplier'] as String?,
         supplierIce: data['supplier_ice'] as String?,
@@ -355,6 +356,29 @@ class SupabaseBackend extends RemboBackend {
             : null,
         amountCents: (data['amount_cents'] as num?)?.toInt(),
         vatCents: (data['vat_cents'] as num?)?.toInt(),
+        vatRate: (data['vat_rate'] as num?)?.toInt(),
+        currency: data['currency'] as String?,
+        engine: 'server',
+      );
+      return ReceiptReading(
+        unreadable: reading.unreadable,
+        supplier: reading.supplier,
+        supplierIce: reading.supplierIce,
+        date: reading.date,
+        amountCents: reading.amountCents,
+        vatCents: reading.vatCents,
+        vatRate: vatRates.contains(reading.vatRate) ? reading.vatRate : null,
+        currency: receiptCurrencies.contains(reading.currency)
+            ? reading.currency
+            : null,
+        engine: 'server',
+        notes: {
+          if (reading.supplier != null) 'supplier': note,
+          if (reading.supplierIce != null) 'ice': note,
+          if (reading.date != null) 'date': note,
+          if (reading.amountCents != null) 'amount': note,
+          if (reading.vatCents != null) 'vat': note,
+        },
       );
     } catch (e, st) {
       logFailure('receipt reading', e, st);
