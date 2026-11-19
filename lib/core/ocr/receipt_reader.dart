@@ -15,6 +15,15 @@ typedef ReceiptReader = Future<ReceiptReading?> Function(
 /// sends the picture anywhere. Null where there is none (desktop, web).
 ReceiptReader? deviceReceiptReader = platformReceiptReader();
 
+/// The raw rows of text the phone recognises on a picture (diagnostic of
+/// the OCR bench). Null where there is no reader.
+typedef RowsReader = Future<List<String>?> Function(
+  Uint8List bytes,
+  String name,
+);
+
+RowsReader? deviceRowsReader = platformRowsReader();
+
 /// Reads a receipt with the phone first, and asks the server's reader only
 /// when the phone could not find the essentials (typically a receipt in
 /// Arabic or handwritten, which the phone's reader does not know).

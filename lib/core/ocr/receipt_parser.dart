@@ -13,16 +13,39 @@ import '../data/models.dart';
 ReceiptReading parseReceiptText(List<String> rows, {DateTime? today}) {
   final lines = [
     for (final r in rows)
-      if (r.trim().isNotEmpty) r.replaceAll(RegExp(r'\s+'), ' ').trim(),
+      if (r.trim().isNotEmpty)
+        r
+            .replaceAll(RegExp(r'\s+'), ' ')
+            // The phone's reader often puts a space after the decimal
+            // comma: « 156, 40 » is 156,40.
+            .replaceAllMapped(
+              RegExp(r'(\d)([.,]) (\d{2})(?![\d.,])'),
+              (m) => '${m[1]}${m[2]}${m[3]}',
+            )
+            .trim(),
   ];
   final letters = lines.join().replaceAll(RegExp(r'[^A-Za-zÀ-ÿ]'), '').length;
   final notes = <String, FieldNote>{};
-  final total = _total(lines, notes);
+  var total = _total(lines, notes);
   final date = _date(lines, today ?? DateTime.now());
   if (letters < 8 || (total == null && date == null)) {
     return const ReceiptReading(unreadable: true);
   }
-  final vat = total == null ? null : _vat(lines, total, notes);
+  var vat = total == null ? null : _vat(lines, total, notes);
+  // A « TTC » badly read can leave the amount without taxes as the total:
+  // when the receipt also prints that amount plus its VAT, that is the
+  // amount paid.
+  final withTaxes = total == null || vat == null
+      ? null
+      : _amountEqualTo(lines, total + vat);
+  if (withTaxes != null) {
+    total = withTaxes;
+    notes['amount'] = const FieldNote(
+      Confidence.medium,
+      'Montant hors taxes plus la TVA imprimés sur le ticket',
+    );
+    vat = _vat(lines, withTaxes, notes);
+  }
   final supplier = _supplier(lines);
   final ice = _ice(lines);
   final rate = _vatRate(lines, total, vat, notes);
@@ -61,6 +84,17 @@ ReceiptReading parseReceiptText(List<String> rows, {DateTime? today}) {
     currency: currency,
     notes: notes,
   );
+}
+
+/// An amount printed on the receipt equal to [cents], give or take a
+/// centime of rounding.
+int? _amountEqualTo(List<String> lines, int cents) {
+  for (final line in lines) {
+    for (final a in _amounts(line)) {
+      if ((a - cents).abs() <= 1) return a;
+    }
+  }
+  return null;
 }
 
 // Currency and VAT rate ----------------------------------------------------
@@ -354,7 +388,7 @@ String? _ice(List<String> lines) {
 }
 
 final _notAName = RegExp(
-  r'ticket|facture|re[çc]u|bienvenue|merci|t[ée]l|fax|adresse|www\.|http|@|'
+  r'ticket|facture|re[çc]u|bienvenue|merci|\bt[ée]l\b|fax|adresse|www\.|http|@|'
   r'caisse|table|serveur|date|heure|\bice\b|\bif\b|\brc\b|patente|tva|total|'
   r'duplicata|client',
   caseSensitive: false,

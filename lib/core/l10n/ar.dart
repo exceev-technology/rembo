@@ -697,4 +697,10 @@ const arabic = <String, String>{
   'Par qualité de photo': 'حسب جودة الصورة',
   'Partager le rapport (CSV)': 'مشاركة التقرير (CSV)',
   'Rien n’est enregistré : le banc mesure seulement la lecture. Les reçus en arabe sont prévus pour le lecteur du serveur.': 'لا يُحفظ أي شيء: المنصة تقيس القراءة فقط. الوصولات بالعربية مخصصة لقارئ الخادم.',
+  'Montant hors taxes plus la TVA imprimés sur le ticket':
+      'المبلغ دون الضريبة مع الضريبة المطبوعين على الوصل',
+  'Tester sur une vraie photo': 'تجربة على صورة حقيقية',
+  'Texte lu sur la photo ({kb} Ko)': 'النص المقروء على الصورة ({kb} ك.ب)',
+  'Aucun texte reconnu sur cette photo.':
+      'لم يُتعرَّف على أي نص في هذه الصورة.',
 };

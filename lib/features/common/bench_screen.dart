@@ -9,7 +9,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/agents/ocr_bench.dart';
 import '../../core/data/app_state.dart';
 import '../../core/ocr/receipt_reader.dart';
+import '../../core/ocr/receipt_parser.dart';
 import '../../core/widgets/rembo_widgets.dart';
+import '../expenses/receipt_picker.dart';
 
 /// « Banc d'essai OCR » : the 30 fictional receipts of the Testing
 /// Protocol, read on this phone (or by the server reader), field by field
@@ -32,6 +34,11 @@ class _BenchScreenState extends State<BenchScreen> {
   int _done = 0;
   bool _running = false;
   String? _failure;
+
+  /// Diagnostic of a real photo: what the phone read, what it found.
+  List<String>? _rows;
+  ReceiptReading? _rowsReading;
+  int? _photoKb;
 
   @override
   void initState() {
@@ -86,6 +93,36 @@ class _BenchScreenState extends State<BenchScreen> {
     setState(() {
       _running = false;
       _report = BenchReport(server ? 'server' : 'device', results);
+    });
+  }
+
+  /// Takes a real photo and shows the raw rows the phone recognised and
+  /// what the reading agent took from them: tells a reading problem from
+  /// a parsing problem.
+  Future<void> _tryPhoto() async {
+    final rowsReader = deviceRowsReader;
+    if (rowsReader == null || _running) return;
+    final picker = ReceiptPickerScope.read(context);
+    PickedReceipt? picked;
+    try {
+      picked = await picker(camera: true);
+    } on RemboException catch (e) {
+      if (mounted) setState(() => _failure = e.message);
+      return;
+    }
+    if (picked == null || !mounted) return;
+    setState(() {
+      _running = true;
+      _rows = null;
+      _failure = null;
+    });
+    final rows = await rowsReader(picked.bytes, picked.name);
+    if (!mounted) return;
+    setState(() {
+      _running = false;
+      _photoKb = picked!.bytes.length ~/ 1024;
+      _rows = rows ?? const [];
+      _rowsReading = rows == null ? null : parseReceiptText(rows);
     });
   }
 
@@ -177,6 +214,69 @@ class _BenchScreenState extends State<BenchScreen> {
                 ? null
                 : () => _run(server: true),
           ),
+        ],
+        if (deviceRowsReader != null) ...[
+          const SizedBox(height: RemboSpace.md),
+          RemboSecondaryButton(
+            key: const ValueKey('bench-photo'),
+            label: tr('Tester sur une vraie photo'),
+            icon: Icons.photo_camera_outlined,
+            onPressed: _running ? null : _tryPhoto,
+          ),
+        ],
+        if (_rows != null) ...[
+          SectionTitle(
+            tr('Texte lu sur la photo ({kb} Ko)', {'kb': _photoKb ?? 0}),
+          ),
+          RemboCard(
+            key: const ValueKey('bench-rows'),
+            child: _rows!.isEmpty
+                ? Text(tr('Aucun texte reconnu sur cette photo.'))
+                : SelectableText(
+                    _rows!.join('\n'),
+                    style: RemboText.caption.copyWith(
+                      fontFamily: 'JetBrains Mono',
+                    ),
+                  ),
+          ),
+          if (_rowsReading != null) ...[
+            const SizedBox(height: RemboSpace.sm),
+            RemboCard(
+              child: Column(
+                children: [
+                  DetailRow(
+                    Icons.storefront_outlined,
+                    tr('Fournisseur'),
+                    _rowsReading!.supplier ?? '—',
+                  ),
+                  DetailRow(
+                    Icons.calendar_today_outlined,
+                    tr('Date'),
+                    _rowsReading!.date == null
+                        ? '—'
+                        : formatDate(_rowsReading!.date!),
+                  ),
+                  DetailRow(
+                    Icons.payments_outlined,
+                    tr('Montant TTC (MAD)'),
+                    _rowsReading!.amountCents == null
+                        ? '—'
+                        : formatMad(_rowsReading!.amountCents!),
+                  ),
+                  DetailRow(
+                    Icons.percent_rounded,
+                    tr('TVA incluse'),
+                    _rowsReading!.vatCents == null
+                        ? '—'
+                        : formatVat(
+                            _rowsReading!.vatCents!,
+                            _rowsReading!.vatRate,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
         if (_running && cases != null) ...[
           const SizedBox(height: RemboSpace.lg),
