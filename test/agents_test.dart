@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rembo/core/agents/agent_metrics.dart';
 import 'package:rembo/core/agents/classification_agent.dart';
 import 'package:rembo/core/agents/compliance_agent.dart';
 import 'package:rembo/core/data/models.dart';
@@ -201,6 +202,84 @@ void main() {
         'Même fournisseur et même montant à quelques jours d’intervalle',
       ]);
       expect(check(expense(daysAgo: 1), [earlier]), isEmpty);
+    });
+  });
+
+  group('Agent measures', () {
+    Expense submitted({
+      required Map<String, String> proposal,
+      int amount = 25000,
+      Duration took = const Duration(seconds: 90),
+      String status = 'needs_review',
+    }) {
+      final start = DateTime(2026, 11, 20, 10);
+      return Expense.fromJson({
+        'id': 'e-${proposal.length}-$amount',
+        'employee_id': 'u1',
+        'employee_name': 'Omar',
+        'supplier_name': 'Café Atlas',
+        'expense_date': '2026-11-19',
+        'amount_cents': amount,
+        'category': 'Repas',
+        'status': status,
+        'created_at': start.toUtc().toIso8601String(),
+        'capture_started_at': start.toUtc().toIso8601String(),
+        'agent_proposal': {
+          'engine': 'device',
+          'fields': {
+            for (final e in proposal.entries)
+              e.key: {'value': e.value, 'agent': 'reading'},
+          },
+        },
+        'status_events': [
+          {
+            'to_status': 'submitted',
+            'actor_kind': 'human',
+            'created_at': start.add(took).toUtc().toIso8601String(),
+          },
+        ],
+      });
+    }
+
+    test('kept and corrected fields, as the SQL view counts them', () {
+      final m = AgentMeasure.of(
+        submitted(
+          proposal: {
+            'supplier': 'CAFÉ ATLAS',
+            'amount': '24000',
+            'category': 'Repas',
+          },
+        ),
+      )!;
+      expect(m.proposed.length, 3);
+      expect(m.accepted, 2);
+      expect(m.corrected, {'amount'});
+      expect(m.declareTime, const Duration(seconds: 90));
+    });
+
+    test('a summary over the submitted expenses, drafts left out', () {
+      final metrics = AgentMetrics.of([
+        submitted(proposal: {'amount': '25000', 'date': '2026-11-19'}),
+        submitted(
+          proposal: {'amount': '24000'},
+          took: const Duration(seconds: 150),
+        ),
+        submitted(proposal: {}, took: const Duration(seconds: 200)),
+        submitted(proposal: {'amount': '1'}, status: 'draft'),
+      ]);
+      expect(metrics.assisted.length, 2);
+      expect(metrics.proposed, 3);
+      expect(metrics.accepted, 2);
+      expect(metrics.untouched, 1);
+      expect(metrics.byField.firstWhere((f) => f.field == 'amount').rate, .5);
+      expect(
+        metrics.medianDeclare(assisted: true),
+        const Duration(seconds: 120),
+      );
+      expect(
+        metrics.medianDeclare(assisted: false),
+        const Duration(seconds: 200),
+      );
     });
   });
 }

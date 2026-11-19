@@ -484,6 +484,9 @@ class LocalBackend extends RemboBackend {
           : null,
       category: draft.category,
       project: draft.project.trim(),
+      // What the agents proposed and the start are written once.
+      agentProposal: saved.agentProposal ?? draft.agentProposal,
+      captureStartedAt: saved.captureStartedAt ?? draft.captureStartedAt,
       reason: draft.reason.trim(),
       receiptPath: receiptBytes != null
           ? 'local/${saved.id}'

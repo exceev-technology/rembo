@@ -142,6 +142,8 @@ class Expense {
     this.source = ExpenseSource.app,
     this.transcript,
     this.voicePath,
+    this.agentProposal,
+    this.captureStartedAt,
     required this.createdAt,
   });
 
@@ -175,6 +177,14 @@ class Expense {
 
   /// Voice note kept next to the receipts, when there is one.
   final String? voicePath;
+
+  /// What the agents proposed when the form opened, kept as it was to
+  /// measure what the person accepted or corrected:
+  /// `{engine, fields: {field: {value, confidence, reason, agent}}}`.
+  final Map<String, dynamic>? agentProposal;
+
+  /// When the person started declaring (picture taken, form opened).
+  final DateTime? captureStartedAt;
   final DateTime createdAt;
 
   bool get fromWhatsApp => source == ExpenseSource.whatsapp;
@@ -234,6 +244,8 @@ class Expense {
     String? receiptPath,
     List<ExpenseFlag>? flags,
     List<ExpenseEvent>? events,
+    Map<String, dynamic>? agentProposal,
+    DateTime? captureStartedAt,
   }) => Expense(
     id: id ?? this.id,
     employeeId: employeeId,
@@ -258,6 +270,8 @@ class Expense {
     source: source,
     transcript: transcript,
     voicePath: voicePath,
+    agentProposal: agentProposal ?? this.agentProposal,
+    captureStartedAt: captureStartedAt ?? this.captureStartedAt,
     createdAt: createdAt,
   );
 
@@ -296,6 +310,12 @@ class Expense {
       source: ExpenseSource.parse(json['source'] as String?),
       transcript: json['transcript'] as String?,
       voicePath: json['voice_path'] as String?,
+      agentProposal: json['agent_proposal'] is Map
+          ? Map<String, dynamic>.from(json['agent_proposal'] as Map)
+          : null,
+      captureStartedAt: json['capture_started_at'] == null
+          ? null
+          : DateTime.parse(json['capture_started_at'] as String).toLocal(),
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
     );
   }
@@ -314,6 +334,9 @@ class Expense {
     'category': category,
     'project': project.trim(),
     'reason': reason.trim(),
+    if (agentProposal != null) 'agent_proposal': agentProposal,
+    if (captureStartedAt != null)
+      'capture_started_at': captureStartedAt!.toUtc().toIso8601String(),
   };
 }
 

@@ -320,6 +320,46 @@ void main() {
     expect(draft.vatCents, 2000);
   });
 
+  testWidgets('A captured receipt keeps what the agents proposed', (
+    tester,
+  ) async {
+    await _start(
+      tester,
+      receiptPicker: ({required bool camera}) async =>
+          PickedReceipt(Uint8List.fromList([1, 2, 3]), 'ticket.jpg'),
+    );
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-photo');
+    await tester.pumpAndSettle();
+    await _tap(tester, 'form-save-draft');
+    final saved = state.mine.firstWhere(
+      (e) => e.status == ExpenseStatus.draft && e.agentProposal != null,
+    );
+    final fields = saved.agentProposal!['fields'] as Map;
+    expect(saved.agentProposal!['engine'], 'demo');
+    expect((fields['amount'] as Map)['value'], '24000');
+    expect((fields['amount'] as Map)['confidence'], 'high');
+    expect((fields['category'] as Map)['agent'], 'classification');
+    expect(saved.captureStartedAt, isNotNull);
+  });
+
+  testWidgets('The manager reads the measures of the agents', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-metrics');
+    expect(find.text('Mesures des agents'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('metrics-empty')).evaluate().isNotEmpty ||
+          find
+              .byKey(const ValueKey('metrics-acceptance'))
+              .evaluate()
+              .isNotEmpty,
+      isTrue,
+    );
+  });
+
   testWidgets('A manager cannot decide on their own expense', (tester) async {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);

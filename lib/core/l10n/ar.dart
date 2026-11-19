@@ -597,7 +597,7 @@ const arabic = <String, String>{
   'Lu sur la ligne du total de TVA': 'قُرئ في سطر مجموع الضريبة',
   'Somme des lignes de TVA du ticket': 'مجموع أسطر الضريبة في الوصل',
   'Catégorie de vos dépenses précédentes chez ce fournisseur':
-      'صنف مصاريفك السابقة لدى هذا المورد',
+      'فئة مصاريفك السابقة لدى هذا المورد',
   'Type de fournisseur reconnu à son nom': 'نوع المورد معروف من اسمه',
   'Projet de votre dernière dépense chez ce fournisseur':
       'مشروع آخر مصروف لك لدى هذا المورد',
@@ -623,4 +623,14 @@ const arabic = <String, String>{
   'L’agent de conformité signalera :': 'سيشير وكيل المطابقة إلى:',
   'Vous pouvez corriger avant de soumettre ; sinon votre responsable décide.':
       'يمكنك التصحيح قبل الإرسال، وإلا فسيقرر مسؤولك.',
+  'Montant payé': 'المبلغ المدفوع',
+  'Mesures des agents': 'مؤشرات الوكلاء',
+  'Ce que les personnes ont gardé des propositions des agents, sur les dépenses soumises.': 'ما احتفظ به المستخدمون من اقتراحات الوكلاء في المصاريف المرسلة.',
+  'Aucune dépense soumise avec une proposition d’agent pour l’instant.': 'لا يوجد بعد أي مصروف مرسل يتضمن اقتراحاً من وكيل.',
+  'des champs proposés gardés tels quels': 'من الحقول المقترحة احتُفظ بها كما هي',
+  'champs corrigés sur {count}': 'حقلاً مصحَّحاً من أصل {count}',
+  'reçus sans aucune correction': 'وصلاً دون أي تصحيح',
+  'temps médian de déclaration avec lecture': 'الوقت الوسيط للتصريح مع القراءة الآلية',
+  'Par champ': 'حسب الحقل',
+  'Temps médian sans lecture automatique : {time}.': 'الوقت الوسيط دون قراءة آلية: {time}.',
 };

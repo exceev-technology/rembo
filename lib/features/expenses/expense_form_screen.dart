@@ -22,6 +22,7 @@ class ExpenseFormScreen extends StatefulWidget {
     this.receipt,
     this.reading,
     this.readerMissing = false,
+    this.startedAt,
   });
 
   /// Existing draft or rejected expense; null for a new one.
@@ -32,6 +33,9 @@ class ExpenseFormScreen extends StatefulWidget {
   /// A picture was taken but nothing could read it.
   final bool readerMissing;
 
+  /// When the person started declaring; the form opening by default.
+  final DateTime? startedAt;
+
   static Future<void> open(
     BuildContext context, {
     Expense? expense,
@@ -39,6 +43,7 @@ class ExpenseFormScreen extends StatefulWidget {
     ReceiptReading? reading,
     bool readerMissing = false,
     bool replace = false,
+    DateTime? startedAt,
   }) {
     final route = MaterialPageRoute<void>(
       builder: (_) => ExpenseFormScreen(
@@ -46,6 +51,7 @@ class ExpenseFormScreen extends StatefulWidget {
         receipt: receipt,
         reading: reading,
         readerMissing: readerMissing,
+        startedAt: startedAt,
       ),
     );
     final navigator = Navigator.of(context);
@@ -77,6 +83,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   /// Rebuilds the category field when the agent changes its value: the
   /// field only reads its initial value.
   int _categoryVersion = 0;
+
+  /// What the agents proposed when the form opened, saved once with the
+  /// draft to measure what the person kept (see agent_metrics).
+  Map<String, dynamic>? _proposal;
+  late final DateTime _startedAt = widget.startedAt ?? DateTime.now();
   final _errors = <String, String>{};
   final _proposed = <String>{};
   String? _failure;
@@ -155,7 +166,59 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     super.didChangeDependencies();
     if (_classified) return;
     _classified = true;
-    if (widget.expense == null) _classify();
+    if (widget.expense == null) {
+      _classify();
+      _proposal = _agentProposal();
+    }
+  }
+
+  /// The values the reading and classification agents put in the form,
+  /// written the way the columns store them.
+  Map<String, dynamic>? _agentProposal() {
+    final fields = <String, Map<String, String>>{};
+    void add(String field, Object? value, FieldNote? note, String agent) {
+      if (value == null || '$value'.isEmpty) return;
+      fields[field] = {
+        'value': '$value',
+        'confidence': (note?.confidence ?? Confidence.medium).name,
+        'reason': note?.reason ?? '',
+        'agent': agent,
+      };
+    }
+
+    final r = widget.reading;
+    if (r != null && !r.unreadable) {
+      final n = r.notes;
+      add('supplier', r.supplier, n['supplier'], 'reading');
+      add('ice', r.supplierIce, n['ice'], 'reading');
+      add(
+        'date',
+        r.date == null ? null : isoDay(r.date!),
+        n['date'],
+        'reading',
+      );
+      final foreign = r.currency != null && r.currency != 'MAD';
+      add(
+        foreign ? 'foreign' : 'amount',
+        r.amountCents,
+        n['amount'],
+        'reading',
+      );
+      if ((r.vatCents ?? 0) > 0) add('vat', r.vatCents, n['vat'], 'reading');
+      add('rate', r.vatRate, n['rate'], 'reading');
+      add('currency', r.currency, n['currency'], 'reading');
+    }
+    if (_agentNotes['category'] != null) {
+      add('category', _category, _agentNotes['category'], 'classification');
+    }
+    if (_agentNotes['project'] != null) {
+      add('project', _project.text, _agentNotes['project'], 'classification');
+    }
+    if (fields.isEmpty) return null;
+    return {
+      'engine': r == null ? '' : (r.simulated ? 'demo' : r.engine),
+      'fields': fields,
+    };
   }
 
   /// Asks the classification agent for a category and a project, without
@@ -282,6 +345,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       source: base.source,
       transcript: base.transcript,
       voicePath: base.voicePath,
+      agentProposal: base.agentProposal ?? _proposal,
+      captureStartedAt:
+          base.captureStartedAt ?? (widget.expense == null ? _startedAt : null),
       createdAt: base.createdAt,
     );
   }

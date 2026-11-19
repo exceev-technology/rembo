@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../manager/agent_metrics_screen.dart';
+
 import '../../app/app_routes.dart';
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
@@ -112,6 +114,13 @@ class ProfileTab extends StatelessWidget {
                   onTap: () => Navigator.of(context).pushNamed(AppRoutes.rules),
                 ),
               ],
+              if (manager || state.role == UserRole.accountant)
+                _Entry(
+                  key: const ValueKey('profile-metrics'),
+                  Icons.insights_outlined,
+                  tr('Mesures des agents'),
+                  onTap: () => AgentMetricsScreen.open(context),
+                ),
               _Entry(
                 key: const ValueKey('profile-whatsapp'),
                 Icons.chat_outlined,

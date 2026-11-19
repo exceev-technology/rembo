@@ -22,6 +22,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _pick({required bool camera, bool unreadable = false}) async {
     if (_busy) return;
+    final startedAt = DateTime.now();
     final state = AppScope.read(context);
     final navigator = Navigator.of(context);
     final picker = ReceiptPickerScope.read(context);
@@ -72,6 +73,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         receipt: picked,
         reading: reading,
         readerMissing: reading == null,
+        startedAt: startedAt,
       );
     }
   }
