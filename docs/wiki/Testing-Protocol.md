@@ -39,6 +39,18 @@ These must pass before demo day. Each one is a test case with a fictional scenar
 | C4 | **Escalation**: an expense above the alert limit, and an ambiguous receipt | Both are routed to a manager with the reason shown |
 | C5 | **No secret on the client**: inspect the app build and the repository | Only the public `anon` key is present |
 
+**Where each control is automated** (CI, job « Database & functions », and the scripts below):
+
+| # | Test |
+|---|---|
+| C1 | `supabase/tests/database/02_approval.test.sql`, `07_controls.test.sql` (also a manager promoted afterwards, and the batch confirmation) |
+| C2 | `07_controls.test.sql`: a colleague, the manager before submission and another company read no receipt; the manager reads it once submitted |
+| C3 | `06_export_agent.test.sql` (count, total and VAT of the batch equal the approved ones; no second export); the app also compares them after each export |
+| C4 | `07_controls.test.sql`, `04_compliance_agent.test.sql` |
+| C5 | `tool/check_no_secrets.sh` on the repository and on the built APK |
+
+The end-to-end journey (capture, correction, submission, decision) runs in `integration_test/journey_test.dart`, on a phone or in the CI.
+
 ## Reporting
 
 Record the results in a test report (in the repository, under `docs/`):

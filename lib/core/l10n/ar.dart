@@ -686,8 +686,10 @@ const arabic = <String, String>{
   'Basse résolution': 'دقة منخفضة',
   'Manuscrit': 'مكتوب باليد',
   'Banc d’essai OCR': 'منصة اختبار القراءة الآلية',
-  '30 reçus fictifs de qualités différentes, lus puis comparés champ par champ à ce qu’ils impriment.': '30 وصلاً وهمياً بجودات مختلفة، تُقرأ ثم تُقارن حقلاً بحقل بما تطبعه.',
-  'Pas de lecteur sur cet appareil : lancez le banc sur un téléphone.': 'لا يوجد قارئ على هذا الجهاز: شغّل الاختبار على هاتف.',
+  '30 reçus fictifs de qualités différentes, lus puis comparés champ par champ à ce qu’ils impriment.':
+      '30 وصلاً وهمياً بجودات مختلفة، تُقرأ ثم تُقارن حقلاً بحقل بما تطبعه.',
+  'Pas de lecteur sur cet appareil : lancez le banc sur un téléphone.':
+      'لا يوجد قارئ على هذا الجهاز: شغّل الاختبار على هاتف.',
   'Lire avec le téléphone': 'القراءة بالهاتف',
   'Lire avec le lecteur du serveur': 'القراءة بقارئ الخادم',
   'Reçu {done} sur {total}': 'الوصل {done} من {total}',
