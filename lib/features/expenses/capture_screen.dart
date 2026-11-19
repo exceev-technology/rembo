@@ -20,7 +20,38 @@ class CaptureScreen extends StatefulWidget {
 class _CaptureScreenState extends State<CaptureScreen> {
   bool _busy = false;
 
-  Future<void> _pick({required bool camera, bool unreadable = false}) async {
+  /// The gallery, or a PDF from the phone's files.
+  Future<void> _import() async {
+    final pdf = await showRemboSheet<bool>(
+      context,
+      title: tr('Importer un justificatif'),
+      builder: (context) => Column(
+        children: [
+          RemboPrimaryButton(
+            key: const ValueKey('import-image'),
+            label: tr('Une image de la galerie'),
+            icon: Icons.image_outlined,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          const SizedBox(height: RemboSpace.md),
+          RemboSecondaryButton(
+            key: const ValueKey('import-pdf'),
+            label: tr('Une facture en PDF'),
+            icon: Icons.picture_as_pdf_outlined,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (pdf == null || !mounted) return;
+    await _pick(camera: false, pdf: pdf);
+  }
+
+  Future<void> _pick({
+    required bool camera,
+    bool unreadable = false,
+    bool pdf = false,
+  }) async {
     if (_busy) return;
     final startedAt = DateTime.now();
     final state = AppScope.read(context);
@@ -30,7 +61,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
     try {
       picked = demoAllowed && unreadable
           ? await sampleReceipt(unreadable: true)
-          : await picker(camera: camera);
+          : (pdf ? await pdfPicker() : await picker(camera: camera));
     } on RemboException catch (e) {
       if (!mounted) return;
       if (demoAllowed && state.isDemo) {
@@ -107,10 +138,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
           ),
           _Way(
             key: const ValueKey('capture-import'),
-            title: tr('Importer une image'),
+            title: tr('Importer une image ou un PDF'),
             hint: tr('Depuis la galerie ou vos fichiers.'),
             icon: Icons.image_outlined,
-            onTap: () => _pick(camera: false),
+            onTap: _import,
           ),
           _Way(
             key: const ValueKey('capture-whatsapp'),

@@ -487,7 +487,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   }
 
   Future<void> _pickReceipt() async {
-    final camera = await showRemboSheet<bool>(
+    final source = await showRemboSheet<String>(
       context,
       title: tr('Justificatif'),
       builder: (context) => Column(
@@ -495,22 +495,31 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           RemboPrimaryButton(
             label: tr('Prendre une photo'),
             icon: Icons.photo_camera_outlined,
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(context).pop('camera'),
           ),
           const SizedBox(height: RemboSpace.md),
           RemboSecondaryButton(
             label: tr('Importer une image'),
             icon: Icons.insert_drive_file_outlined,
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(context).pop('gallery'),
+          ),
+          const SizedBox(height: RemboSpace.md),
+          RemboSecondaryButton(
+            key: const ValueKey('form-receipt-pdf'),
+            label: tr('Une facture en PDF'),
+            icon: Icons.picture_as_pdf_outlined,
+            onPressed: () => Navigator.of(context).pop('pdf'),
           ),
         ],
       ),
     );
-    if (camera == null || !mounted) return;
+    if (source == null || !mounted) return;
     final state = AppScope.read(context);
     final picker = ReceiptPickerScope.read(context);
     try {
-      final picked = await picker(camera: camera);
+      final picked = source == 'pdf'
+          ? await pdfPicker()
+          : await picker(camera: source == 'camera');
       if (picked == null || !mounted) return;
       setState(() {
         _receiptBytes = picked.bytes;
@@ -723,6 +732,16 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         ],
         if (_failure != null) ...[
           RemboMessage(tone: MessageTone.error, title: _failure!),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        if ((widget.receipt?.pdfPages ?? 1) > 1) ...[
+          InfoStrip(
+            key: const ValueKey('form-pdf-pages'),
+            tr('PDF de {pages} pages : seule la première est gardée et lue.', {
+              'pages': widget.receipt!.pdfPages,
+            }),
+            icon: Icons.picture_as_pdf_outlined,
+          ),
           const SizedBox(height: RemboSpace.lg),
         ],
         ReceiptCard(

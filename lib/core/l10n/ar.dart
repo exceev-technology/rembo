@@ -666,4 +666,14 @@ const arabic = <String, String>{
       'مجاميع الدفعة تختلف عن المجاميع المُعدّة.',
   'Ne l’importez pas : rechargez les dépenses et vérifiez le lot.':
       'لا تستورده: أعد تحميل المصاريف وتحقق من الدفعة.',
+  'Impossible d’ouvrir vos fichiers sur cet appareil.':
+      'تعذر فتح ملفاتك على هذا الجهاز.',
+  'Ce PDF ne peut pas être lu. Essayez une photo.':
+      'تعذرت قراءة ملف PDF هذا. جرّب صورة.',
+  'Importer un justificatif': 'استيراد وثيقة إثبات',
+  'Une image de la galerie': 'صورة من المعرض',
+  'Une facture en PDF': 'فاتورة بصيغة PDF',
+  'Importer une image ou un PDF': 'استيراد صورة أو ملف PDF',
+  'PDF de {pages} pages : seule la première est gardée et lue.':
+      'ملف PDF من {pages} صفحات: تُحفظ الصفحة الأولى فقط وتُقرأ.',
 };

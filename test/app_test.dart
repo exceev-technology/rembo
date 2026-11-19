@@ -344,6 +344,25 @@ void main() {
     expect(saved.captureStartedAt, isNotNull);
   });
 
+  testWidgets('A PDF invoice is imported as the picture of its first page', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-add');
+    pdfPicker = () async => PickedReceipt(
+      Uint8List.fromList([1, 2, 3]),
+      'facture.png',
+      pdfPages: 3,
+    );
+    addTearDown(() => pdfPicker = pickPdfWithDevice);
+    await _tap(tester, 'capture-import');
+    await _tap(tester, 'import-pdf');
+    await tester.pumpAndSettle();
+    expect(find.text('Vérifier les informations'), findsOneWidget);
+    expect(find.byKey(const ValueKey('form-pdf-pages')), findsOneWidget);
+  });
+
   testWidgets('The manager reads the measures of the agents', (tester) async {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);
