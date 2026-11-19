@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../core/agents/compliance_agent.dart';
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../collaborator/expense_detail_screen.dart';
@@ -167,10 +168,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
           ),
         ),
         const SizedBox(height: RemboSpace.md),
-        InfoStrip(
-          tr('Hors règles, votre responsable décide.'),
-          icon: Icons.groups_2_outlined,
-        ),
+        _Preview(expense: e),
       ],
     );
   }
@@ -259,6 +257,65 @@ class SubmissionResultScreen extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// What the compliance agent will report, before anything is sent: the
+/// person can still correct the expense or add the receipt.
+class _Preview extends StatelessWidget {
+  const _Preview({required this.expense});
+  final Expense expense;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final now = DateTime.now();
+    final flags = controlExpense(
+      expense,
+      policies: state.policies,
+      others: state.mine,
+      today: DateTime(now.year, now.month, now.day),
+    );
+    if (flags.isEmpty) {
+      return InfoStrip(
+        key: const ValueKey('summary-preview-ok'),
+        tr('L’agent de conformité ne relève aucun écart.'),
+        icon: Icons.verified_outlined,
+      );
+    }
+    return RemboCard(
+      key: const ValueKey('summary-preview'),
+      color: RemboColors.warningTint,
+      borderColor: RemboColors.warningTint,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr('L’agent de conformité signalera :'),
+            style: RemboText.subtitle.copyWith(color: RemboColors.warningText),
+          ),
+          const SizedBox(height: RemboSpace.xs),
+          for (final f in flags)
+            Padding(
+              padding: const EdgeInsets.only(top: RemboSpace.xs),
+              child: Text(
+                '• ${f.kind.label} : ${trData(f.message)}',
+                style: RemboText.caption.copyWith(
+                  color: RemboColors.warningText,
+                ),
+              ),
+            ),
+          const SizedBox(height: RemboSpace.sm),
+          Text(
+            tr(
+              'Vous pouvez corriger avant de soumettre ; sinon votre '
+              'responsable décide.',
+            ),
+            style: RemboText.caption,
+          ),
+        ],
+      ),
     );
   }
 }

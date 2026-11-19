@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rembo/core/agents/classification_agent.dart';
+import 'package:rembo/core/agents/compliance_agent.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/ocr/receipt_parser.dart';
 
@@ -118,6 +119,88 @@ void main() {
         ],
       );
       expect(c.isEmpty, isTrue);
+    });
+  });
+
+  group('Compliance agent', () {
+    Expense expense({
+      String id = 'new',
+      String supplier = 'Station Afriquia',
+      int cents = 49875,
+      int vat = 0,
+      int? rate,
+      String ice = '',
+      String currency = 'MAD',
+      int? paid,
+      int daysAgo = 5,
+      ExpenseStatus status = ExpenseStatus.draft,
+    }) => Expense(
+      id: id,
+      employeeId: 'u1',
+      employeeName: 'Omar',
+      supplier: supplier,
+      supplierIce: ice,
+      date: DateTime(2026, 11, 20 - daysAgo),
+      amountCents: cents,
+      vatCents: vat,
+      vatRate: rate,
+      currency: currency,
+      foreignAmountCents: paid,
+      category: 'Transport',
+      reason: 'Mission',
+      status: status,
+      createdAt: _today,
+    );
+    List<String> check(Expense e, [List<Expense> others = const []]) => [
+      for (final f in controlExpense(
+        e,
+        policies: const [
+          PolicyRule(
+            category: 'Transport',
+            limitCents: 50000,
+            receiptRequired: false,
+          ),
+        ],
+        others: others,
+        today: _today,
+      ))
+        f.message,
+    ];
+
+    test('a coherent VAT and a valid ICE: nothing to report', () {
+      expect(
+        check(expense(vat: 6125, rate: 14, ice: '001234567000089')),
+        isEmpty,
+      );
+    });
+
+    test('VAT, ICE and currency are checked as on the server', () {
+      expect(check(expense(cents: 40000, vat: 2000, rate: 20)), [
+        'TVA incohérente avec le taux indiqué',
+      ]);
+      expect(check(expense(ice: '12345')), [
+        'ICE du fournisseur invalide : 15 chiffres attendus',
+      ]);
+      expect(check(expense(currency: 'EUR', paid: 2000)), [
+        'Dépense en devise : conversion en dirhams à vérifier',
+      ]);
+      expect(
+        expense(currency: 'EUR').missingFields,
+        contains('montant payé en devise'),
+      );
+    });
+
+    test('the same supplier and amount a few days apart is a duplicate', () {
+      final earlier = expense(
+        id: 'old',
+        supplier: 'STATION  afriquia',
+        daysAgo: 7,
+        status: ExpenseStatus.approved,
+      );
+      expect(check(expense(), [earlier]), [
+        'Même fournisseur et même montant à quelques jours d’intervalle',
+      ]);
+      expect(check(expense(daysAgo: 1), [earlier]), isEmpty);
     });
   });
 }

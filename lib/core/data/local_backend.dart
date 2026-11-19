@@ -10,7 +10,7 @@ import 'csv_export.dart';
 import 'local_store.dart';
 import 'models.dart';
 import '../l10n/l10n.dart';
-import 'expense_control.dart';
+import '../agents/compliance_agent.dart';
 
 part 'demo_backend.dart';
 

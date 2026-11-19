@@ -373,7 +373,6 @@ const arabic = <String, String>{
   'Soumettre la dépense': 'إرسال المصروف',
   'Modifier': 'تعديل',
   'Tout est correct ?': 'هل كل شيء صحيح؟',
-  'Hors règles, votre responsable décide.': 'خارج القواعد، مسؤولك يقرر.',
   'Retour à l’accueil': 'العودة إلى الرئيسية',
   'Voir le suivi': 'عرض التتبع',
   'Transmise à votre responsable': 'أحيل على مسؤولك',
@@ -608,4 +607,20 @@ const arabic = <String, String>{
   'Non lu : {fields}': 'لم يُقرأ: {fields}',
   'Proposé par l’agent : {reason}': 'اقتراح الوكيل: {reason}',
   'Lu par le lecteur du serveur': 'قرأه قارئ الخادم',
+  'montant payé en devise': 'المبلغ المدفوع بالعملة الأجنبية',
+  'Indiquez le montant payé en devise.':
+      'أدخل المبلغ المدفوع بالعملة الأجنبية.',
+  'Même fournisseur et même montant à quelques jours d’intervalle':
+      'نفس المورد ونفس المبلغ بفارق أيام قليلة',
+  'Dépense en devise : conversion en dirhams à vérifier':
+      'مصروف بعملة أجنبية: يجب التحقق من تحويله إلى الدرهم',
+  'TVA incohérente avec le taux indiqué':
+      'الضريبة غير متوافقة مع النسبة المذكورة',
+  'ICE du fournisseur invalide : 15 chiffres attendus':
+      'رقم ICE للمورد غير صالح: يلزم 15 رقماً',
+  'L’agent de conformité ne relève aucun écart.':
+      'لم يرصد وكيل المطابقة أي مخالفة.',
+  'L’agent de conformité signalera :': 'سيشير وكيل المطابقة إلى:',
+  'Vous pouvez corriger avant de soumettre ; sinon votre responsable décide.':
+      'يمكنك التصحيح قبل الإرسال، وإلا فسيقرر مسؤولك.',
 };

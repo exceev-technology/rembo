@@ -196,6 +196,8 @@ class Expense {
     if (amountCents <= 0) tr('montant'),
     if (category.trim().isEmpty) tr('catégorie'),
     if (reason.trim().isEmpty) tr('motif'),
+    if (foreignCurrency && (foreignAmountCents ?? 0) <= 0)
+      tr('montant payé en devise'),
   ];
 
   ExpenseEvent? get lastDecision {

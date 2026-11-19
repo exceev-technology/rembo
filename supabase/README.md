@@ -55,7 +55,7 @@ Seule la clé publique (`anon` / `publishable`) va dans `.env`. La clé `service
 
 | Fonction | Règle |
 |---|---|
-| `submit_expense(id)` | Contrôle automatique : plafond, justificatif exigé, doublon (même jour, même montant), catégorie « Autre », date de plus de 60 jours. Tout passe par `needs_review` ; une dépense conforme n’y porte aucun signalement. Si l’entreprise a activé `auto_approve`, une dépense conforme passe directement à `approved` (agent) |
+| `submit_expense(id)` | Contrôle automatique (agent de conformité) : plafond, justificatif exigé, doublon (même jour et même montant, ou même fournisseur et même montant à 3 jours près), catégorie « Autre », date de plus de 60 jours, TVA incohérente avec son taux, ICE invalide, dépense en devise (montant payé exigé, conversion à vérifier). Tout passe par `needs_review` ; une dépense conforme n’y porte aucun signalement. Si l’entreprise a activé `auto_approve`, une dépense conforme passe directement à `approved` (agent) |
 | `approve_compliant(ids)` | Responsable uniquement : valide en un geste les dépenses conformes (sans signalement) de son équipe, jamais la sienne ; renvoie le nombre validé |
 | `set_auto_approve(on)` | Responsable uniquement : laisse le contrôle valider seul les dépenses conformes (désactivé par défaut) |
 | `decide_expense(id, approve, reason)` | Responsable de l’entreprise uniquement, jamais sur sa propre dépense ; motif obligatoire pour un rejet |

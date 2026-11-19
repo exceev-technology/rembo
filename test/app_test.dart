@@ -197,8 +197,11 @@ void main() {
     (tester) async {
       await _start(tester, autoApprove: true);
       await _signInAs(tester, UserRole.employee);
-      // A meal without a receipt: the control sends it to a manager.
+      // A meal without a receipt: the control sends it to a manager. The
+      // compliance agent says so before anything is sent.
       await _declare(tester, amount: '120', category: 'Repas');
+      expect(find.byKey(const ValueKey('summary-preview')), findsOneWidget);
+      expect(find.textContaining('Justificatif manquant'), findsOneWidget);
       await _tap(tester, 'summary-submit');
       expect(find.text('Transmise à votre responsable'), findsOneWidget);
       expect(find.textContaining('Justificatif manquant'), findsOneWidget);
@@ -245,6 +248,7 @@ void main() {
       await _signInAs(tester, UserRole.employee);
       // Fournitures needs no receipt: nothing to flag.
       await _declare(tester, amount: '45,50', category: 'Fournitures');
+      expect(find.byKey(const ValueKey('summary-preview-ok')), findsOneWidget);
       await _tap(tester, 'summary-submit');
       expect(find.text('Conforme, en attente de validation'), findsOneWidget);
       await _tap(tester, 'result-home');
