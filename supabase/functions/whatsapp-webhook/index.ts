@@ -338,6 +338,8 @@ async function confirmLatest(owner: Owner, to: string, state: Handling) {
     to,
     data.status === "approved"
       ? `Dépense validée : ${mad(data.amount_cents)}.`
+      : (data.flags ?? []).length === 0
+      ? "Dépense conforme, en attente de validation par votre responsable."
       : "Dépense transmise à votre responsable pour décision.",
   );
 }

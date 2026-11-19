@@ -179,6 +179,7 @@ class SubmissionResultScreen extends StatelessWidget {
     final e = AppScope.of(context).byId(expenseId);
     if (e == null) return const RemboPage(children: []);
     final approved = e.status == ExpenseStatus.approved;
+    final compliant = e.compliantToConfirm;
     return RemboPage(
       showBack: false,
       bottom: Column(
@@ -204,11 +205,22 @@ class SubmissionResultScreen extends StatelessWidget {
         RemboMoment(
           title: approved
               ? tr('Dépense validée')
-              : tr('Transmise à votre responsable'),
+              : (compliant
+                    ? tr('Conforme, en attente de validation')
+                    : tr('Transmise à votre responsable')),
           message: approved
               ? tr('Conforme aux règles de votre entreprise.')
-              : tr('Un point est à examiner : votre responsable décide.'),
-          illustration: approved ? RemboArt.approved : RemboArt.search,
+              : (compliant
+                    ? tr(
+                        'Aucun écart relevé : votre responsable la valide '
+                        'avec les autres dépenses conformes.',
+                      )
+                    : tr(
+                        'Un point est à examiner : votre responsable décide.',
+                      )),
+          illustration: approved || compliant
+              ? RemboArt.approved
+              : RemboArt.search,
         ),
         Center(
           child: CountUp(

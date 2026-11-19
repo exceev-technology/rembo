@@ -17,6 +17,8 @@ class RulesScreen extends StatelessWidget {
           title: tr('Règles de remboursement'),
           subtitle: tr('Plafonds par dépense et justificatifs exigés.'),
         ),
+        const _ValidationMode(),
+        const SizedBox(height: RemboSpace.lg),
         for (final category in expenseCategories)
           if (category != 'Autre')
             _RuleCard(
@@ -29,6 +31,67 @@ class RulesScreen extends StatelessWidget {
           tr('Tout écart, et la catégorie « Autre », va au responsable.'),
         ),
       ],
+    );
+  }
+}
+
+/// Who approves an expense that complies with every rule: a manager, in
+/// one gesture (default), or the control itself.
+class _ValidationMode extends StatefulWidget {
+  const _ValidationMode();
+
+  @override
+  State<_ValidationMode> createState() => _ValidationModeState();
+}
+
+class _ValidationModeState extends State<_ValidationMode> {
+  bool _saving = false;
+
+  Future<void> _set(bool on) async {
+    setState(() => _saving = true);
+    try {
+      await AppScope.read(context).setAutoApprove(on);
+    } on RemboException catch (e) {
+      if (mounted) {
+        showRemboSnackBar(context, e.message, tone: MessageTone.error);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = AppScope.of(context).autoApprove;
+    return RemboCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            key: const ValueKey('rules-auto-approve'),
+            contentPadding: EdgeInsets.zero,
+            value: on,
+            onChanged: _saving ? null : _set,
+            title: Text(
+              tr('Validation automatique des dépenses conformes'),
+              style: RemboText.subtitle,
+            ),
+          ),
+          Text(
+            on
+                ? tr(
+                    'Le contrôle valide seul une dépense sans aucun écart. '
+                    'Vous ne voyez que les exceptions.',
+                  )
+                : tr(
+                    'Le contrôle signale les dépenses conformes ; vous les '
+                    'validez toutes en un geste. Aucun agent ne valide à '
+                    'votre place.',
+                  ),
+            style: RemboText.caption,
+          ),
+        ],
+      ),
     );
   }
 }

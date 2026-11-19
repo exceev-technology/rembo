@@ -21,6 +21,7 @@ Future<void> _start(
   Size size = const Size(420, 2600),
   double textScale = 1,
   ReceiptPicker receiptPicker = pickWithDevice,
+  bool autoApprove = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -30,7 +31,7 @@ Future<void> _start(
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  backend = DemoBackend(latency: Duration.zero);
+  backend = DemoBackend(latency: Duration.zero, autoApprove: autoApprove);
   state = AppState(backend);
   await tester.pumpWidget(
     RemboApp(state: state, initialRoute: route, receiptPicker: receiptPicker),
@@ -156,7 +157,7 @@ void main() {
   testWidgets('Collaborator: a compliant expense is validated automatically', (
     tester,
   ) async {
-    await _start(tester);
+    await _start(tester, autoApprove: true);
     await _signInAs(tester, UserRole.employee);
 
     await _tap(tester, 'home-add');
@@ -194,7 +195,7 @@ void main() {
   testWidgets(
     'Exception: manager rejects, collaborator corrects and resubmits',
     (tester) async {
-      await _start(tester);
+      await _start(tester, autoApprove: true);
       await _signInAs(tester, UserRole.employee);
       // A meal without a receipt: the control sends it to a manager.
       await _declare(tester, amount: '120', category: 'Repas');
@@ -236,6 +237,46 @@ void main() {
       expect(state.byId(id)!.status, ExpenseStatus.approved);
     },
   );
+
+  testWidgets(
+    'By default a manager confirms compliant expenses in one gesture',
+    (tester) async {
+      await _start(tester);
+      await _signInAs(tester, UserRole.employee);
+      // Fournitures needs no receipt: nothing to flag.
+      await _declare(tester, amount: '45,50', category: 'Fournitures');
+      await _tap(tester, 'summary-submit');
+      expect(find.text('Conforme, en attente de validation'), findsOneWidget);
+      await _tap(tester, 'result-home');
+      final id = state.mine.first.id;
+      expect(state.byId(id)!.status, ExpenseStatus.needsReview);
+      await _signOut(tester);
+
+      await _signInAs(tester, UserRole.manager);
+      await _tap(tester, 'tab-exceptions');
+      expect(find.byKey(const ValueKey('compliant-card')), findsOneWidget);
+      // Not mixed with the exceptions that need a decision.
+      expect(find.byKey(ValueKey('exception-$id')), findsNothing);
+      await _tap(tester, 'compliant-all');
+      await _tap(tester, 'compliant-confirm');
+      expect(state.byId(id)!.status, ExpenseStatus.approved);
+      expect(state.byId(id)!.approvedByAgent, isFalse);
+      expect(find.byKey(const ValueKey('compliant-card')), findsNothing);
+    },
+  );
+
+  testWidgets('The manager lets the control approve compliant expenses', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-rules');
+    expect(state.autoApprove, isFalse);
+    await _tap(tester, 'rules-auto-approve');
+    expect(state.autoApprove, isTrue);
+    expect(await backend.fetchAutoApprove(), isTrue);
+  });
 
   testWidgets('A manager cannot decide on their own expense', (tester) async {
     await _start(tester);
@@ -372,7 +413,7 @@ void main() {
   testWidgets('WhatsApp: the author confirms what was understood', (
     tester,
   ) async {
-    await _start(tester);
+    await _start(tester, autoApprove: true);
     await _signInAs(tester, UserRole.employee);
     await _tap(tester, 'home-whatsapp');
     expect(find.text('Dépense reçue via WhatsApp'), findsOneWidget);

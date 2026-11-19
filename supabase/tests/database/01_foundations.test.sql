@@ -95,6 +95,12 @@ select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 select isnt(public.create_company('Autre SARL', '', 'Rabat'), null,
   'Zed creates another company');
 
+-- These steps check the control itself: the companies let it approve the
+-- compliant expenses (by default a manager confirms them, see
+-- 03_validation_mode).
+select pg_temp.as_admin();
+update public.companies set auto_approve = true;
+
 select pg_temp.as_user('22222222-2222-2222-2222-222222222222');
 select ok(public.accept_invitation(), 'Omar joins through his invitation');
 select is(public.my_role(), 'employee'::public.member_role,

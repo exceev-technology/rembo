@@ -35,7 +35,7 @@ Seule la clé publique (`anon` / `publishable`) va dans `.env`. La clé `service
 |---|---|
 | A crée un compte puis son entreprise | A est Responsable ; 4 règles par défaut dans « Règles de remboursement » |
 | A invite B (Collaborateur) et C (Comptable) ; B et C créent leur compte avec ces adresses | Ils arrivent directement dans l’entreprise avec leur rôle |
-| B déclare un repas de 150 MAD avec photo | « Dépense validée » (contrôle automatique) |
+| B déclare un repas de 150 MAD avec photo | « Conforme, en attente de validation » ; A la valide avec « Tout valider » dans « À examiner » |
 | B déclare un repas de 260 MAD | « Transmise à votre responsable » ; visible chez A dans « Exceptions » |
 | A rejette avec un motif ; B corrige et soumet à nouveau | Statuts et historique à jour des deux côtés |
 | B ouvre `/responsable` | « Accès réservé » ; côté base, B ne lit aucune dépense d’autrui |
@@ -55,7 +55,9 @@ Seule la clé publique (`anon` / `publishable`) va dans `.env`. La clé `service
 
 | Fonction | Règle |
 |---|---|
-| `submit_expense(id)` | Contrôle automatique : plafond, justificatif exigé, doublon (même jour, même montant), catégorie « Autre », date de plus de 60 jours. Conforme → `approved` (agent) ; sinon `needs_review` |
+| `submit_expense(id)` | Contrôle automatique : plafond, justificatif exigé, doublon (même jour, même montant), catégorie « Autre », date de plus de 60 jours. Tout passe par `needs_review` ; une dépense conforme n’y porte aucun signalement. Si l’entreprise a activé `auto_approve`, une dépense conforme passe directement à `approved` (agent) |
+| `approve_compliant(ids)` | Responsable uniquement : valide en un geste les dépenses conformes (sans signalement) de son équipe, jamais la sienne ; renvoie le nombre validé |
+| `set_auto_approve(on)` | Responsable uniquement : laisse le contrôle valider seul les dépenses conformes (désactivé par défaut) |
 | `decide_expense(id, approve, reason)` | Responsable de l’entreprise uniquement, jamais sur sa propre dépense ; motif obligatoire pour un rejet |
 | `create_export(ids, request_id, file_name)` | Comptable uniquement ; tout ou rien ; le même `request_id` renvoie le même lot |
 | `create_company(...)`, `accept_invitation()` | Création d’entreprise ; adhésion par invitation |

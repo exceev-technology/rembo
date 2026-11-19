@@ -40,11 +40,17 @@ $$;
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 select isnt(public.create_company('Atelier Sara', '', 'Casablanca'), null,
   'Sara creates her company');
+
 select lives_ok($$insert into public.invitations (company_id, email, role)
   values (public.my_company_id(), 'karim@exemple.ma', 'manager')$$,
   'Sara invites a second manager');
 select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
 select ok(public.accept_invitation(), 'Karim joins as manager');
+
+-- The control approves compliant expenses here (by default a manager
+-- confirms them, see 03_validation_mode): this test is about the lock.
+select pg_temp.as_admin();
+update public.companies set auto_approve = true;
 
 -- A receipt while its expense is a draft --------------------------------------
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');

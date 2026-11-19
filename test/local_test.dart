@@ -34,7 +34,11 @@ Expense _draft({
 );
 
 /// A company with a manager, an employee and an accountant.
-Future<LocalBackend> _company(LocalStore store) async {
+/// [autoApprove]: the control approves compliant expenses itself.
+Future<LocalBackend> _company(
+  LocalStore store, {
+  bool autoApprove = false,
+}) async {
   final b = await _open(store);
   await b.signUp(
     email: 'Sara@Exemple.ma',
@@ -42,6 +46,7 @@ Future<LocalBackend> _company(LocalStore store) async {
     fullName: 'Sara',
   );
   await b.createCompany(name: 'Atelier Sara');
+  if (autoApprove) await b.setAutoApprove(true);
   await b.invite('omar@exemple.ma', UserRole.employee);
   await b.invite('lina@exemple.ma', UserRole.accountant);
   await b.signOut();
@@ -154,7 +159,7 @@ void main() {
   });
 
   test('full cycle: compliant expense approved alone, then exported', () async {
-    final b = await _company(MemoryStore());
+    final b = await _company(MemoryStore(), autoApprove: true);
     await b.signIn('omar@exemple.ma', 'Secret#2');
     final draft = await b.saveDraft(_draft(), receiptBytes: _photo);
     expect(draft.status, ExpenseStatus.draft);
@@ -185,7 +190,7 @@ void main() {
   test(
     'an expense over the limit waits for the manager, who decides',
     () async {
-      final b = await _company(MemoryStore());
+      final b = await _company(MemoryStore(), autoApprove: true);
       await b.signIn('omar@exemple.ma', 'Secret#2');
       final a = await b.saveDraft(_draft(cents: 35000), receiptBytes: _photo);
       final c = await b.saveDraft(_draft(supplier: 'Snack', cents: 5000));
@@ -231,7 +236,7 @@ void main() {
   });
 
   test('the rules changed by the manager drive the control', () async {
-    final b = await _company(MemoryStore());
+    final b = await _company(MemoryStore(), autoApprove: true);
     await b.signIn('sara@exemple.ma', 'Secret#1');
     await b.savePolicy(const PolicyRule(category: 'Repas', limitCents: 50000));
     await _throws(

@@ -109,18 +109,18 @@ from public.expenses
 where id <> 'e0000000-0000-0000-0000-000000000008'
 order by expense_date;
 
--- Karim decides what waits for a manager, except one left for the demo.
+-- Karim decides what waits for a manager, except what is left for the
+-- demo: the café over its limit, the hotel without receipt, « Divers » to
+-- clarify and the compliant train ticket, to confirm in one gesture.
 select pg_temp.as_user('a0000000-0000-0000-0000-000000000002');
+select public.approve_compliant(array[
+  'e0000000-0000-0000-0000-000000000001',
+  'e0000000-0000-0000-0000-000000000003']::uuid[]);
 select public.decide_expense('e0000000-0000-0000-0000-000000000006', false,
   'Repas d''équipe : joindre la liste des participants.')
 where exists (select 1 from public.expenses
   where id = 'e0000000-0000-0000-0000-000000000006'
     and status = 'needs_review');
-select public.decide_expense(id, true, '')
-from public.expenses
-where status = 'needs_review'
-  and id in ('e0000000-0000-0000-0000-000000000001',
-             'e0000000-0000-0000-0000-000000000003');
 
 -- Lina exports the approved transport and supplies.
 select pg_temp.as_user('a0000000-0000-0000-0000-000000000005');

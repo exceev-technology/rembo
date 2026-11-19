@@ -553,4 +553,22 @@ const arabic = <String, String>{
   'Vous êtes le seul responsable': 'أنت المسؤول الوحيد',
   'Personne ne décide de sa propre dépense. Invitez un autre responsable : il pourra approuver ou rejeter celle-ci.': 'لا أحد يقرّر في مصروفه الخاص. ادعُ مسؤولاً آخر ليتمكّن من قبول هذا المصروف أو رفضه.',
   'Inviter un responsable': 'دعوة مسؤول',
+  'Conforme, en attente de validation': 'مطابق، في انتظار القبول',
+  'Aucun écart relevé : votre responsable la valide avec les autres dépenses conformes.':
+      'لم تُرصد أي مخالفة: سيقبله مسؤولك مع باقي المصاريف المطابقة.',
+  'Valider les dépenses conformes': 'قبول المصاريف المطابقة',
+  'Le contrôle n’a relevé aucun écart sur ces dépenses. Votre validation est enregistrée dans leur historique.':
+      'لم ترصد المراقبة أي مخالفة في هذه المصاريف. يُسجَّل قبولك في سجلها.',
+  'Valider {count}': 'قبول {count}',
+  'Validation enregistrée : {count}.': 'تم تسجيل القبول: {count}.',
+  'Conformes aux règles': 'مطابقة للقواعد',
+  'Tout valider': 'قبول الكل',
+  'Les dépenses conformes attendent votre validation : réglage dans « Règles de remboursement ».':
+      'المصاريف المطابقة في انتظار قبولك: يمكن تغيير ذلك في «قواعد التعويض».',
+  'Validation automatique des dépenses conformes':
+      'القبول الآلي للمصاريف المطابقة',
+  'Le contrôle valide seul une dépense sans aucun écart. Vous ne voyez que les exceptions.': 'تقبل المراقبة وحدها كل مصروف بلا مخالفة. لا ترى إلا الحالات الاستثنائية.',
+  'Le contrôle signale les dépenses conformes ; vous les validez toutes en un geste. Aucun agent ne valide à votre place.': 'تشير المراقبة إلى المصاريف المطابقة، وتقبلها كلها بنقرة واحدة. لا يقبل أي وكيل نيابة عنك.',
+  'Conforme aux règles': 'مطابق للقواعد',
+  'Validation groupée des dépenses conformes': 'قبول جماعي للمصاريف المطابقة',
 };

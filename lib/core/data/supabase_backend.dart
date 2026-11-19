@@ -320,6 +320,15 @@ class SupabaseBackend extends RemboBackend {
         return _one(id);
       });
 
+  @override
+  Future<int> approveCompliant(List<String> ids) => _guard(() async {
+    final n = await _client.rpc<dynamic>(
+      'approve_compliant',
+      params: {'p_ids': ids},
+    );
+    return (n as num?)?.toInt() ?? 0;
+  });
+
   /// Contract of the optional `read-receipt` Edge Function:
   /// request  `{ "file_name": "...", "image_base64": "..." }`
   /// response `{ "unreadable": bool, "supplier": str?, "supplier_ice": str?,
@@ -450,6 +459,21 @@ class SupabaseBackend extends RemboBackend {
       'limit_cents': rule.limitCents,
       'receipt_required': rule.receiptRequired,
     }, onConflict: 'company_id,category'),
+  );
+
+  @override
+  Future<bool> fetchAutoApprove() => _guard(() async {
+    final row = await _client
+        .from('companies')
+        .select('auto_approve')
+        .eq('id', _companyId)
+        .maybeSingle();
+    return row?['auto_approve'] == true;
+  });
+
+  @override
+  Future<void> setAutoApprove(bool on) => _guard(
+    () => _client.rpc<dynamic>('set_auto_approve', params: {'p_on': on}),
   );
 
   // Exports ---------------------------------------------------------------

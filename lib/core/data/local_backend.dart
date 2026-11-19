@@ -76,6 +76,9 @@ class LocalBackend extends RemboBackend {
   final _policies = <String, List<PolicyRule>>{}; // by company
   final _exports = <String, List<ExportBatch>>{}; // by company
   final _exportByRequest = <String, ExportBatch>{};
+
+  /// Companies that let the control approve compliant expenses itself.
+  final _autoApprove = <String>{};
   AppUser? _user;
   var _nextId = 1;
 
@@ -136,6 +139,9 @@ class LocalBackend extends RemboBackend {
           ExportBatch.fromJson(b, csv: b['csv'] as String?),
       ];
     });
+    _autoApprove.addAll([
+      for (final c in (data['auto_approve'] as List? ?? const [])) '$c',
+    ]);
     final session = data['session'] as String?;
     _user = _users.where((u) => u.id == session).firstOrNull;
   }
@@ -169,6 +175,7 @@ class LocalBackend extends RemboBackend {
           for (final x in _exports.entries)
             x.key: [for (final b in x.value) b.toJson()],
         },
+        'auto_approve': _autoApprove.toList(),
       }),
     );
   }
@@ -516,7 +523,7 @@ class LocalBackend extends RemboBackend {
       others: _expenses,
       today: _day(0),
     );
-    final decided = flags.isEmpty
+    final decided = flags.isEmpty && _autoApprove.contains(me.companyId)
         ? ExpenseStatus.approved
         : ExpenseStatus.needsReview;
     e = e.copyWith(
@@ -534,12 +541,46 @@ class LocalBackend extends RemboBackend {
           at: _now.add(const Duration(seconds: 1)),
           actorName: 'Contrôle automatique',
           byAgent: true,
+          reason: flags.isEmpty && decided == ExpenseStatus.needsReview
+              ? 'Conforme aux règles'
+              : null,
         ),
       ],
     );
     _expenses[i] = e;
     await _save();
     return e;
+  }
+
+  @override
+  Future<int> approveCompliant(List<String> ids) async {
+    await _latency();
+    final me = _me;
+    if (me.role != UserRole.manager) {
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
+    }
+    var done = 0;
+    for (final id in ids.toSet()) {
+      final i = _expenses.indexWhere((e) => e.id == id);
+      if (i < 0 || !_visible(_expenses[i])) continue;
+      final e = _expenses[i];
+      if (!e.compliantToConfirm || e.employeeId == me.id) continue;
+      _expenses[i] = e.copyWith(
+        status: ExpenseStatus.approved,
+        events: [
+          ...e.events,
+          ExpenseEvent(
+            status: ExpenseStatus.approved,
+            at: _now,
+            actorName: me.fullName,
+            reason: 'Validation groupée des dépenses conformes',
+          ),
+        ],
+      );
+      done++;
+    }
+    await _save();
+    return done;
   }
 
   @override
@@ -682,6 +723,23 @@ class LocalBackend extends RemboBackend {
     _policiesOf(me.companyId!)
       ..removeWhere((p) => p.category == rule.category)
       ..add(rule);
+    await _save();
+  }
+
+  @override
+  Future<bool> fetchAutoApprove() async {
+    await _latency();
+    return _autoApprove.contains(_me.companyId);
+  }
+
+  @override
+  Future<void> setAutoApprove(bool on) async {
+    await _latency();
+    final me = _me;
+    if (me.role != UserRole.manager || me.companyId == null) {
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
+    }
+    on ? _autoApprove.add(me.companyId!) : _autoApprove.remove(me.companyId);
     await _save();
   }
 

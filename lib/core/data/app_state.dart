@@ -29,6 +29,9 @@ class AppState extends ChangeNotifier {
   /// an empty list then means an empty team, not a failed load.
   bool membersLoaded = false;
   List<ExportBatch> exports = const [];
+
+  /// The control approves compliant expenses itself (company setting).
+  bool autoApprove = false;
   bool loading = false;
 
   /// The company that invited the person, while they belong to none: shown
@@ -137,6 +140,7 @@ class AppState extends ChangeNotifier {
       if (role == UserRole.manager) {
         members = await backend.fetchMembers();
         membersLoaded = true;
+        autoApprove = await backend.fetchAutoApprove();
       }
       if (role == UserRole.accountant) exports = await backend.fetchExports();
     } on RemboException catch (e) {
@@ -178,6 +182,14 @@ class AppState extends ChangeNotifier {
             e.status == ExpenseStatus.needsReview && e.employeeId != user?.id,
       )
       .toList();
+
+  /// Waiting only for a manager's confirmation: nothing was found.
+  List<Expense> get compliantToConfirm =>
+      toReview.where((e) => e.compliantToConfirm).toList();
+
+  /// Waiting for a decision because the control found something.
+  List<Expense> get exceptions =>
+      toReview.where((e) => !e.compliantToConfirm).toList();
 
   List<Expense> get toExport =>
       expenses.where((e) => e.status == ExpenseStatus.approved).toList();
@@ -240,6 +252,19 @@ class AppState extends ChangeNotifier {
     final result = await backend.decide(id, approve: approve, reason: reason);
     _put(result);
     return result;
+  }
+
+  /// Confirms the compliant expenses waiting for the manager.
+  Future<int> approveCompliant(List<String> ids) async {
+    final n = await backend.approveCompliant(ids);
+    await refresh();
+    return n;
+  }
+
+  Future<void> setAutoApprove(bool on) async {
+    await backend.setAutoApprove(on);
+    autoApprove = on;
+    notifyListeners();
   }
 
   Future<ExportBatch> createExport(

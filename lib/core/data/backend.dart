@@ -64,6 +64,11 @@ abstract class RemboBackend {
   /// Manager decision on an expense waiting for review.
   Future<Expense> decide(String id, {required bool approve, String? reason});
 
+  /// Manager confirms, in one gesture, the expenses the control found
+  /// compliant. Never their own; flagged ones are left for a decision.
+  /// Returns how many were approved.
+  Future<int> approveCompliant(List<String> ids);
+
   /// Tries to read a receipt. Null when no reader is available.
   Future<ReceiptReading?> readReceipt(Uint8List bytes, String name);
 
@@ -93,6 +98,11 @@ abstract class RemboBackend {
   Future<void> invite(String email, UserRole role);
   Future<List<PolicyRule>> fetchPolicies();
   Future<void> savePolicy(PolicyRule rule);
+
+  /// True when the control approves compliant expenses itself; false (the
+  /// default) when a manager confirms them.
+  Future<bool> fetchAutoApprove();
+  Future<void> setAutoApprove(bool on);
 
   // Exports ---------------------------------------------------------------
   /// Marks [ids] as exported and returns the batch with its CSV content.

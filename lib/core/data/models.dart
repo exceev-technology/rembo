@@ -187,6 +187,11 @@ class Expense {
 
   bool get approvedByAgent => lastDecision?.byAgent ?? false;
 
+  /// The control found nothing to say: it waits only for a manager to
+  /// confirm it (when the company does not let the control approve).
+  bool get compliantToConfirm =>
+      status == ExpenseStatus.needsReview && flags.isEmpty;
+
   Expense copyWith({
     String? id,
     String? supplier,
