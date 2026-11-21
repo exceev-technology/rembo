@@ -42,7 +42,7 @@ each with what would close it.
 
 | Limit | Why | What would close it |
 |---|---|---|
-| **WhatsApp** (photo or voice note) is built but not in service | It needs a WhatsApp Business line (Meta) and a speech-to-text service for darija voice notes | A Meta business account, `TRANSCRIBE_URL`, and the webhook deployed |
+| **WhatsApp** (text, photo, voice note) works end to end against the local stack (simulator playing Meta and Gemini) but is not yet connected to a Meta number | It needs a Meta app (a free test number writes to 5 numbers) and a Gemini key (AI Studio, free tier: fictional data only) | The Meta app and its secrets, the Gemini key, the webhook deployed (`supabase/README.md`) |
 | The early-access form on the site is ready but **not connected** | It needs the public key of the chosen Supabase project in `site/config.js` | Fill `site/config.js` and publish the site |
 
 ## Law and compliance

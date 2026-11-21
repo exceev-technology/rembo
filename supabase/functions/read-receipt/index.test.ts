@@ -53,7 +53,9 @@ Deno.test("the answer is checked again before it reaches the app", () => {
 });
 
 Deno.test("a JSON answer, even inside a code fence", () => {
-  const r = parseAnswer('```json\n{"readable": true, "total": 45, "currency": "MAD"}\n```');
+  const r = parseAnswer(
+    '```json\n{"readable": true, "total": 45, "currency": "MAD"}\n```',
+  );
   assertEquals(r?.total, 45);
   assertEquals(parseAnswer("Je ne peux pas lire ce reçu."), null);
   assertEquals(parseAnswer('{"total": 45}'), null);

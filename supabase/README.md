@@ -72,18 +72,52 @@ Parcours : la personne relie son numéro (Profil → WhatsApp), écrit ou parle 
 | `whatsapp_messages` | Messages déjà traités, pour ignorer les doublons de livraison |
 | `functions/whatsapp-webhook` | Reçoit les messages de l’API WhatsApp Cloud (Meta), crée le brouillon, répond |
 
-Mise en service :
-1. Créez une application Meta avec le produit **WhatsApp** et un numéro ; relevez le jeton d’accès, l’identifiant du numéro et le secret de l’application.
-2. `supabase secrets set WHATSAPP_VERIFY_TOKEN=… WHATSAPP_APP_SECRET=… WHATSAPP_TOKEN=… WHATSAPP_PHONE_NUMBER_ID=…`
-3. `supabase functions deploy whatsapp-webhook --no-verify-jwt` (la fonction vérifie elle-même la signature de Meta).
-4. Dans la console Meta, déclarez l’URL de la fonction comme webhook avec le même `WHATSAPP_VERIFY_TOKEN`, et abonnez-vous au champ `messages`.
-5. Renseignez `REMBO_WHATSAPP_NUMBER` dans `.env` pour afficher « Ouvrir WhatsApp » dans l’application.
+Mise en service (environ 15 min, numéro de test gratuit de Meta) :
+1. **developers.facebook.com** → Créer une app → cas d’usage « Se connecter avec les clients via WhatsApp » (type Business) → produit **WhatsApp** → *Configuration de l’API* : relevez l’**identifiant du numéro de test**, ajoutez votre propre numéro comme destinataire autorisé (5 au plus).
+2. Jeton d’accès : celui de la page expire en 24 h ; pour durer, *Paramètres Business* → *Utilisateurs système* → jeton avec `whatsapp_business_messaging` et `whatsapp_business_management`. Secret de l’app : *Paramètres de l’app → Général*. Inventez un jeton de vérification.
+3. `supabase secrets set WHATSAPP_TOKEN=… WHATSAPP_PHONE_NUMBER_ID=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…` (tapez-les vous-même : ils ne vont jamais dans le dépôt).
+4. `supabase functions deploy whatsapp-webhook --no-verify-jwt` (la fonction vérifie elle-même la signature de Meta ; les messages non signés sont refusés).
+5. Console Meta → *WhatsApp → Configuration* → webhook : `https://<ref>.supabase.co/functions/v1/whatsapp-webhook`, même jeton de vérification, abonnement au champ **messages**.
+6. Dans l’application, chacun relie son numéro (Profil → WhatsApp) ; `REMBO_WHATSAPP_NUMBER` dans `.env` affiche « Ouvrir WhatsApp ».
 
-Ce que la fonction comprend aujourd’hui :
-- **Texte** (« Taxi, 45 dirhams, client Atlas ») : montant, catégorie par mots-clés, client ou projet. Sans IA : une phrase inhabituelle donne un brouillon à compléter.
-- **Photo** : enregistrée comme justificatif, brouillon à compléter.
-- **Note vocale** : enregistrée et écoutable dans l’application. Elle n’est transcrite que si `TRANSCRIBE_URL` pointe vers un service de transcription (à choisir, notamment pour la darija) ; sinon le brouillon est à compléter.
-- Pas de réponse vocale de l’agent.
+Ce que la fonction comprend :
+- **Texte** (« Taxi, 45 dirhams, client Atlas ») : montant, catégorie par mots-clés, client ou projet ; résumé renvoyé, « oui » soumet.
+- **Photo** : gardée comme justificatif et **lue par le moteur de reçus** (`RECEIPT_API_URL`, le même que `read-receipt`) : fournisseur, ICE, date, montant, TVA, devise ; la légende ajoute le contexte. Sans moteur, brouillon à compléter.
+### Moteur d’IA retenu : Gemini (Google AI Studio)
+
+Pour la démo et les tests utilisateurs, la lecture des photos et la transcription des notes vocales passent par **Gemini**, avec une clé gratuite de [Google AI Studio](https://aistudio.google.com/apikey). L’offre gratuite peut réutiliser ce qu’on lui envoie : **reçus et notes vocales fictifs uniquement** (d’où le verrou `…_SHARED_ENGINE=fictitious-data-only`). Pour de vraies données, passer à l’offre payante (données non réutilisées) ou à un moteur hébergé par l’entreprise.
+
+```bash
+supabase secrets set \
+  RECEIPT_API_URL=https://generativelanguage.googleapis.com/v1beta/openai \
+  RECEIPT_MODEL=gemini-2.5-flash RECEIPT_API_KEY=<clé> \
+  RECEIPT_SHARED_ENGINE=fictitious-data-only \
+  TRANSCRIBE_API_URL=https://generativelanguage.googleapis.com/v1beta \
+  TRANSCRIBE_MODEL=gemini-2.5-flash TRANSCRIBE_API_KEY=<clé> \
+  TRANSCRIBE_SHARED_ENGINE=fictitious-data-only
+```
+
+Un moteur gratuit est souvent saturé (« high demand », erreur 503). Le serveur réessaie une fois, puis passe au modèle de secours s’il est défini :
+`RECEIPT_FALLBACK_MODEL=gemini-2.5-flash TRANSCRIBE_FALLBACK_MODEL=gemini-2.5-flash`.
+Les photos passent par la porte compatible OpenAI de Gemini (`…/v1beta/openai`) ; les notes vocales par son API d’origine (`…/v1beta`, audio OGG de WhatsApp envoyé tel quel). `RECEIPT_MODEL` et `TRANSCRIBE_MODEL` : le modèle Flash proposé par AI Studio au moment du déploiement.
+
+- **Note vocale** (darija, français) : gardée, écoutable dans l’application, **transcrite** (Gemini, ou Whisper) puis comprise comme un texte. Autres moteurs possibles :
+
+| Choix | Secrets |
+|---|---|
+| Whisper hébergé par l’entreprise (gratuit, privé ; faible en darija sans modèle spécialisé), ex. [faster-whisper-server](https://github.com/fedirz/faster-whisper-server) | `TRANSCRIBE_API_URL=http://<serveur>:8000/v1`, `TRANSCRIBE_MODEL=Systran/faster-whisper-small` |
+| Service en ligne gratuit (ex. Groq, `whisper-large-v3`) : **données fictives uniquement** | `TRANSCRIBE_API_URL=https://api.groq.com/openai/v1`, `TRANSCRIBE_MODEL=whisper-large-v3`, `TRANSCRIBE_API_KEY=…`, `TRANSCRIBE_SHARED_ENGINE=fictitious-data-only` |
+
+**Tester sans Meta** (pile locale) : `supabase db reset` relie le numéro d’Omar (+212600000003), puis
+```bash
+supabase functions serve whatsapp-webhook --no-verify-jwt --env-file tool/whatsapp/local.env
+python3 tool/whatsapp/simulate.py "Taxi, 45 dirhams, client Atlas"   # brouillon
+python3 tool/whatsapp/simulate.py oui                                  # soumise
+python3 tool/whatsapp/simulate.py image assets/bench/r01.jpg --caption "client Atlas"
+python3 tool/whatsapp/simulate.py audio note.ogg
+```
+Le simulateur joue Meta et Gemini sur le port 8765 (mêmes chemins que les vrais services) et affiche les réponses de Rembo.
+Tests : `deno test --allow-env supabase/functions/whatsapp-webhook/`.
 
 ## Pas encore en place
 - **Lecture automatique des reçus** : le téléphone lit d’abord le reçu lui-même (Google ML Kit, hors ligne). Quand il n’y arrive pas (reçu en arabe, manuscrit), l’application appelle `functions/read-receipt`, si `REMBO_OCR=true`.

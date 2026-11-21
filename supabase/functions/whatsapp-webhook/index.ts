@@ -6,35 +6,63 @@
 //                                                that code in the app
 //   text   « Taxi, 45 dirhams, client Atlas »  → draft, summary sent back
 //   « oui »                                    → latest draft is submitted
-//   voice note                                 → stored; transcribed only
-//                                                when TRANSCRIBE_URL is set
-//   photo                                      → stored as the receipt
+//   voice note                                 → stored and transcribed
+//                                                (Gemini), then read as text
+//   photo                                      → stored as the receipt and
+//                                                read by the receipt engine
 //
-// NOT YET RUN against WhatsApp or Supabase: deploy on a test project first.
+// Nothing is submitted until the person says « oui » (or confirms in the
+// app); the control is the same as in the app (control_expense).
 //
 // Secrets (supabase secrets set …):
 //   WHATSAPP_VERIFY_TOKEN     free text, also typed in the Meta console
 //   WHATSAPP_APP_SECRET       Meta app secret, checks each request's signature
 //   WHATSAPP_TOKEN            access token used to answer and fetch media
 //   WHATSAPP_PHONE_NUMBER_ID  id of the REMBO WhatsApp number
-//   TRANSCRIBE_URL / TRANSCRIBE_KEY  optional speech-to-text endpoint:
-//     POST audio bytes (Authorization: Bearer KEY) → { "text": "…" }
+//   TRANSCRIBE_API_URL, TRANSCRIBE_MODEL, TRANSCRIBE_API_KEY
+//                             speech-to-text engine: Gemini's own API
+//                             (…/v1beta) or any OpenAI audio/transcriptions
+//                             server (Whisper). An engine outside the
+//                             company needs TRANSCRIBE_SHARED_ENGINE=
+//                             fictitious-data-only (see _shared/engines.ts).
+//   RECEIPT_API_URL, RECEIPT_MODEL, …  the receipt engine of read-receipt,
+//                             used for photos (see supabase/README.md)
 // Deploy: supabase functions deploy whatsapp-webhook --no-verify-jwt
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { encodeBase64 } from "jsr:@std/encoding@1/base64";
+import {
+  engine,
+  patiently,
+  readPicture,
+  transcribeAudio,
+} from "../_shared/engines.ts";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
-const GRAPH = "https://graph.facebook.com/v21.0";
+// Meta Graph API; WHATSAPP_GRAPH_URL points elsewhere only for local tests
+// (tool/whatsapp/simulate.py serves a fake one).
+const GRAPH = env("WHATSAPP_GRAPH_URL") || "https://graph.facebook.com/v21.0";
 const BUCKET = "receipts";
 
-const db = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
-  auth: { persistSession: false },
-});
+// Opened on the first message, so that tests can import this file without
+// a database (and without its background timers).
+let client: SupabaseClient | null = null;
+const db = () =>
+  client ??= createClient(
+    env("SUPABASE_URL"),
+    env("SUPABASE_SERVICE_ROLE_KEY"),
+    {
+      auth: { persistSession: false },
+    },
+  );
 
 // --- Understanding a message ------------------------------------------------
 
 const CATEGORIES: [string, RegExp][] = [
-  ["Transport", /taxi|train|bus|tram|carburant|essence|gasoil|p[ée]age|parking|طاكسي|طاكسى/i],
+  [
+    "Transport",
+    /taxi|train|bus|tram|carburant|essence|gasoil|p[ée]age|parking|طاكسي|طاكسى/i,
+  ],
   ["Repas", /d[ée]jeuner|d[îi]ner|restaurant|resto|caf[ée]|repas|sandwich/i],
   ["Hébergement", /h[ôo]tel|nuit[ée]e?|riad/i],
   ["Fournitures", /fourniture|papier|cartouche|stylo|bureau/i],
@@ -56,10 +84,13 @@ export function parseMessage(text: string): Parsed {
   const clean = text.trim().replace(/\s+/g, " ");
   // The number written with a currency is the amount (« 2 taxis, 45 dh »
   // costs 45); without one, the first number.
-  const amount = clean.match(new RegExp(`${NUMBER}\\s*(?:dhs?|dirhams?|mad|درهم)(?![a-z])`, "i")) ??
+  const amount = clean.match(
+    new RegExp(`${NUMBER}\\s*(?:dhs?|dirhams?|mad|درهم)(?![a-z])`, "i"),
+  ) ??
     clean.match(new RegExp(NUMBER));
   const amountCents = amount
-    ? parseInt(amount[1], 10) * 100 + parseInt((amount[2] ?? "0").padEnd(2, "0"), 10)
+    ? parseInt(amount[1], 10) * 100 +
+      parseInt((amount[2] ?? "0").padEnd(2, "0"), 10)
     : 0;
   const category = CATEGORIES.find(([, re]) => re.test(clean))?.[0] ?? "";
   const project = clean.match(/\b(client|projet)\s+([^,.;]+)/i);
@@ -68,20 +99,25 @@ export function parseMessage(text: string): Parsed {
     supplier: supplier.slice(0, 80),
     amountCents,
     category,
-    project: project ? `${cap(project[1])} ${project[2].trim()}`.slice(0, 80) : "",
+    project: project
+      ? `${cap(project[1])} ${project[2].trim()}`.slice(0, 80)
+      : "",
     reason: clean.slice(0, 200),
   };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-const isYes = (t: string) => /^\s*(oui|ok|d'accord|wah|ah|iyeh|نعم|واه)\s*[.!]?\s*$/i.test(t);
+const isYes = (t: string) =>
+  /^\s*(oui|ok|d'accord|wah|ah|iyeh|نعم|واه)\s*[.!]?\s*$/i.test(t);
 const linkCode = (t: string) => /^\s*lier\s+(\d{6})\s*$/i.exec(t)?.[1] ?? null;
 const mad = (cents: number) =>
   `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")} MAD`;
 
 /** Today in Morocco, as YYYY-MM-DD. */
 const today = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Casablanca" }).format(new Date());
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Casablanca" }).format(
+    new Date(),
+  );
 
 // --- WhatsApp Cloud API -----------------------------------------------------
 
@@ -89,14 +125,22 @@ const today = () =>
 // handling, whose writes in the database are already done.
 async function reply(to: string, body: string) {
   try {
-    const res = await fetch(`${GRAPH}/${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`,
-        "Content-Type": "application/json",
+    const res = await fetch(
+      `${GRAPH}/${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to,
+          type: "text",
+          text: { body },
+        }),
       },
-      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
-    });
+    );
     if (!res.ok) console.error("reply failed", res.status, await res.text());
   } catch (e) {
     console.error("reply failed", e);
@@ -114,26 +158,75 @@ async function downloadMedia(
   if (!file.ok) return null;
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (bytes.length > 10 * 1024 * 1024) return null;
-  return { bytes, type: String(mime_type ?? "application/octet-stream").split(";")[0] };
+  return {
+    bytes,
+    type: String(mime_type ?? "application/octet-stream").split(";")[0],
+  };
 }
 
-async function transcribe(audio: Uint8Array<ArrayBuffer>, type: string): Promise<string> {
-  if (!env("TRANSCRIBE_URL")) return "";
+async function transcribe(audio: Uint8Array, type: string): Promise<string> {
+  const e = engine("TRANSCRIBE");
+  return e ? await patiently(e, (x) => transcribeAudio(x, audio, type)) : "";
+}
+
+/** What the receipt engine reads on a photo, as a draft; null when there
+ * is no engine or nothing could be read. */
+async function readPhoto(bytes: Uint8Array, type: string) {
+  const e = engine("RECEIPT");
+  if (!e || !/^image\/(jpeg|png|webp)$/.test(type)) return null;
   try {
-    const res = await fetch(env("TRANSCRIBE_URL"), {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env("TRANSCRIBE_KEY")}`, "Content-Type": type },
-      body: audio,
-    });
-    if (!res.ok) return "";
-    return String((await res.json()).text ?? "").slice(0, 500);
-  } catch (e) {
-    console.error("transcription failed", e);
-    return "";
+    const r = await patiently(
+      e,
+      (x) => readPicture(x, encodeBase64(bytes), type),
+    );
+    return r.unreadable ? null : r;
+  } catch (err) {
+    console.error("photo reading", err);
+    return null;
   }
 }
 
-async function validSignature(raw: string, header: string | null): Promise<boolean> {
+/** A photo's reading merged with what the caption says. */
+export function fromReading(
+  reading: {
+    supplier?: string | null;
+    supplier_ice?: string | null;
+    date?: string | null;
+    amount_cents?: number | null;
+    vat_cents?: number | null;
+    vat_rate?: number | null;
+    currency?: string | null;
+  },
+  caption: string,
+): { parsed: Parsed; extra: Record<string, unknown> } {
+  const fromCaption = parseMessage(caption);
+  const supplier = reading.supplier || fromCaption.supplier;
+  const parsed: Parsed = {
+    supplier,
+    amountCents: reading.currency && reading.currency !== "MAD"
+      ? fromCaption.amountCents
+      : reading.amount_cents ?? fromCaption.amountCents,
+    category: fromCaption.category || parseMessage(supplier).category,
+    project: fromCaption.project,
+    reason: caption.trim() ? fromCaption.reason : `Reçu ${supplier}`.trim(),
+  };
+  const extra: Record<string, unknown> = {
+    supplier_ice: reading.supplier_ice ?? "",
+    vat_cents: reading.vat_cents ?? 0,
+    vat_rate: reading.vat_rate ?? null,
+    currency: reading.currency ?? "MAD",
+  };
+  if (reading.date) extra.expense_date = reading.date;
+  if (reading.currency && reading.currency !== "MAD") {
+    extra.foreign_amount_cents = reading.amount_cents ?? null;
+  }
+  return { parsed, extra };
+}
+
+export async function validSignature(
+  raw: string,
+  header: string | null,
+): Promise<boolean> {
   const secret = env("WHATSAPP_APP_SECRET");
   if (!secret || !header?.startsWith("sha256=")) return false;
   const key = await crypto.subtle.importKey(
@@ -143,12 +236,18 @@ async function validSignature(raw: string, header: string | null): Promise<boole
     false,
     ["sign"],
   );
-  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw)));
-  const expected = Array.from(mac, (b) => b.toString(16).padStart(2, "0")).join("");
+  const mac = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw)),
+  );
+  const expected = Array.from(mac, (b) => b.toString(16).padStart(2, "0")).join(
+    "",
+  );
   const given = header.slice(7);
   if (given.length !== expected.length) return false;
   let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ given.charCodeAt(i);
+  for (let i = 0; i < expected.length; i++) {
+    diff |= expected.charCodeAt(i) ^ given.charCodeAt(i);
+  }
   return diff === 0;
 }
 
@@ -159,18 +258,24 @@ type Owner = { profile_id: string; company_id: string };
 // A database failure is thrown, never read as « no account »: the person
 // would be told their number is not linked when it is.
 async function ownerOf(phone: string): Promise<Owner | null> {
-  const { data: link, error: linkError } = await db.from("whatsapp_links")
+  const { data: link, error: linkError } = await db().from("whatsapp_links")
     .select("profile_id").eq("phone", phone).maybeSingle();
   if (linkError) throw linkError;
   if (!link) return null;
-  const { data: member, error: memberError } = await db.from("memberships")
+  const { data: member, error: memberError } = await db().from("memberships")
     .select("company_id").eq("profile_id", link.profile_id).maybeSingle();
   if (memberError) throw memberError;
-  return member ? { profile_id: link.profile_id, company_id: member.company_id } : null;
+  return member
+    ? { profile_id: link.profile_id, company_id: member.company_id }
+    : null;
 }
 
-async function createDraft(owner: Owner, p: Parsed, extra: Record<string, unknown>) {
-  const { data, error } = await db.from("expenses").insert({
+async function createDraft(
+  owner: Owner,
+  p: Parsed,
+  extra: Record<string, unknown>,
+) {
+  const { data, error } = await db().from("expenses").insert({
     company_id: owner.company_id,
     employee_id: owner.profile_id,
     supplier_name: p.supplier,
@@ -198,7 +303,9 @@ const summary = (p: Parsed) =>
 async function handle(message: any) {
   // First writer wins: a message delivered twice is handled once. Only a
   // duplicate id (23505) means « already seen »; any other error is thrown.
-  const { error: seen } = await db.from("whatsapp_messages").insert({ id: message.id });
+  const { error: seen } = await db().from("whatsapp_messages").insert({
+    id: message.id,
+  });
   if (seen?.code === "23505") return;
   if (seen) throw seen;
   const state: Handling = { wrote: false };
@@ -209,7 +316,7 @@ async function handle(message: any) {
     // retries it. Once an expense is created or submitted, handling the
     // message again would create or submit a second one.
     if (!state.wrote) {
-      await db.from("whatsapp_messages").delete().eq("id", message.id);
+      await db().from("whatsapp_messages").delete().eq("id", message.id);
     }
     throw e;
   }
@@ -222,7 +329,9 @@ type Handling = { wrote: boolean };
 async function answer(message: any, state: Handling) {
   const from = `+${message.from}`;
   // A number not linked yet may send its code: checked before the owner.
-  const code = message.type === "text" ? linkCode(String(message.text?.body ?? "")) : null;
+  const code = message.type === "text"
+    ? linkCode(String(message.text?.body ?? ""))
+    : null;
   if (code) return linkNumber(from, code, message.from, state);
   const owner = await ownerOf(from);
   if (!owner) {
@@ -233,7 +342,8 @@ async function answer(message: any, state: Handling) {
     );
     return;
   }
-  await db.from("whatsapp_messages").update({ profile_id: owner.profile_id }).eq("id", message.id);
+  await db().from("whatsapp_messages").update({ profile_id: owner.profile_id })
+    .eq("id", message.id);
 
   if (message.type === "text") {
     const text = String(message.text?.body ?? "");
@@ -243,7 +353,9 @@ async function answer(message: any, state: Handling) {
     state.wrote = true;
     await reply(
       message.from,
-      `${summary(parsed)}\nRépondez « oui » pour confirmer, ou complétez dans l’application.`,
+      `${
+        summary(parsed)
+      }\nRépondez « oui » pour confirmer, ou complétez dans l’application.`,
     );
     return;
   }
@@ -252,22 +364,32 @@ async function answer(message: any, state: Handling) {
     const mediaId = message[message.type]?.id;
     const media = mediaId ? await downloadMedia(mediaId) : null;
     if (!media) {
-      await reply(message.from, "Le fichier n’a pas pu être récupéré. Réessayez.");
+      await reply(
+        message.from,
+        "Le fichier n’a pas pu être récupéré. Réessayez.",
+      );
       return;
     }
     const voice = message.type === "audio";
+    const caption = String(message.image?.caption ?? "");
     const text = voice ? await transcribe(media.bytes, media.type) : "";
-    const parsed = parseMessage(text || String(message.image?.caption ?? ""));
-    const id = await createDraft(owner, parsed, { transcript: text || null });
+    const reading = voice ? null : await readPhoto(media.bytes, media.type);
+    const { parsed, extra } = reading
+      ? fromReading(reading, caption)
+      : { parsed: parseMessage(text || caption), extra: {} };
+    const id = await createDraft(owner, parsed, {
+      transcript: text || caption || null,
+      ...extra,
+    });
     state.wrote = true;
     const path = `${owner.profile_id}/${id}${voice ? "-voice" : ""}`;
     // The draft exists from here on: a file that cannot be kept (refused
     // type, storage down) is said to the person instead of being dropped.
-    const upload = await db.storage.from(BUCKET).upload(path, media.bytes, {
+    const upload = await db().storage.from(BUCKET).upload(path, media.bytes, {
       contentType: media.type,
       upsert: true,
     });
-    const link = upload.error ? null : await db.from("expenses")
+    const link = upload.error ? null : await db().from("expenses")
       .update(voice ? { voice_path: path } : { receipt_path: path })
       .eq("id", id);
     const failure = upload.error ?? link?.error;
@@ -281,8 +403,9 @@ async function answer(message: any, state: Handling) {
     }
     await reply(
       message.from,
-      text
-        ? `${summary(parsed)}\nRépondez « oui » pour confirmer, ou complétez dans l’application.`
+      text || reading
+        ? `${voice ? `« ${text} »\n` : "Ticket lu : "}${summary(parsed)}\n` +
+          "Répondez « oui » pour confirmer, ou complétez dans l’application."
         : voice
         ? "Message vocal reçu. Ouvrez REMBO pour compléter et confirmer la dépense."
         : "Ticket reçu. Ouvrez REMBO pour compléter et confirmer la dépense.",
@@ -290,11 +413,15 @@ async function answer(message: any, state: Handling) {
     return;
   }
 
-  await reply(message.from, "Envoyez un message, une note vocale ou la photo d’un ticket.");
+  await reply(
+    message.from,
+    "Envoyez un message, une note vocale ou la photo d’un ticket.",
+  );
 }
 
 const LINK_REPLIES: Record<string, string> = {
-  linked: "Numéro relié à votre compte REMBO. Vous pouvez envoyer vos dépenses ici.",
+  linked:
+    "Numéro relié à votre compte REMBO. Vous pouvez envoyer vos dépenses ici.",
   expired:
     "Ce code a expiré. Demandez un nouveau code dans l’application → Profil → WhatsApp.",
   invalid:
@@ -304,8 +431,13 @@ const LINK_REPLIES: Record<string, string> = {
 
 // The server checks the code and links the number it came from: the person
 // proves they hold the number, nobody can link someone else's.
-async function linkNumber(phone: string, code: string, to: string, state: Handling) {
-  const { data, error } = await db.rpc("claim_whatsapp_link", {
+async function linkNumber(
+  phone: string,
+  code: string,
+  to: string,
+  state: Handling,
+) {
+  const { data, error } = await db().rpc("claim_whatsapp_link", {
     p_phone: phone,
     p_code: code,
   });
@@ -316,8 +448,13 @@ async function linkNumber(phone: string, code: string, to: string, state: Handli
 }
 
 async function confirmLatest(owner: Owner, to: string, state: Handling) {
-  const { data: draft, error: draftError } = await db.from("expenses").select("id")
-    .eq("employee_id", owner.profile_id).eq("source", "whatsapp").eq("status", "draft")
+  const { data: draft, error: draftError } = await db().from("expenses").select(
+    "id",
+  )
+    .eq("employee_id", owner.profile_id).eq("source", "whatsapp").eq(
+      "status",
+      "draft",
+    )
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (draftError) throw draftError;
   if (!draft) {
@@ -325,12 +462,15 @@ async function confirmLatest(owner: Owner, to: string, state: Handling) {
     return;
   }
   // Same control as in the app; the server decides the outcome.
-  const { data, error } = await db.rpc("control_expense", {
+  const { data, error } = await db().rpc("control_expense", {
     p_id: draft.id,
     p_actor: owner.profile_id,
   });
   if (error) {
-    await reply(to, `${error.message}\nComplétez la dépense dans l’application.`);
+    await reply(
+      to,
+      `${error.message}\nComplétez la dépense dans l’application.`,
+    );
     return;
   }
   state.wrote = true;
@@ -353,12 +493,15 @@ if (import.meta.main) {
       // Subscription check made once by Meta.
       const ok = url.searchParams.get("hub.mode") === "subscribe" &&
         env("WHATSAPP_VERIFY_TOKEN") !== "" &&
-        url.searchParams.get("hub.verify_token") === env("WHATSAPP_VERIFY_TOKEN");
+        url.searchParams.get("hub.verify_token") ===
+          env("WHATSAPP_VERIFY_TOKEN");
       return ok
         ? new Response(url.searchParams.get("hub.challenge") ?? "")
         : new Response("forbidden", { status: 403 });
     }
-    if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
+    if (req.method !== "POST") {
+      return new Response("method not allowed", { status: 405 });
+    }
 
     const raw = await req.text();
     if (!(await validSignature(raw, req.headers.get("x-hub-signature-256")))) {

@@ -136,3 +136,8 @@ where exists (select 1 from public.expenses
                'e0000000-0000-0000-0000-000000000003'));
 
 select set_config('request.jwt.claims', '', false);
+
+-- WhatsApp: Omar's number is linked, for the simulator
+-- (tool/whatsapp/simulate.py) and the demo.
+insert into public.whatsapp_links (profile_id, phone)
+values ('a0000000-0000-0000-0000-000000000003', '+212600000003');
