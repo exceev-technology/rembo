@@ -77,6 +77,9 @@ update storage.objects set metadata = '{"v":"2"}'
   where name = '11111111-1111-1111-1111-111111111111/r1';
 select is(pg_temp.version_of('11111111-1111-1111-1111-111111111111/r1'), '1',
   'the receipt of a submitted expense cannot be replaced');
+-- Storage refuses any direct SQL deletion unless this is set; with it,
+-- only the row level policies decide, which is what is tested here.
+select set_config('storage.allow_delete_query', 'true', true);
 delete from storage.objects
   where name = '11111111-1111-1111-1111-111111111111/r1';
 select is((select count(*)::int from storage.objects
