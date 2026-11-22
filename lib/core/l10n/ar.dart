@@ -601,8 +601,7 @@ const arabic = <String, String>{
   'Type de fournisseur reconnu à son nom': 'نوع المورد معروف من اسمه',
   'Projet de votre dernière dépense chez ce fournisseur':
       'مشروع آخر مصروف لك لدى هذا المورد',
-  'Agent de lecture · serveur': 'وكيل القراءة · الخادم',
-  'Agent de lecture · sur le téléphone': 'وكيل القراءة · على الهاتف',
+  'Devise étrangère ou taux de TVA': 'عملة أجنبية أو نسبة الضريبة',
   'À vérifier : {field} — {reason}': 'للتحقق: {field} — {reason}',
   'Non lu : {fields}': 'لم يُقرأ: {fields}',
   'Proposé par l’agent : {reason}': 'اقتراح الوكيل: {reason}',

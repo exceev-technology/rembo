@@ -143,13 +143,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
             icon: Icons.image_outlined,
             onTap: _import,
           ),
-          _Way(
-            key: const ValueKey('capture-whatsapp'),
-            title: tr('Envoyer par WhatsApp'),
-            hint: tr('Un message vocal ou une photo suffit.'),
-            icon: Icons.chat_outlined,
-            onTap: () => showWhatsAppSheet(context),
-          ),
+          if (whatsAppOffered(AppScope.of(context).isDemo))
+            _Way(
+              key: const ValueKey('capture-whatsapp'),
+              title: tr('Envoyer par WhatsApp'),
+              hint: tr('Un message vocal ou une photo suffit.'),
+              icon: Icons.chat_outlined,
+              onTap: () => showWhatsAppSheet(context),
+            ),
           _Way(
             key: const ValueKey('capture-manual'),
             title: tr('Saisir sans photo'),

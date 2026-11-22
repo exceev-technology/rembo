@@ -6,6 +6,7 @@ import 'bench_screen.dart';
 
 import '../../app/app_routes.dart';
 import '../../core/data/app_state.dart';
+import '../../core/data/demo_build.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../whatsapp/whatsapp.dart';
 
@@ -123,28 +124,30 @@ class ProfileTab extends StatelessWidget {
                   tr('Comptes comptables'),
                   onTap: () => AccountsScreen.open(context),
                 ),
-              if (manager || state.role == UserRole.accountant)
+              if (manager)
                 _Entry(
                   key: const ValueKey('profile-metrics'),
                   Icons.insights_outlined,
                   tr('Mesures des agents'),
                   onTap: () => AgentMetricsScreen.open(context),
                 ),
-              _Entry(
-                key: const ValueKey('profile-whatsapp'),
-                Icons.chat_outlined,
-                'WhatsApp',
-                value: user.whatsappPhone == null
-                    ? tr('Non relié')
-                    : ltr(user.whatsappPhone!),
-                onTap: () => showWhatsAppSheet(context),
-              ),
-              _Entry(
-                key: const ValueKey('profile-bench'),
-                Icons.document_scanner_outlined,
-                tr('Banc d’essai OCR'),
-                onTap: () => BenchScreen.open(context),
-              ),
+              if (whatsAppOffered(state.isDemo))
+                _Entry(
+                  key: const ValueKey('profile-whatsapp'),
+                  Icons.chat_outlined,
+                  'WhatsApp',
+                  value: user.whatsappPhone == null
+                      ? tr('Non relié')
+                      : ltr(user.whatsappPhone!),
+                  onTap: () => showWhatsAppSheet(context),
+                ),
+              if (teamTools)
+                _Entry(
+                  key: const ValueKey('profile-bench'),
+                  Icons.document_scanner_outlined,
+                  tr('Banc d’essai OCR'),
+                  onTap: () => BenchScreen.open(context),
+                ),
               _Entry(
                 key: const ValueKey('profile-language'),
                 Icons.language_rounded,

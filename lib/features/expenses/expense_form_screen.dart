@@ -72,6 +72,16 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _foreign = TextEditingController();
   String _currency = 'MAD';
   int? _vatRate;
+
+  /// Currency and VAT rate are folded away for the usual receipt (dirhams,
+  /// no rate): shown when asked for, read on the receipt, or already set.
+  bool _detailsAsked = false;
+  bool get _details =>
+      _detailsAsked ||
+      _currency != 'MAD' ||
+      _vatRate != null ||
+      _proposed.contains('currency') ||
+      _proposed.contains('rate');
   String? _category;
 
   /// Proposals of the classification agent still shown as such, and why.
@@ -608,26 +618,21 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             children: [
               const Icon(
                 Icons.auto_awesome_outlined,
-                size: 20,
+                size: 18,
                 color: RemboColors.indigo,
               ),
               const SizedBox(width: RemboSpace.sm),
               Expanded(
                 child: Text(
-                  reading.engine == 'server'
-                      ? tr('Agent de lecture · serveur')
-                      : tr('Agent de lecture · sur le téléphone'),
-                  style: RemboText.subtitle,
+                  reading.simulated
+                      ? tr(
+                          'Démonstration : valeurs simulées, non lues sur la photo.',
+                        )
+                      : tr('Valeurs lues sur le ticket : vérifiez-les.'),
+                  style: RemboText.caption,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: RemboSpace.xs),
-          Text(
-            reading.simulated
-                ? tr('Démonstration : valeurs simulées, non lues sur la photo.')
-                : tr('Valeurs lues sur le ticket : vérifiez-les.'),
-            style: RemboText.caption,
           ),
           for (final field in unsure)
             Padding(
@@ -789,29 +794,30 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           textInputAction: TextInputAction.next,
           onChanged: (_) => setState(() => _proposed.remove('amount')),
         ),
-        const SizedBox(height: RemboSpace.sm),
-        Row(
-          children: [
-            Expanded(
-              child: Text(tr('Devise du reçu'), style: RemboText.caption),
-            ),
-            if (_proposed.contains('currency')) _readBadge('currency')!,
-            DropdownButton<String>(
-              key: const ValueKey('form-currency'),
-              value: _currency,
-              underline: const SizedBox.shrink(),
-              items: [
-                for (final c in receiptCurrencies)
-                  DropdownMenuItem(value: c, child: Text(c)),
-              ],
-              onChanged: (c) => setState(() {
-                _currency = c ?? 'MAD';
-                _proposed.remove('currency');
-                _errors.remove('foreign');
-              }),
-            ),
-          ],
-        ),
+        if (_details) const SizedBox(height: RemboSpace.sm),
+        if (_details)
+          Row(
+            children: [
+              Expanded(
+                child: Text(tr('Devise du reçu'), style: RemboText.caption),
+              ),
+              if (_proposed.contains('currency')) _readBadge('currency')!,
+              DropdownButton<String>(
+                key: const ValueKey('form-currency'),
+                value: _currency,
+                underline: const SizedBox.shrink(),
+                items: [
+                  for (final c in receiptCurrencies)
+                    DropdownMenuItem(value: c, child: Text(c)),
+                ],
+                onChanged: (c) => setState(() {
+                  _currency = c ?? 'MAD';
+                  _proposed.remove('currency');
+                  _errors.remove('foreign');
+                }),
+              ),
+            ],
+          ),
         if (_currency != 'MAD') ...[
           const SizedBox(height: RemboSpace.sm),
           RemboTextField(
@@ -861,31 +867,43 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               ..remove('vat-computed');
           }),
         ),
-        const SizedBox(height: RemboSpace.sm),
-        Row(
-          children: [
-            Text(tr('Taux de TVA'), style: RemboText.caption),
-            if (_proposed.contains('rate')) ...[
-              const SizedBox(width: RemboSpace.sm),
-              _readBadge('rate')!,
+        if (!_details)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('form-details'),
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: Text(tr('Devise étrangère ou taux de TVA')),
+              onPressed: () => setState(() => _detailsAsked = true),
+            ),
+          ),
+        if (_details) ...[
+          const SizedBox(height: RemboSpace.sm),
+          Row(
+            children: [
+              Text(tr('Taux de TVA'), style: RemboText.caption),
+              if (_proposed.contains('rate')) ...[
+                const SizedBox(width: RemboSpace.sm),
+                _readBadge('rate')!,
+              ],
             ],
-          ],
-        ),
-        const SizedBox(height: RemboSpace.xs),
-        Wrap(
-          spacing: RemboSpace.sm,
-          runSpacing: RemboSpace.xs,
-          children: [
-            for (final rate in vatRates)
-              ChoiceChip(
-                key: ValueKey('form-rate-$rate'),
-                label: Text('$rate %'),
-                selected: _vatRate == rate,
-                showCheckmark: false,
-                onSelected: (on) => _pickRate(on ? rate : null),
-              ),
-          ],
-        ),
+          ),
+          const SizedBox(height: RemboSpace.xs),
+          Wrap(
+            spacing: RemboSpace.sm,
+            runSpacing: RemboSpace.xs,
+            children: [
+              for (final rate in vatRates)
+                ChoiceChip(
+                  key: ValueKey('form-rate-$rate'),
+                  label: Text('$rate %'),
+                  selected: _vatRate == rate,
+                  showCheckmark: false,
+                  onSelected: (on) => _pickRate(on ? rate : null),
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-date'),

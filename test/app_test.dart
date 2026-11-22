@@ -291,6 +291,9 @@ void main() {
     await _tap(tester, 'capture-manual');
     await _type(tester, 'form-supplier', 'Café de Flore');
     await _type(tester, 'form-amount', '220,00');
+    // Folded away for the usual receipt.
+    expect(find.byKey(const ValueKey('form-currency')), findsNothing);
+    await _tap(tester, 'form-details');
     await _tap(tester, 'form-rate-10');
     expect(
       tester
@@ -376,6 +379,14 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('The accountant\'s profile stays short', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.accountant);
+    await _tap(tester, 'tab-profile');
+    expect(find.byKey(const ValueKey('profile-accounts')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-metrics')), findsNothing);
   });
 
   testWidgets('The manager reads the measures of the agents', (tester) async {
