@@ -41,7 +41,7 @@ Field personas from the pitch, used for scenarios and mockups:
 |---|---|
 | 📸 **Capture** | Photo or import of a receipt in the Flutter app (Android + iOS). OCR suggests date, supplier, amount and currency; the user reviews and corrects |
 | 💰 **Expense in MAD** | Category, reason, client or project allocation. Simple policy: required fields and alert limits |
-| ✅ **Approval** | The manager approves or rejects with a reason. **No self-approval.** Status history is kept |
+| ✅ **Approval** | The manager approves or rejects with a reason, their own expenses included. Status history names who decided |
 | 📤 **CSV export** | The accountant reviews approved expenses and exports a **documented CSV** that any accounting software or ERP can import |
 | 📱 **Platform** | Native mobile app built with Flutter for **Android and iOS** |
 
@@ -52,7 +52,7 @@ Agents read the receipt, classify the expense, check it against the company rule
 1. **An inconsistency** between the expense and the reimbursement policy
 2. **An ambiguity** the agent cannot resolve on its own
 
-An employee can never approve their own expense. Every agent action is logged. See [Architecture](Architecture#ai-agents-mcp-and-human-in-the-loop).
+An employee can never approve an expense, their own included; a manager decides on their own expenses too, and the history names who decided. Every agent action is logged. See [Architecture](Architecture#ai-agents-mcp-and-human-in-the-loop).
 
 ## Vision after the MVP
 

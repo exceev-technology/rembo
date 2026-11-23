@@ -45,7 +45,7 @@ Rembo turns that into four steps: **capture, understand, approve, export**.
 
 - 📸 **Capture.** Employees photograph a receipt; text recognition on the phone suggests the date, supplier, amount and VAT, and they check and correct it.
 - 🤖 **Understand.** An automatic control in the database checks each submitted expense against the company rules (limits per category, required receipt) and flags possible duplicates and points to clarify. Compliant expenses are approved; the others go to a manager. Every status change is kept in the expense history.
-- ✅ **Approve.** Managers handle exceptions: they approve or reject with a reason. Nobody approves their own expense.
+- ✅ **Approve.** Managers handle exceptions: they approve or reject with a reason, their own expenses included; the history names who decided.
 - 📤 **Export.** Accountants review approved expenses and export a documented **CSV** that any accounting software or ERP can import.
 
 It is built for Morocco (amounts in **MAD**, Moroccan VAT rates and ICE) and it is **open source**: a company can audit the code and host it itself, with no per-employee license.
@@ -57,7 +57,7 @@ It is built for Morocco (amounts in **MAD**, Moroccan VAT rates and ICE) and it 
 | Accounts and roles | Employee, manager and accountant roles per company, enforced by Row Level Security | ✅ Sprint 1 |
 | Expense entry | Category, reason, client or project (free text), receipt upload to private storage | ✅ Sprint 2 |
 | Receipt capture and OCR | Text recognition on the phone (Latin script) fills a review and correction screen | ✅ Sprint 3 |
-| Approval workflow | Submit, approve or reject with a reason, expense policy, status history, no self-approval | ✅ Sprint 4 |
+| Approval workflow | Submit, approve or reject with a reason, expense policy, status history naming who decided | ✅ Sprint 4 |
 | Mobile MVP | The full journey on **Android and iOS**, in French or Arabic | 🚧 Sprint 5 |
 | CSV accounting export | Approved expenses exported as a CSV; the format is still to be validated with accountants | 🗓️ Sprint 6 · built |
 | Arabic interface | The whole app in Arabic, right to left, chosen by each person | ✅ Ahead of plan |

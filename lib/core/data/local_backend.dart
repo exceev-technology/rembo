@@ -604,7 +604,7 @@ class LocalBackend extends RemboBackend {
       final i = _expenses.indexWhere((e) => e.id == id);
       if (i < 0 || !_visible(_expenses[i])) continue;
       final e = _expenses[i];
-      if (!e.compliantToConfirm || e.employeeId == me.id) continue;
+      if (!e.compliantToConfirm) continue;
       _expenses[i] = e.copyWith(
         status: ExpenseStatus.approved,
         events: [
@@ -636,11 +636,6 @@ class LocalBackend extends RemboBackend {
     }
     final i = _indexOf(id);
     final e = _expenses[i];
-    if (e.employeeId == me.id) {
-      throw RemboException(
-        tr('Vous ne pouvez pas décider de votre propre dépense.'),
-      );
-    }
     if (e.status != ExpenseStatus.needsReview) {
       throw RemboException(tr('Cette dépense a déjà été traitée.'));
     }

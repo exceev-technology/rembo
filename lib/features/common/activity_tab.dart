@@ -100,8 +100,7 @@ class ActivityTab extends StatelessWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) =>
-                    !own &&
-                        item.expense.status == ExpenseStatus.needsReview &&
+                    item.expense.status == ExpenseStatus.needsReview &&
                         state.role == UserRole.manager
                     ? DecisionScreen(expenseId: item.expense.id)
                     : ExpenseDetailScreen(expenseId: item.expense.id),

@@ -405,7 +405,7 @@ void main() {
     );
   });
 
-  testWidgets('A manager cannot decide on their own expense', (tester) async {
+  testWidgets('A manager decides on their own expense too', (tester) async {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);
     await _declare(tester, amount: '900');
@@ -413,9 +413,9 @@ void main() {
     await _tap(tester, 'result-home');
     final own = state.mine.first;
     expect(own.status, ExpenseStatus.needsReview);
-    // Not offered in the list of exceptions to decide.
+    // Offered in the list of exceptions, like the others.
     await _tap(tester, 'tab-exceptions');
-    expect(find.byKey(ValueKey('exception-${own.id}')), findsNothing);
+    expect(find.byKey(ValueKey('exception-${own.id}')), findsOneWidget);
   });
 
   testWidgets('Duplicate: same day and amount is announced before submitting', (
@@ -641,6 +641,24 @@ void main() {
     await _tap(tester, 'home-bell');
     expect(find.text('Correction demandée'), findsOneWidget);
     await _tap(tester, 'activity-read-all');
+    expect(state.unreadCount, 0);
+  });
+
+  testWidgets('What was read stays read after signing out and back in', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    expect(state.unreadCount, greaterThan(0));
+    state.markAllRead();
+    await tester.pumpAndSettle();
+    final email = state.user!.email;
+    await state.signOut();
+    await tester.pumpAndSettle();
+    final done = state.signIn(email, 'x');
+    await tester.pumpAndSettle();
+    await done;
+    await tester.pumpAndSettle();
     expect(state.unreadCount, 0);
   });
 

@@ -100,16 +100,16 @@ select is(public.approve_compliant(array[
     'cccccccc-0000-0000-0000-000000000001',
     'cccccccc-0000-0000-0000-000000000002',
     'cccccccc-0000-0000-0000-000000000003',
-    'cccccccc-0000-0000-0000-000000000004']::uuid[]), 2,
-  'the manager confirms the two compliant expenses of her team');
+    'cccccccc-0000-0000-0000-000000000004']::uuid[]), 3,
+  'the manager confirms the three compliant expenses, her own included');
 select is((select status from public.expenses
   where id = 'cccccccc-0000-0000-0000-000000000003'),
   'needs_review'::public.expense_status,
   'an expense with a flag keeps waiting for its own decision');
 select is((select status from public.expenses
   where id = 'cccccccc-0000-0000-0000-000000000004'),
-  'needs_review'::public.expense_status,
-  'her own expense is never confirmed by herself');
+  'approved'::public.expense_status,
+  'her own compliant expense is confirmed with the others');
 select is((select actor_kind || ' · ' || actor_name || ' · ' || reason
   from public.status_events
   where expense_id = 'cccccccc-0000-0000-0000-000000000001'
@@ -122,8 +122,8 @@ select is(public.approve_compliant(
 
 select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
 select is(public.approve_compliant(
-    array['cccccccc-0000-0000-0000-000000000004'::uuid]), 1,
-  'another manager confirms Sara''s compliant expense');
+    array['cccccccc-0000-0000-0000-000000000004'::uuid]), 0,
+  'another manager finds nothing left to confirm');
 
 -- A company may let the control approve ---------------------------------------
 select is(public.set_auto_approve(true), true,

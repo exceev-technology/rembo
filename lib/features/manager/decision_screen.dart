@@ -71,8 +71,6 @@ class _DecisionScreenState extends State<DecisionScreen> {
     final state = AppScope.of(context);
     final e = state.byId(widget.expenseId);
     if (e == null) return const RemboPage(children: []);
-    // Never shown for the manager's own expense: the lists that open this
-    // screen leave it out, and decide_expense refuses it on the server.
     final open = e.status == ExpenseStatus.needsReview;
     final rule = state.policyOf(e.category);
 

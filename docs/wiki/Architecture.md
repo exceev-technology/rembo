@@ -43,7 +43,7 @@ flowchart LR
 |---|---|
 | **Postgres** | Expenses, categories, expense policies, clients/projects for allocation, export batches, audit log |
 | **Auth** | Employee, manager and accountant accounts, with a role **per company** |
-| **Row Level Security** | Everyone sees only their own expenses; a manager sees their team's; no self-approval |
+| **Row Level Security** | Everyone sees only their own expenses; a manager sees their team's; only a manager decides |
 | **Storage** | Receipts in a **private bucket**, accessed through short-lived **signed URLs** |
 | **Edge Functions** | OCR calls, CSV export generation, agent calls. API keys stay on the server |
 
@@ -67,7 +67,7 @@ The client/project reference data is managed directly in Supabase for the MVP.
 
 **Guardrails**
 
-- An employee can never approve their own expense, whether a human or an agent does the approving.
+- An employee can never approve an expense, their own included. A manager decides on their own expenses too; the history names who decided.
 - Every agent action is written down: status changes carry who or what acted (`actor_kind` human or agent), when and why.
 - The agents are explainable code, not models: they run without cost or key, on the phone or in SQL. Only the optional server reader calls a vision model, whose key stays in Edge Function secrets.
 - **MCP** and a conversational assistant are part of the [post-MVP vision](Product-Vision#vision-after-the-mvp).
@@ -78,7 +78,7 @@ The client/project reference data is managed directly in Supabase for the MVP.
 |---|---|
 | A user only reads their own expenses and receipts | RLS on `expenses` and Storage policies on the receipts bucket |
 | A manager reads and decides on their team's expenses only | RLS based on company membership and role |
-| Nobody approves their own expense | RLS / check constraint on the decision (`decided_by <> employee_id`) |
+| Only a manager decides, their own expenses included, and the history names them | `decide_expense` and `approve_compliant` check the role; `status_events` keeps the actor |
 | The accountant reads approved expenses of their company and creates exports | RLS by role and company |
 | The `service_role` key and OCR / AI keys never leave the server | Edge Functions secrets; only the public `anon` key is in the app |
 

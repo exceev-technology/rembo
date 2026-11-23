@@ -275,7 +275,7 @@ void main() {
       );
     });
 
-    test('only a manager decides, never on their own expense', () async {
+    test('only a manager decides, their own expense included', () async {
       final b = _backend();
       await b.signIn(DemoBackend.marius.email, 'x');
       await _expectRefused(b.decide('EXP-1036', approve: true), 'responsables');
@@ -283,7 +283,9 @@ void main() {
       await b.signIn(DemoBackend.salma.email, 'x');
       final own = await b.submit((await b.saveDraft(_draft(cents: 99000))).id);
       expect(own.status, ExpenseStatus.needsReview);
-      await _expectRefused(b.decide(own.id, approve: true), 'propre dépense');
+      final mine = await b.decide(own.id, approve: true);
+      expect(mine.status, ExpenseStatus.approved);
+      expect(mine.events.last.actorName, DemoBackend.salma.fullName);
       await _expectRefused(b.decide('EXP-1037', approve: false), 'motif');
 
       final rejected = await b.decide(

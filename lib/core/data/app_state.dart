@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend.dart';
 import 'models.dart';
@@ -44,6 +45,11 @@ class AppState extends ChangeNotifier {
   /// Last loading problem, shown by the tabs with a retry.
   RemboException? loadError;
   final _read = <String>{};
+
+  /// Everything that happened up to this moment is read: kept on the phone
+  /// for each person, so it survives a sign-out and a restart.
+  DateTime? _readUntil;
+  String? _readUntilOf;
 
   bool get isDemo => backend.isDemo;
   bool get isLocal => backend.isLocal;
@@ -154,7 +160,32 @@ class AppState extends ChangeNotifier {
     policies = const [];
     accounts = const {};
     _read.clear();
+    _readUntil = null;
+    _readUntilOf = null;
     notifyListeners();
+  }
+
+  String _readKey(String userId) => 'rembo.activity.read_until.$userId';
+
+  /// Reads the person's read mark once per session. Without storage (tests,
+  /// a blocked plug-in) everything simply stays unread.
+  Future<void> _loadReadMark() async {
+    final id = user?.id;
+    if (id == null || _readUntilOf == id) return;
+    _readUntilOf = id;
+    _readUntil = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_readKey(id));
+      _readUntil = saved == null ? null : DateTime.tryParse(saved);
+    } catch (_) {}
+  }
+
+  Future<void> _saveReadMark(String id, DateTime until) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_readKey(id), until.toUtc().toIso8601String());
+    } catch (_) {}
   }
 
   /// Reloads everything the current role can see.
@@ -163,6 +194,7 @@ class AppState extends ChangeNotifier {
     loading = true;
     loadError = null;
     notifyListeners();
+    await _loadReadMark();
     try {
       expenses = await backend.fetchExpenses();
       policies = await backend.fetchPolicies();
@@ -205,13 +237,11 @@ class AppState extends ChangeNotifier {
       .where((e) => e.fromWhatsApp && e.status == ExpenseStatus.draft)
       .toList();
 
-  /// Waiting for a manager, the manager's own expenses excluded.
-  List<Expense> get toReview => expenses
-      .where(
-        (e) =>
-            e.status == ExpenseStatus.needsReview && e.employeeId != user?.id,
-      )
-      .toList();
+  /// Waiting for a manager's decision, the manager's own expenses included:
+  /// the history names who decided.
+  List<Expense> get toReview => role != UserRole.manager
+      ? const []
+      : expenses.where((e) => e.status == ExpenseStatus.needsReview).toList();
 
   /// Waiting only for a manager's confirmation: nothing was found.
   List<Expense> get compliantToConfirm =>
@@ -369,11 +399,24 @@ class AppState extends ChangeNotifier {
     return items..sort((a, b) => b.event.at.compareTo(a.event.at));
   }
 
-  bool isUnread(ActivityItem item) => !_read.contains(item.key);
+  bool isUnread(ActivityItem item) =>
+      !_read.contains(item.key) &&
+      (_readUntil == null || item.event.at.isAfter(_readUntil!));
   int get unreadCount => activity.where(isUnread).length;
 
   void markAllRead() {
-    _read.addAll(activity.map((a) => a.key));
+    final items = activity;
+    _read.addAll(items.map((a) => a.key));
+    final id = user?.id;
+    if (id != null && items.isNotEmpty) {
+      final latest = items
+          .map((a) => a.event.at)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
+      if (_readUntil == null || latest.isAfter(_readUntil!)) {
+        _readUntil = latest;
+        _saveReadMark(id, latest);
+      }
+    }
     notifyListeners();
   }
 }

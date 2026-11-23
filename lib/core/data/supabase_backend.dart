@@ -148,6 +148,18 @@ class SupabaseBackend extends RemboBackend {
       password: password,
       data: {'full_name': fullName},
     );
+    // An address already registered gets no e-mail (the server does not
+    // tell who has an account) and comes back without any identity: say so
+    // instead of waiting for a code that never comes.
+    if (response.session == null &&
+        (response.user?.identities?.isEmpty ?? false)) {
+      throw RemboException(
+        tr(
+          'Un compte existe déjà pour cet e-mail. Connectez-vous, ou '
+          'utilisez « Mot de passe oublié ».',
+        ),
+      );
+    }
     if (response.session == null) return null;
     return _loadUser();
   });

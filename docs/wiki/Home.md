@@ -29,7 +29,7 @@ The MVP will be presented on **8 December 2026**.
 |---|---|
 | 📸 **Capture** | Photo or upload of a receipt from the Android / iOS app |
 | 🧠 **Understand** | OCR suggests date, supplier, amount, currency and VAT; the employee checks and corrects |
-| ✅ **Approve** | Agents check the company policy; the manager approves or rejects with a reason. No self-approval |
+| ✅ **Approve** | Agents check the company policy; the manager approves or rejects with a reason (their own expenses too, named in the history) |
 | 📤 **Export** | The accountant exports approved expenses as a documented **CSV** that any accounting software can import |
 
 **Stack:** Flutter (Android + iOS) · Supabase (Postgres, Auth, RLS, Storage, Edge Functions) · AI agents connected through MCP.

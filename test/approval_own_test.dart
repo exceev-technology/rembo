@@ -9,27 +9,14 @@ import 'package:rembo/features/collaborator/expense_detail_screen.dart';
 
 late AppState state;
 
-/// The team cannot be read: everything else loads.
-class _TeamUnavailable extends DemoBackend {
-  _TeamUnavailable() : super(latency: Duration.zero);
-
-  @override
-  Future<List<Member>> fetchMembers() async =>
-      throw const RemboException('Connexion impossible.', network: true);
-}
-
-Future<void> _start(
-  WidgetTester tester,
-  AppUser who, {
-  DemoBackend? backend,
-}) async {
+Future<void> _start(WidgetTester tester, AppUser who) async {
   tester.view.physicalSize = const Size(420, 2600);
   tester.view.devicePixelRatio = 1;
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  state = AppState(backend ?? DemoBackend(latency: Duration.zero));
+  state = AppState(DemoBackend(latency: Duration.zero));
   await tester.pumpWidget(
     RemboApp(state: state, initialRoute: AppRoutes.login),
   );
@@ -67,41 +54,34 @@ Future<void> _openDetail(WidgetTester tester, String id) async {
 }
 
 void main() {
-  testWidgets('The only manager is told to invite another one', (tester) async {
+  testWidgets('The manager approves their own expense', (tester) async {
     await _start(tester, DemoBackend.salma);
     final own = await _flagged();
     expect(own.status, ExpenseStatus.needsReview);
+    expect(state.toReview.map((e) => e.id), contains(own.id));
     await tester.pumpAndSettle();
 
     await _openDetail(tester, own.id);
-    expect(find.byKey(const ValueKey('detail-alone-manager')), findsOneWidget);
-    expect(find.text('Vous êtes le seul responsable'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('detail-invite-manager')));
+    final decide = find.byKey(const ValueKey('detail-decide'));
+    await tester.ensureVisible(decide);
+    await tester.tap(decide);
     await tester.pumpAndSettle();
-    expect(find.text('Équipe'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('decision-approve')));
+    await tester.pumpAndSettle();
+
+    final decided = state.byId(own.id)!;
+    expect(decided.status, ExpenseStatus.approved);
+    expect(decided.events.last.actorName, DemoBackend.salma.fullName);
   });
 
-  testWidgets('An employee never sees the notice', (tester) async {
+  testWidgets('An employee cannot decide on their own expense', (tester) async {
     await _start(tester, DemoBackend.marius);
     final own = await _flagged();
     expect(own.status, ExpenseStatus.needsReview);
+    expect(state.toReview, isEmpty);
     await tester.pumpAndSettle();
 
     await _openDetail(tester, own.id);
-    expect(find.byKey(const ValueKey('detail-alone-manager')), findsNothing);
-  });
-
-  testWidgets('Nothing is said while the team could not be loaded', (
-    tester,
-  ) async {
-    await _start(tester, DemoBackend.salma, backend: _TeamUnavailable());
-    final own = await _flagged();
-    expect(own.status, ExpenseStatus.needsReview);
-    expect(state.membersLoaded, isFalse);
-    await tester.pumpAndSettle();
-
-    await _openDetail(tester, own.id);
-    expect(find.byKey(const ValueKey('detail-alone-manager')), findsNothing);
+    expect(find.byKey(const ValueKey('detail-decide')), findsNothing);
   });
 }

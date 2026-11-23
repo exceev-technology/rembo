@@ -227,12 +227,13 @@ void main() {
     },
   );
 
-  test('a manager cannot decide their own expense', () async {
+  test('a manager decides on their own expense', () async {
     final b = await _company(MemoryStore());
     await b.signIn('sara@exemple.ma', 'Secret#1');
     final mine = await b.saveDraft(_draft(cents: 90000), receiptBytes: _photo);
     expect((await b.submit(mine.id)).status, ExpenseStatus.needsReview);
-    await _throws(() => b.decide(mine.id, approve: true), 'propre dépense');
+    final decided = await b.decide(mine.id, approve: true);
+    expect(decided.status, ExpenseStatus.approved);
   });
 
   test('the rules changed by the manager drive the control', () async {
