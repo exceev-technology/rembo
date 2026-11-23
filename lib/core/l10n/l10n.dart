@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ar.dart';
+import '../log.dart';
 
 /// The languages offered, each under its own name.
 const appLanguages = <(Locale, String)>[
@@ -72,7 +73,8 @@ Future<void> loadLanguage() async {
   String? code;
   try {
     code = (await SharedPreferences.getInstance()).getString(_languageKey);
-  } catch (_) {
+  } catch (e, st) {
+    logFailure('saved language not read', e, st);
     // No storage here (some tests, exotic platforms): keep the default.
   }
   code ??= WidgetsBinding.instance.platformDispatcher.locale.languageCode;
@@ -93,7 +95,8 @@ Future<void> setLanguage(Locale locale) async {
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageKey, locale.languageCode);
-  } catch (_) {
+  } catch (e, st) {
+    logFailure('language not saved', e, st);
     // The choice still holds until the app is closed.
   }
 }

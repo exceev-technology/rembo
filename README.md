@@ -121,6 +121,31 @@ The database tests (`supabase/tests/database/`) need the local stack and are not
 
 The full guide covers emulators, the local Supabase stack and troubleshooting: [Development Setup](https://github.com/exceev-technology/rembo/wiki/Development-Setup).
 
+### Android release signing
+
+A release build (`flutter build apk --release`, `flutter build appbundle`) is signed with the key named in `android/key.properties`. Without that file the build stops with an error; it is never signed with the debug key. Debug builds need nothing.
+
+`android/key.properties` and the keystore (`*.jks`, `*.keystore`) are ignored by Git: never commit them.
+
+```properties
+storePassword=…
+keyPassword=…
+keyAlias=upload
+storeFile=/absolute/path/to/upload-keystore.jks
+```
+
+`storeFile` is an absolute path, or a path relative to `android/app/`.
+
+In CI, keep the keystore (base64) and the three values in repository secrets, and write both files before the release build:
+
+```bash
+echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
+  "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" > android/key.properties
+```
+
+The current CI builds debug APKs only and needs no key.
+
 ## Project structure
 
 ```text
