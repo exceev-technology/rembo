@@ -49,8 +49,6 @@ const arabic = <String, String>{
       'رفض الخادم الطلب. أعد المحاولة بعد لحظة.',
   'Le justificatif n’a pas pu être enregistré.': 'تعذر حفظ وثيقة الإثبات.',
   'Une erreur inattendue est survenue.': 'حدث خطأ غير متوقع.',
-  'Confirmez d’abord votre adresse avec le lien reçu par e-mail.':
-      'أكد عنوانك أولا عبر الرابط الذي وصلك بالبريد الإلكتروني.',
   'Mot de passe trop faible.': 'كلمة المرور ضعيفة جدا.',
   'Trop de tentatives. Réessayez plus tard.':
       'محاولات كثيرة. أعد المحاولة لاحقا.',
@@ -134,16 +132,10 @@ const arabic = <String, String>{
   'Casablanca': 'الدار البيضاء',
   'Adresse e-mail invalide.': 'عنوان البريد الإلكتروني غير صالح.',
   'Mot de passe\noublié ?': 'نسيت\nكلمة المرور؟',
-  'Recevez un lien de réinitialisation par e-mail.':
-      'احصل على رابط إعادة التعيين عبر البريد الإلكتروني.',
   'Démonstration : aucun e-mail envoyé': 'عرض تجريبي: لم يرسل أي بريد',
-  'Demande envoyée': 'تم إرسال الطلب',
   'Avec un serveur configuré, un lien serait envoyé à {trim}.':
       'عند إعداد خادم، سيرسل رابط إلى {trim}.',
-  'Si un compte existe pour {trim}, vous recevrez un lien dans quelques minutes.':
-      'إذا وجد حساب للعنوان {trim} فسيصلك رابط خلال دقائق.',
   'Adresse e-mail': 'البريد الإلكتروني',
-  'Envoyer le lien': 'إرسال الرابط',
   'Retour à la connexion': 'العودة إلى تسجيل الدخول',
   'Saisissez votre adresse e-mail.': 'أدخل بريدك الإلكتروني.',
   'Saisissez votre mot de passe.': 'أدخل كلمة المرور.',
@@ -164,8 +156,6 @@ const arabic = <String, String>{
   'Saisissez votre nom.': 'أدخل اسمك العائلي.',
   'Le mot de passe ne respecte pas les règles.': 'كلمة المرور لا تحترم الشروط.',
   'Confirmez votre adresse': 'أكد عنوانك',
-  'Un e-mail de confirmation a été envoyé à {trim}. Ouvrez le lien puis connectez-vous.':
-      'أرسلنا بريد تأكيد إلى {trim}. افتح الرابط ثم سجل الدخول.',
   'Créer un compte': 'إنشاء حساب',
   'Invité ? Utilisez l’adresse qui a reçu l’invitation.':
       'مدعو؟ استعمل العنوان الذي وصلته الدعوة.',
@@ -287,9 +277,6 @@ const arabic = <String, String>{
   'Plus tôt': 'قبل ذلك',
   'Aucune activité': 'لا يوجد نشاط',
   'Tout marquer comme lues': 'تعليم الكل كمقروء',
-  'Démonstration : aucun e-mail n’est envoyé.': 'عرض تجريبي: لا يرسل أي بريد.',
-  'Un lien de réinitialisation a été envoyé à {email}.':
-      'أرسلنا رابط إعادة التعيين إلى {email}.',
   'Mon profil': 'ملفي الشخصي',
   'Équipe': 'الفريق',
   'Règles de remboursement': 'قواعد التعويض',
@@ -601,6 +588,31 @@ const arabic = <String, String>{
   'Type de fournisseur reconnu à son nom': 'نوع المورد معروف من اسمه',
   'Projet de votre dernière dépense chez ce fournisseur':
       'مشروع آخر مصروف لك لدى هذا المورد',
+  'Confirmez d’abord votre adresse avec le code reçu par e-mail.':
+      'أكّد عنوانك أولاً بالرمز الذي وصلك عبر البريد الإلكتروني.',
+  'Code incorrect ou expiré. Demandez-en un nouveau.':
+      'الرمز غير صحيح أو منتهي الصلاحية. اطلب رمزاً جديداً.',
+  'Choisissez un mot de passe différent de l’ancien.':
+      'اختر كلمة مرور مختلفة عن السابقة.',
+  'Saisissez le code à 6 chiffres reçu par e-mail.':
+      'أدخل الرمز المكوّن من 6 أرقام الذي وصلك عبر البريد الإلكتروني.',
+  'Un nouveau code a été envoyé.': 'تم إرسال رمز جديد.',
+  'Confirmer': 'تأكيد',
+  'Un code à 6 chiffres a été envoyé à {trim}. Saisissez-le ci-dessous.':
+      'تم إرسال رمز من 6 أرقام إلى {trim}. أدخله أدناه.',
+  'Code reçu par e-mail': 'الرمز المستلم عبر البريد الإلكتروني',
+  'Pas reçu ? Regardez dans les courriers indésirables.':
+      'لم يصلك؟ تحقّق من البريد غير المرغوب فيه.',
+  'Renvoyer le code': 'إعادة إرسال الرمز',
+  'Recevez un code par e-mail pour choisir un nouveau mot de passe.':
+      'استلم رمزاً عبر البريد الإلكتروني لاختيار كلمة مرور جديدة.',
+  'Code envoyé': 'تم إرسال الرمز',
+  'Si un compte existe pour {trim}, un code à 6 chiffres arrive dans quelques minutes (pensez aux courriers indésirables).': 'إذا كان هناك حساب لـ {trim}، سيصلك رمز من 6 أرقام خلال دقائق (تحقّق من البريد غير المرغوب فيه).',
+  'Nouveau mot de passe': 'كلمة المرور الجديدة',
+  'Au moins 8 caractères, une lettre, un chiffre et un caractère spécial.':
+      '8 أحرف على الأقل، حرف ورقم ورمز خاص.',
+  'Changer le mot de passe': 'تغيير كلمة المرور',
+  'Envoyer le code': 'إرسال الرمز',
   'Devise étrangère ou taux de TVA': 'عملة أجنبية أو نسبة الضريبة',
   'À vérifier : {field} — {reason}': 'للتحقق: {field} — {reason}',
   'Non lu : {fields}': 'لم يُقرأ: {fields}',

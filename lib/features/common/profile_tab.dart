@@ -6,6 +6,7 @@ import 'bench_screen.dart';
 
 import '../../app/app_routes.dart';
 import '../../core/data/app_state.dart';
+import '../auth/forgot_password_screen.dart';
 import '../../core/data/demo_build.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../whatsapp/whatsapp.dart';
@@ -15,25 +16,13 @@ class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key, this.embedded = true});
   final bool embedded;
 
-  Future<void> _resetPassword(BuildContext context, AppState state) async {
-    try {
-      await state.backend.sendPasswordReset(state.user!.email);
-      if (!context.mounted) return;
-      showRemboSnackBar(
-        context,
-        state.isDemo
-            ? tr('Démonstration : aucun e-mail n’est envoyé.')
-            : tr('Un lien de réinitialisation a été envoyé à {email}.', {
-                'email': state.user!.email,
-              }),
-        tone: state.isDemo ? MessageTone.info : MessageTone.success,
+  /// A code is e-mailed, then typed with the new password.
+  void _resetPassword(BuildContext context, AppState state) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ForgotPasswordScreen(email: state.user!.email),
+        ),
       );
-    } on RemboException catch (e) {
-      if (context.mounted) {
-        showRemboSnackBar(context, e.message, tone: MessageTone.error);
-      }
-    }
-  }
 
   Future<void> _signOut(BuildContext context, AppState state) async {
     final navigator = Navigator.of(context);

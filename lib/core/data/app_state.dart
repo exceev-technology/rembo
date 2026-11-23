@@ -107,6 +107,31 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
+  /// Signs in with the code that confirms a new account.
+  Future<void> confirmSignUp({
+    required String email,
+    required String code,
+  }) async {
+    user = await backend.confirmSignUp(email: email, code: code);
+    notifyListeners();
+    user!.companyId != null ? await refresh() : await _loadInvitation();
+  }
+
+  /// Sets a new password with the e-mailed code, and signs in.
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    user = await backend.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
+    notifyListeners();
+    user!.companyId != null ? await refresh() : await _loadInvitation();
+  }
+
   Future<void> createCompany({
     required String name,
     String ice = '',

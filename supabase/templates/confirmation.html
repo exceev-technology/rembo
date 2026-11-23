@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="fr">
+<body style="margin:0;padding:24px;background:#f5f6fa;font-family:Arial,Helvetica,sans-serif;color:#1b1f3b">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px">
+    <tr><td>
+      <p style="margin:0 0 4px;font-size:13px;color:#5b5f7a">Rembo · notes de frais</p>
+      <h1 style="margin:0 0 16px;font-size:20px">Confirmez votre adresse</h1>
+      <p style="margin:0 0 12px;font-size:15px">Voici votre code pour confirmer votre adresse et accéder à Rembo :</p>
+      <p style="margin:0 0 16px;font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+      <p style="margin:0 0 20px;font-size:13px;color:#5b5f7a">Saisissez-le dans l’application. Il est valable une heure. Si vous n’avez rien demandé, ignorez ce message.</p>
+      <p dir="rtl" lang="ar" style="margin:0;font-size:14px;color:#5b5f7a">رمز تأكيد عنوانك في Rembo: <strong>{{ .Token }}</strong></p>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -323,6 +323,29 @@ class LocalBackend extends RemboBackend {
   }
 
   @override
+  Future<AppUser> confirmSignUp({
+    required String email,
+    required String code,
+  }) async => throw RemboException(_noMail);
+
+  @override
+  Future<void> resendSignUpCode(String email) async =>
+      throw RemboException(_noMail);
+
+  @override
+  Future<AppUser> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async => throw RemboException(_noMail);
+
+  /// Accounts on the phone are created signed in: no code is ever needed.
+  String get _noMail => tr(
+    'Les comptes sont enregistrés sur ce téléphone uniquement : '
+    'aucun e-mail de réinitialisation ne peut être envoyé.',
+  );
+
+  @override
   Future<void> sendPasswordReset(String email) async {
     await _latency();
     throw RemboException(

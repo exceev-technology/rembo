@@ -18,7 +18,9 @@ class _SignupScreenState extends State<SignupScreen> {
   final _first = TextEditingController();
   final _last = TextEditingController();
   final _password = TextEditingController();
+  final _code = TextEditingController();
   final _errors = <String, String>{};
+  String? _notice;
   String? _failure;
   bool _obscure = true;
   bool _loading = false;
@@ -26,7 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
-    for (final c in [_email, _first, _last, _password]) {
+    for (final c in [_email, _first, _last, _password, _code]) {
       c.dispose();
     }
     super.dispose();
@@ -71,26 +73,99 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  /// Signs in with the code of the confirmation e-mail.
+  Future<void> _confirmCode() async {
+    final code = _code.text.trim();
+    setState(() {
+      _failure = null;
+      _notice = null;
+      _errors.remove('code');
+      if (!RegExp(r'^\d{6,8}$').hasMatch(code)) {
+        _errors['code'] = tr('Saisissez le code à 6 chiffres reçu par e-mail.');
+      }
+    });
+    if (_errors.containsKey('code')) return;
+    setState(() => _loading = true);
+    final navigator = Navigator.of(context);
+    try {
+      await AppScope.read(context)
+          .confirmSignUp(email: _email.text.trim(), code: code);
+      if (mounted) {
+        navigator.pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
+      }
+    } on RemboException catch (e) {
+      if (mounted) setState(() => _failure = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    setState(() {
+      _failure = null;
+      _notice = null;
+    });
+    try {
+      await AppScope.read(context).backend.resendSignUpCode(_email.text.trim());
+      if (mounted) {
+        setState(() => _notice = tr('Un nouveau code a été envoyé.'));
+      }
+    } on RemboException catch (e) {
+      if (mounted) setState(() => _failure = e.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final rules = passwordRules(_password.text);
     if (_confirm) {
       return RemboPage(
         bottom: RemboPrimaryButton(
-          label: tr('Retour à la connexion'),
-          onPressed: () =>
-              Navigator.of(context)
-                  .pushNamedAndRemoveUntil(AppRoutes.home, (_) => false),
+          key: const ValueKey('signup-confirm'),
+          label: tr('Confirmer'),
+          loading: _loading,
+          onPressed: _confirmCode,
         ),
         children: [
           RemboMoment(
             title: tr('Confirmez votre adresse'),
             message: tr(
-              'Un e-mail de confirmation a été envoyé à {trim}. Ouvrez le '
-              'lien puis connectez-vous.',
+              'Un code à 6 chiffres a été envoyé à {trim}. Saisissez-le '
+              'ci-dessous.',
               {'trim': _email.text.trim()},
             ),
             illustration: RemboArt.envelope,
+          ),
+          const SizedBox(height: RemboSpace.lg),
+          if (_failure != null) ...[
+            RemboMessage(tone: MessageTone.error, title: _failure!),
+            const SizedBox(height: RemboSpace.lg),
+          ],
+          if (_notice != null) ...[
+            RemboMessage(tone: MessageTone.success, title: _notice!),
+            const SizedBox(height: RemboSpace.lg),
+          ],
+          RemboTextField(
+            fieldKey: const ValueKey('signup-code'),
+            label: tr('Code reçu par e-mail'),
+            hint: '123456',
+            icon: Icons.pin_outlined,
+            controller: _code,
+            errorText: _errors['code'],
+            keyboardType: TextInputType.number,
+            onSubmitted: (_) => _confirmCode(),
+          ),
+          const SizedBox(height: RemboSpace.sm),
+          Text(
+            tr('Pas reçu ? Regardez dans les courriers indésirables.'),
+            style: RemboText.caption,
+          ),
+          Center(
+            child: TextButton(
+              key: const ValueKey('signup-resend'),
+              onPressed: _loading ? null : _resend,
+              child: Text(tr('Renvoyer le code')),
+            ),
           ),
         ],
       );

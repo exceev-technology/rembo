@@ -143,3 +143,17 @@ Puis `REMBO_OCR=true` dans `.env`. Chaque lecture est journalisée dans `receipt
 - **CSV** : généré sur le téléphone à partir des lignes que le serveur vient de marquer exportées (le wiki prévoit une Edge Function).
 - **Tests RLS automatisés** (pgTAP) : à écrire ; exigés par la Definition of Done.
 - Une entreprise avec un seul responsable ne peut pas faire valider les exceptions de ce responsable.
+
+## E-mails de confirmation (projet hébergé)
+
+L’appli confirme une adresse et change un mot de passe avec un **code à 6 chiffres** reçu par e-mail et tapé dans l’appli : aucun lien à ouvrir, aucune page web nécessaire.
+
+Le service d’envoi intégré de Supabase n’envoie que quelques e-mails par heure, et seulement aux membres de l’organisation. Pour de vrais utilisateurs, brancher un SMTP, par exemple **Brevo** (gratuit, 300 e-mails par jour, sans nom de domaine) :
+
+1. brevo.com → compte gratuit → *Senders, Domains & Dedicated IPs* : ajouter et vérifier l’adresse d’expéditeur.
+2. *SMTP & API* → onglet SMTP : relever le serveur (`smtp-relay.brevo.com`, port 587), l’identifiant, et générer une clé SMTP.
+3. Tableau de bord Supabase → *Authentication* :
+   - *Emails* → *SMTP Settings* : activer, coller serveur, port, identifiant, clé, adresse et nom d’expéditeur (« Rembo »).
+   - *Emails* → *Templates* : « Confirm signup » et « Reset password », coller `supabase/templates/confirmation.html` et `recovery.html` (sujets dans `config.toml`).
+   - *Sign In / Providers* → *Email* : longueur du code (Email OTP length) à 6.
+   - *Rate Limits* : e-mails par heure, par exemple 30.

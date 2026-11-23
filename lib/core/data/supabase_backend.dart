@@ -79,8 +79,10 @@ class SupabaseBackend extends RemboBackend {
   static String _authMessage(AuthException e) => switch (e.code) {
     'invalid_credentials' => tr('E-mail ou mot de passe incorrect.'),
     'email_not_confirmed' => tr(
-      'Confirmez d’abord votre adresse avec le lien reçu par e-mail.',
+      'Confirmez d’abord votre adresse avec le code reçu par e-mail.',
     ),
+    'otp_expired' => tr('Code incorrect ou expiré. Demandez-en un nouveau.'),
+    'same_password' => tr('Choisissez un mot de passe différent de l’ancien.'),
     'user_already_exists' ||
     'email_exists' => tr('Un compte existe déjà pour cet e-mail.'),
     'weak_password' => tr('Mot de passe trop faible.'),
@@ -153,6 +155,38 @@ class SupabaseBackend extends RemboBackend {
   @override
   Future<void> sendPasswordReset(String email) =>
       _guard(() => _client.auth.resetPasswordForEmail(email));
+
+  @override
+  Future<AppUser> confirmSignUp({
+    required String email,
+    required String code,
+  }) => _guard(() async {
+    await _client.auth.verifyOTP(
+      type: OtpType.signup,
+      email: email,
+      token: code.trim(),
+    );
+    return (await _loadUser())!;
+  });
+
+  @override
+  Future<void> resendSignUpCode(String email) =>
+      _guard(() => _client.auth.resend(type: OtpType.signup, email: email));
+
+  @override
+  Future<AppUser> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) => _guard(() async {
+    await _client.auth.verifyOTP(
+      type: OtpType.recovery,
+      email: email,
+      token: code.trim(),
+    );
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+    return (await _loadUser())!;
+  });
 
   @override
   Future<void> signOut() async {

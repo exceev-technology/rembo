@@ -27,6 +27,21 @@ abstract class RemboBackend {
     required String fullName,
   });
   Future<void> sendPasswordReset(String email);
+
+  /// Confirms a new account with the code e-mailed to [email], and signs
+  /// in. A code rather than a link: nothing to open outside the app.
+  Future<AppUser> confirmSignUp({required String email, required String code});
+
+  /// Sends the code of [confirmSignUp] again.
+  Future<void> resendSignUpCode(String email);
+
+  /// Sets a new password with the code sent by [sendPasswordReset], and
+  /// signs in.
+  Future<AppUser> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
   Future<void> signOut();
 
   /// Creates a company; the current user becomes its first manager.
