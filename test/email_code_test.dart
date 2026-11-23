@@ -1,4 +1,4 @@
-// With a server, a new account and a forgotten password are confirmed with
+// With a _server, a new account and a forgotten password are confirmed with
 // a code from the e-mail, typed in the app: no link to open elsewhere.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +8,7 @@ import 'package:rembo/core/data/app_state.dart';
 import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/core/data/models.dart';
 
-/// Behaves like the server: sign-up waits for the e-mailed code.
+/// Behaves like the _server: sign-up waits for the e-mailed code.
 class _Server extends DemoBackend {
   _Server() : super(latency: Duration.zero);
 
@@ -71,7 +71,7 @@ class _Server extends DemoBackend {
 }
 
 late AppState state;
-late _Server server;
+late _Server _server;
 
 Future<void> _start(WidgetTester tester, String route) async {
   tester.view.physicalSize = const Size(420, 2600);
@@ -80,8 +80,8 @@ Future<void> _start(WidgetTester tester, String route) async {
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  server = _Server();
-  state = AppState(server);
+  _server = _Server();
+  state = AppState(_server);
   await tester.pumpWidget(RemboApp(state: state, initialRoute: route));
   await tester.pumpAndSettle();
 }
@@ -108,10 +108,10 @@ void main() {
     await _type(tester, 'signup-password', 'Secret#2026');
     await _tap(tester, 'signup-submit');
     expect(find.text('Confirmez votre adresse'), findsOneWidget);
-    expect(server.sent, ['confirmation']);
+    expect(_server.sent, ['confirmation']);
 
     await _tap(tester, 'signup-resend');
-    expect(server.sent, ['confirmation', 'again']);
+    expect(_server.sent, ['confirmation', 'again']);
     expect(find.text('Un nouveau code a été envoyé.'), findsOneWidget);
 
     await _type(tester, 'signup-code', '12');
@@ -139,7 +139,7 @@ void main() {
     await _start(tester, AppRoutes.forgotPassword);
     await _type(tester, 'reset-email', DemoBackend.marius.email);
     await _tap(tester, 'reset-submit');
-    expect(server.sent, ['reset']);
+    expect(_server.sent, ['reset']);
     expect(find.text('Code envoyé'), findsOneWidget);
 
     await _type(tester, 'reset-code', '654321');
@@ -151,7 +151,7 @@ void main() {
     );
     await _type(tester, 'reset-password', 'Nouveau#2026');
     await _tap(tester, 'reset-confirm');
-    expect(server.newPassword, 'Nouveau#2026');
+    expect(_server.newPassword, 'Nouveau#2026');
     expect(state.user?.email, DemoBackend.marius.email);
   });
 }
