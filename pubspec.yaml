@@ -43,7 +43,7 @@ dependencies:
   url_launcher: ^6.3.3
   crypto: ^3.0.6
   shared_preferences: ^2.3.0
-  google_mlkit_text_recognition: ^1.0.2
+  google_mlkit_text_recognition: ^1.0.3
 
 dev_dependencies:
   flutter_test:
