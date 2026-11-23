@@ -24,6 +24,10 @@ class AppState extends ChangeNotifier {
   List<Expense> expenses = const [];
   List<PolicyRule> policies = const [];
   List<Member> members = const [];
+
+  /// True once [members] has been read from the backend for this session:
+  /// an empty list then means an empty team, not a failed load.
+  bool membersLoaded = false;
   List<ExportBatch> exports = const [];
   bool loading = false;
 
@@ -89,6 +93,7 @@ class AppState extends ChangeNotifier {
     user = null;
     expenses = const [];
     members = const [];
+    membersLoaded = false;
     exports = const [];
     policies = const [];
     _read.clear();
@@ -104,7 +109,10 @@ class AppState extends ChangeNotifier {
     try {
       expenses = await backend.fetchExpenses();
       policies = await backend.fetchPolicies();
-      if (role == UserRole.manager) members = await backend.fetchMembers();
+      if (role == UserRole.manager) {
+        members = await backend.fetchMembers();
+        membersLoaded = true;
+      }
       if (role == UserRole.accountant) exports = await backend.fetchExports();
     } on RemboException catch (e) {
       loadError = e;
@@ -226,6 +234,7 @@ class AppState extends ChangeNotifier {
   Future<void> invite(String email, UserRole role) async {
     await backend.invite(email, role);
     members = await backend.fetchMembers();
+    membersLoaded = true;
     notifyListeners();
   }
 

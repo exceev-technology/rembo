@@ -12,10 +12,12 @@ class AloneManagerNotice extends StatelessWidget {
   final Expense expense;
 
   /// True when [expense] is the signed-in manager's own expense, waiting for
-  /// a decision, and no other active manager can take it.
+  /// a decision, and no other active manager can take it. Nothing is said
+  /// while the team is unknown (not loaded yet, or its loading failed).
   static bool appliesTo(AppState state, Expense expense) {
     final me = state.user;
     if (me == null || state.role != UserRole.manager) return false;
+    if (!state.membersLoaded) return false;
     if (expense.employeeId != me.id) return false;
     if (expense.status != ExpenseStatus.needsReview) return false;
     final myEmail = me.email.toLowerCase();
