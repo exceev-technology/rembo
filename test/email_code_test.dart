@@ -1,4 +1,4 @@
-// With a _server, a new account and a forgotten password are confirmed with
+// With a server, a new account and a forgotten password are confirmed with
 // a code from the e-mail, typed in the app: no link to open elsewhere.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +8,7 @@ import 'package:rembo/core/data/app_state.dart';
 import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/core/data/models.dart';
 
-/// Behaves like the _server: sign-up waits for the e-mailed code.
+/// Behaves like the server: sign-up waits for the e-mailed code.
 class _Server extends DemoBackend {
   _Server() : super(latency: Duration.zero);
 
