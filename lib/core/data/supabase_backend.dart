@@ -237,13 +237,23 @@ class SupabaseBackend extends RemboBackend {
       };
       // One object per expense, in the owner's folder (see storage rules).
       final path = '$_uid/$id';
-      await _client.storage
-          .from(_bucket)
-          .uploadBinary(
-            path,
-            receiptBytes,
-            fileOptions: FileOptions(upsert: true, contentType: type),
+      try {
+        await _client.storage
+            .from(_bucket)
+            .uploadBinary(
+              path,
+              receiptBytes,
+              fileOptions: FileOptions(upsert: true, contentType: type),
+            );
+      } on StorageException catch (e) {
+        // The storage rules lock the receipt of a submitted expense.
+        if (isLockedReceipt(e)) {
+          throw RemboException(
+            tr('Ce justificatif est verrouillé : la dépense a été soumise.'),
           );
+        }
+        rethrow;
+      }
       await _updateEditable(id, {'receipt_path': path});
     }
     return _one(id);
@@ -349,25 +359,15 @@ class SupabaseBackend extends RemboBackend {
   }
 
   @override
-  Future<AppUser> linkWhatsApp(String? phone) => _guard(() async {
-    if (phone == null) {
-      await _client.from('whatsapp_links').delete().eq('profile_id', _uid);
-    } else {
-      try {
-        await _client.from('whatsapp_links').upsert({
-          'profile_id': _uid,
-          'phone': phone,
-        });
-      } on PostgrestException catch (e) {
-        if (e.code == '23505') {
-          throw RemboException(
-            tr('Ce numéro est déjà relié à un autre compte.'),
-          );
-        }
-        rethrow;
-      }
-    }
-    return _user = _user!.withWhatsApp(phone);
+  Future<WhatsAppLinkCode> requestWhatsAppCode() => _guard(() async {
+    final row = await _client.rpc<dynamic>('create_whatsapp_link_code');
+    return WhatsAppLinkCode.fromJson(Map<String, dynamic>.from(row as Map));
+  });
+
+  @override
+  Future<AppUser> unlinkWhatsApp() => _guard(() async {
+    await _client.from('whatsapp_links').delete().eq('profile_id', _uid);
+    return _user = _user!.withWhatsApp(null);
   });
 
   // Company ---------------------------------------------------------------
@@ -475,3 +475,9 @@ class SupabaseBackend extends RemboBackend {
     return [for (final r in rows) ExportBatch.fromJson(r)];
   });
 }
+
+/// True when Storage refused a write by its row level security rules. For a
+/// receipt in its owner's folder, that means its expense was submitted.
+bool isLockedReceipt(StorageException e) =>
+    e.statusCode == '403' ||
+    e.message.toLowerCase().contains('row-level security');

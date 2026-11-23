@@ -238,8 +238,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> linkWhatsApp(String? phone) async {
-    user = await backend.linkWhatsApp(phone);
+  Future<WhatsAppLinkCode> requestWhatsAppCode() =>
+      backend.requestWhatsAppCode();
+
+  /// Reads the person again, to see a number linked from WhatsApp.
+  Future<void> checkWhatsAppLink() async {
+    user = await backend.restoreSession() ?? user;
+    notifyListeners();
+  }
+
+  Future<void> unlinkWhatsApp() async {
+    user = await backend.unlinkWhatsApp();
     notifyListeners();
   }
 
