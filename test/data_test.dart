@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rembo/core/data/csv_export.dart';
-import 'package:rembo/core/data/demo_backend.dart';
+import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/core/data/models.dart';
 import 'package:rembo/core/format/formatters.dart';
 import 'package:rembo/core/format/parsers.dart';
@@ -262,7 +262,7 @@ void main() {
       );
     });
 
-    test('an invited address joins the company with its role', () async {
+    test('an invited address joins the company only when it accepts', () async {
       final b = _backend();
       await b.signIn(DemoBackend.salma.email, 'x');
       await b.invite('Karim@Exemple.ma', UserRole.accountant);
@@ -272,14 +272,23 @@ void main() {
         password: 'Secret1!',
         fullName: 'Karim Alaoui',
       );
-      expect(karim!.role, UserRole.accountant);
-      expect(karim.companyName, DemoBackend.companyName);
+      // Signing up joins nothing: the invitation waits for an answer.
+      expect(karim!.companyId, isNull);
+      final waiting = await b.pendingInvitation();
+      expect(waiting!.companyName, DemoBackend.companyName);
+      expect(waiting.role, UserRole.accountant);
+      final joined = await b.acceptInvitation();
+      expect(joined.role, UserRole.accountant);
+      expect(joined.companyName, DemoBackend.companyName);
+      expect(await b.pendingInvitation(), isNull);
       final stranger = await b.signUp(
         email: 'x@y.ma',
         password: 'Secret1!',
         fullName: 'X Y',
       );
       expect(stranger!.companyId, isNull);
+      expect(await b.pendingInvitation(), isNull);
+      await _expectRefused(b.acceptInvitation(), 'plus valable');
     });
   });
 

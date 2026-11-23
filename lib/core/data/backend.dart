@@ -18,8 +18,9 @@ abstract class RemboBackend {
   Future<AppUser?> restoreSession();
   Future<AppUser> signIn(String email, String password);
 
-  /// Creates the account. Joins the company that invited [email], if any.
-  /// Returns null when the address must be confirmed before signing in.
+  /// Creates the account. An invitation to [email] is joined only later,
+  /// with [acceptInvitation]. Returns null when the address must be
+  /// confirmed before signing in.
   Future<AppUser?> signUp({
     required String email,
     required String password,
@@ -34,6 +35,13 @@ abstract class RemboBackend {
     String ice = '',
     String city = '',
   });
+
+  /// The company that invited the signed-in person, while they belong to
+  /// none. Null when nothing waits.
+  Future<CompanyInvitation?> pendingInvitation();
+
+  /// Joins the company of [pendingInvitation], with the role it gives.
+  Future<AppUser> acceptInvitation();
 
   // Expenses --------------------------------------------------------------
   /// Every expense the current user is allowed to see.
@@ -65,9 +73,14 @@ abstract class RemboBackend {
   /// Short-lived link to the voice note of a WhatsApp expense.
   Future<String?> voiceUrl(Expense expense) async => null;
 
-  /// Declares the WhatsApp number of the signed-in person; messages sent
-  /// from it become their draft expenses. Null unlinks it.
-  Future<AppUser> linkWhatsApp(String? phone);
+  /// A one-time code the person sends as « LIER 123456 » from their
+  /// WhatsApp: the server then links the number it came from, so nobody can
+  /// link a number they do not hold. Messages from that number become the
+  /// person's draft expenses.
+  Future<WhatsAppLinkCode> requestWhatsAppCode();
+
+  /// Removes the linked WhatsApp number.
+  Future<AppUser> unlinkWhatsApp();
 
   /// Bytes kept in memory by the demo backend.
   Uint8List? receiptBytes(Expense expense) => null;

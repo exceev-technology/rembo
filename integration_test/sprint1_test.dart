@@ -7,6 +7,10 @@
 //   flutter test integration_test/sprint1_test.dart -d <phone> \
 //     --dart-define-from-file=.env.local
 //
+// The accounts are created in the app and used at once: this run needs the
+// e-mail confirmation off in the local stack (enable_confirmations = false
+// under [auth.email] in supabase/config.toml, not to be committed).
+//
 // Every run uses new fictional addresses, so it can be run again.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,16 +139,20 @@ void main() {
     await tester.pump(_pace);
     await _signOut(tester);
 
-    // 4. The invited collaborator lands in the collaborator space, without
-    //    being asked for a company.
+    // 4. The invited collaborator sees the invitation, accepts it and lands
+    //    in the collaborator space.
     await _signUp(tester, first: 'Omar', email: omar);
+    await _waitFor(tester, _key('company-join'));
+    await _tap(tester, 'company-join');
     await _waitFor(tester, _key('tab-expenses'));
     expect(_key('company-name'), findsNothing);
     expect(_key('tab-exceptions'), findsNothing);
     await _signOut(tester);
 
-    // 5. The invited accountant lands in the accountant space.
+    // 5. The invited accountant accepts and lands in the accountant space.
     await _signUp(tester, first: 'Lina', email: lina);
+    await _waitFor(tester, _key('company-join'));
+    await _tap(tester, 'company-join');
     await _waitFor(tester, _key('tab-exports'));
     expect(_key('tab-exceptions'), findsNothing);
     await _signOut(tester);
