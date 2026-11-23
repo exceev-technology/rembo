@@ -144,7 +144,19 @@ export function fieldsFound(response: ReturnType<typeof toResponse>) {
 
 /** An engine configured by <PREFIX>_API_URL, _MODEL, _API_KEY, and allowed
  * by the privacy rule; null when missing or refused. */
-export function engine(prefix: string) {
+/** An engine as configured by the <PREFIX>_* secrets. */
+export interface Engine {
+  base: string;
+  model: string;
+  host: string;
+  key: string;
+  /** Models to try in turn when the main one is busy: comma-separated. */
+  fallback: string;
+  /** Longest wait for one answer; set by patiently() to fit its budget. */
+  timeoutMs?: number;
+}
+
+export function engine(prefix: string): Engine | null {
   const base = env(`${prefix}_API_URL`).replace(/\/+$/, "");
   const model = env(`${prefix}_MODEL`);
   if (!base || !model) return null;
@@ -181,19 +193,29 @@ export const isQuotaSpent = (error: unknown) =>
   /RESOURCE_EXHAUSTED|exceeded your current quota/.test(String(error));
 
 /** Calls the engine; when it is busy, tries once more after a short
- * pause (not when its daily allowance is spent), then with the fallback
- * model (<PREFIX>_FALLBACK_MODEL) if set. Any other failure is thrown at
- * once. */
+ * pause (not when its daily allowance is spent), then each fallback model
+ * in turn (<PREFIX>_FALLBACK_MODEL, comma-separated). Never waits longer
+ * than budgetMs in all: a person may be waiting. Any other failure is
+ * thrown at once. */
 export async function patiently<T>(
   e: Engine,
   call: (e: Engine) => Promise<T>,
   pauseMs = 1500,
+  budgetMs = 45_000,
 ): Promise<T> {
-  const models = [e.model, e.model, ...(e.fallback ? [e.fallback] : [])];
-  let last: unknown;
+  const spares = e.fallback.split(",").map((m) => m.trim()).filter(Boolean);
+  const models = [e.model, e.model, ...spares];
+  const deadline = Date.now() + budgetMs;
+  let last: unknown = new Error("engine 503 no time left");
   for (let i = 0; i < models.length; i++) {
+    const left = deadline - Date.now();
+    if (left < 2_000) break;
     try {
-      return await call({ ...e, model: models[i] });
+      return await call({
+        ...e,
+        model: models[i],
+        timeoutMs: Math.min(e.timeoutMs ?? 25_000, left),
+      });
     } catch (error) {
       last = error;
       if (!isBusy(error)) throw error;
@@ -204,8 +226,6 @@ export async function patiently<T>(
   }
   throw last;
 }
-
-export type Engine = NonNullable<ReturnType<typeof engine>>;
 
 const auth = (e: Engine): Record<string, string> =>
   e.key ? { authorization: `Bearer ${e.key}` } : {};
@@ -238,7 +258,7 @@ export async function readPicture(
         },
       ],
     }),
-    signal: AbortSignal.timeout(25_000),
+    signal: AbortSignal.timeout(e.timeoutMs ?? 25_000),
   });
   if (!answer.ok) {
     throw new Error(`engine ${answer.status} ${await answer.text()}`);
@@ -267,7 +287,8 @@ export const TRANSCRIBE_PROMPT = "This voice note describes a work expense, " +
 export const isGeminiNative = (base: string) => /\/v1beta$/.test(base);
 
 /** Transcribes a voice note with Gemini (generateContent, audio sent
- * inline: WhatsApp's OGG is accepted). Empty when it fails. */
+ * inline: WhatsApp's OGG is accepted). Empty when it fails; throws when
+ * the engine is busy. */
 async function transcribeWithGemini(
   e: Engine,
   audio: Uint8Array,
@@ -293,10 +314,15 @@ async function transcribeWithGemini(
         }],
         generationConfig: { temperature: 0 },
       }),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(e.timeoutMs ?? 30_000),
     });
     if (!res.ok) {
-      console.error("transcription", res.status, await res.text());
+      const text = await res.text();
+      // Busy: thrown, so that patiently() tries again or another model.
+      if ([429, 500, 503].includes(res.status)) {
+        throw new Error(`engine ${res.status} ${text}`);
+      }
+      console.error("transcription", res.status, text);
       return "";
     }
     const payload = await res.json();
@@ -304,6 +330,7 @@ async function transcribeWithGemini(
     return parts.map((p: { text?: string }) => p.text ?? "").join(" ").trim()
       .slice(0, 500);
   } catch (err) {
+    if (isBusy(err)) throw err;
     console.error("transcription", err);
     return "";
   }
@@ -311,7 +338,8 @@ async function transcribeWithGemini(
 
 /** Transcribes a voice note: Gemini's own API when the base ends with
  * /v1beta, else OpenAI audio/transcriptions (Whisper served by
- * faster-whisper, whisper.cpp, LocalAI…). Empty when it fails. */
+ * faster-whisper, whisper.cpp, LocalAI…). Empty when it fails; throws when
+ * the engine is busy. */
 export async function transcribeAudio(
   e: Engine,
   audio: Uint8Array,
@@ -335,14 +363,20 @@ export async function transcribeAudio(
       method: "POST",
       headers: auth(e),
       body: form,
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(e.timeoutMs ?? 30_000),
     });
     if (!res.ok) {
-      console.error("transcription", res.status, await res.text());
+      const text = await res.text();
+      // Busy: thrown, so that patiently() tries again or another model.
+      if ([429, 500, 503].includes(res.status)) {
+        throw new Error(`engine ${res.status} ${text}`);
+      }
+      console.error("transcription", res.status, text);
       return "";
     }
     return String((await res.json()).text ?? "").trim().slice(0, 500);
   } catch (err) {
+    if (isBusy(err)) throw err;
     console.error("transcription", err);
     return "";
   }

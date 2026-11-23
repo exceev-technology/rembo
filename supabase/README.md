@@ -97,8 +97,11 @@ supabase secrets set \
   TRANSCRIBE_SHARED_ENGINE=fictitious-data-only
 ```
 
-Un moteur gratuit est souvent saturé (« high demand », erreur 503). Le serveur réessaie une fois, puis passe au modèle de secours s’il est défini :
-`RECEIPT_FALLBACK_MODEL=gemini-2.5-flash TRANSCRIBE_FALLBACK_MODEL=gemini-2.5-flash`.
+Un moteur gratuit est souvent saturé (« high demand », erreur 503) ou à court de quota (20 lectures par jour pour certains modèles). Le serveur réessaie une fois (pas quand le quota du jour est épuisé), puis essaie tour à tour les modèles de secours, chacun avec son propre quota :
+`RECEIPT_FALLBACK_MODEL=gemini-3.5-flash,gemini-3.5-flash-lite,gemini-2.5-flash` (idem pour `TRANSCRIBE_FALLBACK_MODEL`).
+Une seule clé, dans les règles : ne pas multiplier les projets pour contourner les limites (interdit par les conditions de Google).
+
+Pour la lecture d’un ticket, le serveur abandonne après 14 s et l’appli après 16 s : le formulaire s’ouvre alors avec ce que le téléphone a lu. Personne n’attend plus longtemps.
 Les photos passent par la porte compatible OpenAI de Gemini (`…/v1beta/openai`) ; les notes vocales par son API d’origine (`…/v1beta`, audio OGG de WhatsApp envoyé tel quel). `RECEIPT_MODEL` et `TRANSCRIBE_MODEL` : le modèle Flash proposé par AI Studio au moment du déploiement.
 
 - **Note vocale** (darija, français) : gardée, écoutable dans l’application, **transcrite** (Gemini, ou Whisper) puis comprise comme un texte. Autres moteurs possibles :

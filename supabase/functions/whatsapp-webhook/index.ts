@@ -166,7 +166,13 @@ async function downloadMedia(
 
 async function transcribe(audio: Uint8Array, type: string): Promise<string> {
   const e = engine("TRANSCRIBE");
-  return e ? await patiently(e, (x) => transcribeAudio(x, audio, type)) : "";
+  if (!e) return "";
+  // Every engine busy: the note is kept, the person types or says it again.
+  return await patiently(e, (x) => transcribeAudio(x, audio, type))
+    .catch((error) => {
+      console.error("transcription failed", error);
+      return "";
+    });
 }
 
 /** What the receipt engine reads on a photo, as a draft; null when there

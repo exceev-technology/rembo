@@ -343,7 +343,9 @@ class SupabaseBackend extends RemboBackend {
             'read-receipt',
             body: {'file_name': name, 'image_base64': base64Encode(bytes)},
           )
-          .timeout(const Duration(seconds: 30));
+          // Never longer: the server gives up at 14 s, and the form then
+          // opens with what the phone read.
+          .timeout(const Duration(seconds: 16));
       final data = response.data;
       if (data is! Map) return null;
       const note = FieldNote(Confidence.medium, 'Lu par le lecteur du serveur');

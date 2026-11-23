@@ -138,6 +138,9 @@ if (import.meta.main) {
       const response = await patiently(
         reader,
         (e) => readPicture(e, image, mediaType),
+        1500,
+        // The app waits 16 s, then keeps what the phone read.
+        14_000,
       );
       await done(
         response.unreadable ? "unreadable" : "read",

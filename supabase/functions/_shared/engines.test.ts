@@ -108,3 +108,40 @@ Deno.test("a spent daily allowance goes straight to the fallback", async () => {
   }, 0);
   assertEquals(asked, ["main", "spare"]);
 });
+
+Deno.test("the fallback models are tried in turn", async () => {
+  const e = {
+    base: "x",
+    model: "main",
+    host: "x",
+    key: "",
+    fallback: "spare-1, spare-2",
+  };
+  const asked: string[] = [];
+  const answer = await patiently(e, (x) => {
+    asked.push(x.model);
+    if (x.model !== "spare-2") throw new Error("engine 503 high demand");
+    return Promise.resolve("read");
+  }, 0);
+  assertEquals(answer, "read");
+  assertEquals(asked, ["main", "main", "spare-1", "spare-2"]);
+});
+
+Deno.test("no call starts once the time budget is spent", async () => {
+  const e = { base: "x", model: "main", host: "x", key: "", fallback: "a,b" };
+  let calls = 0;
+  await assertRejects(() =>
+    patiently(
+      e,
+      async (x) => {
+        calls++;
+        assertEquals(x.timeoutMs! <= 2_500, true);
+        await new Promise((r) => setTimeout(r, 600));
+        throw new Error("engine 503 high demand");
+      },
+      0,
+      2_500,
+    )
+  );
+  assertEquals(calls, 1);
+});
