@@ -292,6 +292,19 @@ void main() {
     });
 
     test(
+      'a server that does not answer never calls the picture unreadable',
+      () async {
+        final r = await readReceipt(
+          bytes,
+          't.jpg',
+          onDevice: gives(const ReceiptReading(unreadable: true)),
+          onServer: gives(null),
+        );
+        expect(r, isNull);
+      },
+    );
+
+    test(
       'a server that reads nothing does not erase a partial reading',
       () async {
         final r = await readReceipt(

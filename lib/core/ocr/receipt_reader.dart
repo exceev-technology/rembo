@@ -39,7 +39,10 @@ Future<ReceiptReading?> readReceipt(
   final local = onDevice == null ? null : await onDevice(bytes, name);
   if (local != null && isComplete(local)) return local;
   final remote = await onServer(bytes, name);
-  if (remote == null) return local;
+  // No answer from the server (busy, out of quota, slow network, or no
+  // server reader): that says nothing about the picture. The form opens
+  // with what the phone found, never the « unreadable » screen.
+  if (remote == null) return local == null || local.unreadable ? null : local;
   // The server found nothing either: keep whatever the phone had.
   if (remote.unreadable && local != null && !local.unreadable) return local;
   return remote;
