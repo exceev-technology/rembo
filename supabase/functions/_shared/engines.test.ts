@@ -4,6 +4,9 @@ import {
   engine,
   isGeminiNative,
   patiently,
+  toCents,
+  toRate,
+  toResponse,
   transcribeAudio,
 } from "./engines.ts";
 
@@ -144,4 +147,53 @@ Deno.test("no call starts once the time budget is spent", async () => {
     )
   );
   assertEquals(calls, 1);
+});
+
+Deno.test("an amount written with its currency or spaces is still read", () => {
+  assertEquals(toCents("21.82"), 2182);
+  assertEquals(toCents("21,82 DH"), 2182);
+  assertEquals(toCents("MAD 240"), 24000);
+  assertEquals(toCents("1 234,56"), 123456);
+  assertEquals(toCents("1.234,56"), 123456);
+  assertEquals(toCents("1,234.56"), 123456);
+  assertEquals(toCents("TVA : 21,8"), 2180);
+  assertEquals(toCents("٢٤٠,٠٠"), 24000);
+  assertEquals(toCents(240), 24000);
+});
+
+Deno.test("an amount is never guessed", () => {
+  assertEquals(toCents(null), null);
+  assertEquals(toCents(""), null);
+  assertEquals(toCents("illisible"), null);
+  assertEquals(toCents("20% 21,82"), null); // two numbers: which one?
+  assertEquals(toCents("0,00"), null);
+});
+
+Deno.test("a VAT rate written with % is kept", () => {
+  assertEquals(toRate(20), 20);
+  assertEquals(toRate("20"), 20);
+  assertEquals(toRate("20 %"), 20);
+  assertEquals(toRate("TVA 10%"), 10);
+  assertEquals(toRate("5,5"), null);
+  assertEquals(toRate(null), null);
+  const r = toResponse({
+    readable: true,
+    supplier: "Café Atlas",
+    supplier_ice: null,
+    date: "2026-11-20",
+    total: "240,00 DH",
+    vat: "40,00 DH",
+    vat_rate: "20%",
+    currency: "DH",
+  }, new Date("2026-11-24"));
+  assertEquals(r, {
+    unreadable: false,
+    supplier: "Café Atlas",
+    supplier_ice: null,
+    date: "2026-11-20",
+    amount_cents: 24000,
+    vat_cents: 4000,
+    vat_rate: 20,
+    currency: "MAD",
+  });
 });

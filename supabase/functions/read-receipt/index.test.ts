@@ -16,7 +16,8 @@ Deno.test("amounts become centimes, whatever their writing", () => {
   assertEquals(toCents("240,5"), 24050);
   assertEquals(toCents(45), 4500);
   assertEquals(toCents("0"), null);
-  assertEquals(toCents("1 240,00"), null);
+  assertEquals(toCents("1 240,00"), 124000);
+  assertEquals(toCents("12 50"), null);
   assertEquals(toCents(null), null);
 });
 
