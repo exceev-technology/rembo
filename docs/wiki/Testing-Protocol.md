@@ -33,7 +33,7 @@ These must pass before demo day. Each one is a test case with a fictional scenar
 
 | # | Control | Expected result |
 |---|---|---|
-| C1 | **Who decides**: an employee tries to approve; a manager approves their own expense | The employee is refused by the app **and** the database; the manager's decision goes through and the history names them |
+| C1 | **No self-approval**: an employee who is also a manager tries to approve their own expense | Refused by the app **and** by the database |
 | C2 | **Receipt isolation**: user B tries to open user A's receipt (direct query and Storage URL) | Access denied by RLS and Storage policies |
 | C3 | **Export consistency**: total of approved expenses vs total in the exported CSV | Totals are **identical**; every approved expense appears exactly once |
 | C4 | **Escalation**: an expense above the alert limit, and an ambiguous receipt | Both are routed to a manager with the reason shown |

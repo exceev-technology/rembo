@@ -259,7 +259,8 @@ export async function validSignature(
 
 // --- Handling one message ---------------------------------------------------
 
-type Owner = { profile_id: string; company_id: string };
+// `declares`: false for a manager of a company where managers only decide.
+type Owner = { profile_id: string; company_id: string; declares: boolean };
 
 // A database failure is thrown, never read as « no account »: the person
 // would be told their number is not linked when it is.
@@ -271,9 +272,17 @@ async function ownerOf(phone: string): Promise<Owner | null> {
   const { data: member, error: memberError } = await db().from("memberships")
     .select("company_id").eq("profile_id", link.profile_id).maybeSingle();
   if (memberError) throw memberError;
-  return member
-    ? { profile_id: link.profile_id, company_id: member.company_id }
-    : null;
+  if (!member) return null;
+  const { data: declares, error: declaresError } = await db().rpc(
+    "can_declare",
+    { p_profile: link.profile_id },
+  );
+  if (declaresError) throw declaresError;
+  return {
+    profile_id: link.profile_id,
+    company_id: member.company_id,
+    declares: declares === true,
+  };
 }
 
 async function createDraft(
@@ -350,6 +359,13 @@ async function answer(message: any, state: Handling) {
   }
   await db().from("whatsapp_messages").update({ profile_id: owner.profile_id })
     .eq("id", message.id);
+  if (!owner.declares) {
+    await reply(
+      message.from,
+      "Dans votre entreprise, les responsables ne déclarent pas de dépenses dans REMBO.",
+    );
+    return;
+  }
 
   if (message.type === "text") {
     const text = String(message.text?.body ?? "");

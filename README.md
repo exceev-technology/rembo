@@ -57,7 +57,7 @@ It is built for Morocco (amounts in **MAD**, Moroccan VAT rates and ICE) and it 
 | Accounts and roles | Employee, manager and accountant roles per company, enforced by Row Level Security | ✅ Sprint 1 |
 | Expense entry | Category, reason, client or project (free text), receipt upload to private storage | ✅ Sprint 2 |
 | Receipt capture and OCR | Text recognition on the phone (Latin script) fills a review and correction screen | ✅ Sprint 3 |
-| Approval workflow | Submit, approve or reject with a reason, expense policy, status history naming who decided | ✅ Sprint 4 |
+| Approval workflow | Submit, approve or reject with a reason, expense policy, status history, no self-approval, managers decide only unless the company lets them declare | ✅ Sprint 4 |
 | Mobile MVP | The full journey on **Android and iOS**, in French or Arabic | 🚧 Sprint 5 |
 | CSV accounting export | Approved expenses exported as a CSV; the format is still to be validated with accountants | 🗓️ Sprint 6 · built |
 | Arabic interface | The whole app in Arabic, right to left, chosen by each person | ✅ Ahead of plan |

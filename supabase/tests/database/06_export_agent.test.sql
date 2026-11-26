@@ -37,6 +37,8 @@ select public.set_auto_approve(true);
 select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 select public.create_company('Autre SARL', '', 'Rabat');
 select pg_temp.as_admin();
+-- These tests are about managers who declare their own expenses too.
+update public.companies set managers_declare = true;
 insert into public.memberships (company_id, profile_id, role)
 select c.id, m.profile_id, m.role::public.member_role
 from public.companies c, (values

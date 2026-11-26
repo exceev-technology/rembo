@@ -38,6 +38,7 @@ Expense _draft({
 Future<LocalBackend> _company(
   LocalStore store, {
   bool autoApprove = false,
+  bool managersDeclare = false,
 }) async {
   final b = await _open(store);
   await b.signUp(
@@ -47,6 +48,7 @@ Future<LocalBackend> _company(
   );
   await b.createCompany(name: 'Atelier Sara');
   if (autoApprove) await b.setAutoApprove(true);
+  if (managersDeclare) await b.setManagersDeclare(true);
   await b.invite('omar@exemple.ma', UserRole.employee);
   await b.invite('lina@exemple.ma', UserRole.accountant);
   await b.signOut();
@@ -227,13 +229,20 @@ void main() {
     },
   );
 
-  test('a manager decides on their own expense', () async {
+  test('a manager declares only when the company allows it', () async {
     final b = await _company(MemoryStore());
     await b.signIn('sara@exemple.ma', 'Secret#1');
+    await _throws(
+      () => b.saveDraft(_draft(cents: 90000), receiptBytes: _photo),
+      'ne déclarent pas',
+    );
+    await b.setManagersDeclare(true);
+    expect(await b.fetchManagersDeclare(), isTrue);
     final mine = await b.saveDraft(_draft(cents: 90000), receiptBytes: _photo);
     expect((await b.submit(mine.id)).status, ExpenseStatus.needsReview);
-    final decided = await b.decide(mine.id, approve: true);
-    expect(decided.status, ExpenseStatus.approved);
+    // Never on one's own expense, in the batch either.
+    await _throws(() => b.decide(mine.id, approve: true), 'propre dépense');
+    expect(await b.approveCompliant([mine.id]), 0);
   });
 
   test('the rules changed by the manager drive the control', () async {
@@ -327,6 +336,7 @@ void main() {
       var b = await _open(FileStore(dir));
       await b.signUp(email: 'a@b.ma', password: 'Secret#1', fullName: 'A');
       await b.createCompany(name: 'Atelier A');
+      await b.setManagersDeclare(true);
       final d = await b.saveDraft(_draft(), receiptBytes: _photo);
       expect(File('${dir.path}/rembo.json').existsSync(), isTrue);
       expect(File('${dir.path}/rembo.json.tmp').existsSync(), isFalse);

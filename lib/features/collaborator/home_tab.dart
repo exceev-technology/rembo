@@ -4,6 +4,7 @@ import '../../app/app_routes.dart';
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../shell/role_shell.dart';
+import '../manager/decision_screen.dart';
 import '../whatsapp/whatsapp_expense_screen.dart';
 import 'expense_detail_screen.dart';
 
@@ -16,6 +17,7 @@ class HomeTab extends StatelessWidget {
     final state = AppScope.of(context);
     final user = state.user;
     if (user == null) return const SizedBox.shrink();
+    if (!state.canDeclare) return const _DecisionHome();
     final mine = state.mine;
     final drafts = mine.where((e) => e.status == ExpenseStatus.draft).length;
     final rejected = mine
@@ -213,6 +215,140 @@ class HomeTab extends StatelessWidget {
   ];
 }
 
+/// A manager who does not declare expenses: only what waits for a
+/// decision, nothing to capture.
+class _DecisionHome extends StatelessWidget {
+  const _DecisionHome();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final user = state.user!;
+    final exceptions = state.exceptions.length;
+    final compliant = state.compliantToConfirm.length;
+    final pending = state.toReview;
+    return RemboPage(
+      logo: true,
+      embedded: true,
+      showBack: false,
+      onRefresh: state.refresh,
+      trailing: IconButton(
+        key: const ValueKey('home-bell'),
+        tooltip: tr('Activité'),
+        icon: Badge(
+          isLabelVisible: state.unreadCount > 0,
+          backgroundColor: RemboColors.indigo,
+          child: const Icon(Icons.notifications_none_rounded),
+        ),
+        color: RemboColors.night,
+        onPressed: () => ShellTabs.goTo(context, ShellTab.activity),
+      ),
+      children: [
+        if (state.loadError != null) ...[
+          RemboMessage(
+            tone: MessageTone.error,
+            title: tr('Chargement impossible'),
+            message: state.loadError!.message,
+            action: TextButton(
+              key: const ValueKey('retry'),
+              onPressed: state.refresh,
+              child: Text(tr('Réessayer')),
+            ),
+          ),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        RemboHero(
+          title: tr('Bonjour {firstName}', {'firstName': user.firstName}),
+        ),
+        // A new company: nobody can declare yet.
+        if (state.membersLoaded &&
+            !state.members.any(
+              (m) => m.email.toLowerCase() != user.email.toLowerCase(),
+            )) ...[
+          _Callout(
+            key: const ValueKey('home-invite-team'),
+            icon: Icons.person_add_alt_1_outlined,
+            text: tr('Invitez votre équipe'),
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.team),
+          ),
+          const SizedBox(height: RemboSpace.sm),
+        ],
+        if (pending.isNotEmpty) ...[
+          _Callout(
+            key: const ValueKey('home-to-review'),
+            icon: Icons.layers_outlined,
+            text: pending.length == 1
+                ? tr('1 dépense attend votre décision')
+                : tr('{toDecide} dépenses attendent votre décision', {
+                    'toDecide': pending.length,
+                  }),
+            onTap: () => ShellTabs.goTo(context, ShellTab.exceptions),
+          ),
+          const SizedBox(height: RemboSpace.lg),
+        ] else if (!state.loading && state.loadError == null) ...[
+          RemboMessage(
+            key: const ValueKey('home-nothing-to-decide'),
+            tone: MessageTone.success,
+            title: tr('Aucune dépense n’attend votre décision.'),
+          ),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: _Stat(
+                Icons.warning_amber_rounded,
+                exceptions,
+                tr('Exceptions'),
+                tab: ShellTab.exceptions,
+              ),
+            ),
+            const SizedBox(width: RemboSpace.md),
+            Expanded(
+              child: _Stat(
+                Icons.verified_outlined,
+                compliant,
+                tr('Conformes'),
+                tab: ShellTab.exceptions,
+              ),
+            ),
+          ],
+        ),
+        if (pending.isNotEmpty) ...[
+          SectionTitle(
+            tr('À décider'),
+            action: tr('Voir tout'),
+            onAction: () => ShellTabs.goTo(context, ShellTab.exceptions),
+          ),
+          for (final e in pending.take(4))
+            ExpenseTile(
+              e,
+              key: ValueKey('home-decide-${e.id}'),
+              title: e.employeeName,
+              subtitle: e.reason,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => DecisionScreen(expenseId: e.id),
+                ),
+              ),
+            ),
+        ],
+        // Expenses declared before the setting was turned off stay readable.
+        if (state.mine.isNotEmpty) ...[
+          const SizedBox(height: RemboSpace.md),
+          Center(
+            child: TextButton(
+              key: const ValueKey('home-my-expenses'),
+              onPressed: () => HomeTab._openList(context, state),
+              child: Text(tr('Mes dépenses')),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 /// The « Dépenses » list as a pushed screen, for roles without that tab.
 class MyExpensesScreen extends StatelessWidget {
   const MyExpensesScreen({super.key});
@@ -273,16 +409,24 @@ class _Callout extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.icon, this.count, this.label);
+  const _Stat(
+    this.icon,
+    this.count,
+    this.label, {
+    this.tab = ShellTab.expenses,
+  });
   final IconData icon;
   final int count;
   final String label;
+
+  /// The tab opened by a tap.
+  final ShellTab tab;
 
   @override
   Widget build(BuildContext context) => RemboCard(
     color: RemboColors.surface,
     borderColor: Colors.transparent,
-    onTap: () => ShellTabs.goTo(context, ShellTab.expenses),
+    onTap: () => ShellTabs.goTo(context, tab),
     child: Row(
       children: [
         Icon(icon, color: RemboColors.indigo, size: 28),

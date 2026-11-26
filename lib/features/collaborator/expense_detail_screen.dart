@@ -4,7 +4,7 @@ import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../expenses/expense_form_screen.dart';
 import '../expenses/receipt_view.dart';
-import '../manager/decision_screen.dart';
+import '../manager/alone_manager_notice.dart';
 import '../whatsapp/whatsapp.dart';
 import '../whatsapp/whatsapp_expense_screen.dart';
 import 'decision_explanation_screen.dart';
@@ -135,19 +135,8 @@ class ExpenseDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: RemboSpace.lg),
         ],
-        // The manager decides on their own expense as on the others.
-        if (state.role == UserRole.manager &&
-            e.status == ExpenseStatus.needsReview) ...[
-          RemboPrimaryButton(
-            key: const ValueKey('detail-decide'),
-            label: tr('Décider'),
-            icon: Icons.fact_check_outlined,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => DecisionScreen(expenseId: e.id),
-              ),
-            ),
-          ),
+        if (AloneManagerNotice.appliesTo(state, e)) ...[
+          AloneManagerNotice(expense: e),
           const SizedBox(height: RemboSpace.lg),
         ],
         for (final f in e.flags)

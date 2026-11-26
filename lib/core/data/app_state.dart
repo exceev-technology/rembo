@@ -34,6 +34,13 @@ class AppState extends ChangeNotifier {
   /// The control approves compliant expenses itself (company setting).
   bool autoApprove = false;
 
+  /// Managers declare their own expenses too (company setting).
+  bool managersDeclare = false;
+
+  /// This person may declare expenses: a manager only when the company
+  /// allows it. The server applies the same rule.
+  bool get canDeclare => role != UserRole.manager || managersDeclare;
+
   /// Accounting account of each category (company setting).
   Map<String, String> accounts = const {};
   bool loading = false;
@@ -159,6 +166,8 @@ class AppState extends ChangeNotifier {
     exports = const [];
     policies = const [];
     accounts = const {};
+    autoApprove = false;
+    managersDeclare = false;
     _read.clear();
     _readUntil = null;
     _readUntilOf = null;
@@ -202,6 +211,7 @@ class AppState extends ChangeNotifier {
         members = await backend.fetchMembers();
         membersLoaded = true;
         autoApprove = await backend.fetchAutoApprove();
+        managersDeclare = await backend.fetchManagersDeclare();
       }
       if (role == UserRole.accountant) exports = await backend.fetchExports();
       if (role != UserRole.employee) accounts = await backend.fetchAccounts();
@@ -237,11 +247,17 @@ class AppState extends ChangeNotifier {
       .where((e) => e.fromWhatsApp && e.status == ExpenseStatus.draft)
       .toList();
 
-  /// Waiting for a manager's decision, the manager's own expenses included:
-  /// the history names who decided.
+  /// Waiting for this manager's decision. Never their own expenses: another
+  /// manager decides on those.
   List<Expense> get toReview => role != UserRole.manager
       ? const []
-      : expenses.where((e) => e.status == ExpenseStatus.needsReview).toList();
+      : expenses
+            .where(
+              (e) =>
+                  e.status == ExpenseStatus.needsReview &&
+                  e.employeeId != user?.id,
+            )
+            .toList();
 
   /// Waiting only for a manager's confirmation: nothing was found.
   List<Expense> get compliantToConfirm =>
@@ -330,6 +346,12 @@ class AppState extends ChangeNotifier {
   Future<void> setAutoApprove(bool on) async {
     await backend.setAutoApprove(on);
     autoApprove = on;
+    notifyListeners();
+  }
+
+  Future<void> setManagersDeclare(bool on) async {
+    await backend.setManagersDeclare(on);
+    managersDeclare = on;
     notifyListeners();
   }
 

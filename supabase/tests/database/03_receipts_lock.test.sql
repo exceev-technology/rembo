@@ -50,6 +50,8 @@ select ok(public.accept_invitation(), 'Karim joins as manager');
 -- The control approves compliant expenses here (by default a manager
 -- confirms them, see 03_validation_mode): this test is about the lock.
 select pg_temp.as_admin();
+-- These tests are about managers who declare their own expenses too.
+update public.companies set managers_declare = true;
 update public.companies set auto_approve = true;
 
 -- A receipt while its expense is a draft --------------------------------------
