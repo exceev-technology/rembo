@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../log.dart';
+import 'encrypted_store.dart';
 import 'local_store.dart';
 
 /// Files in the app's private folder. The document is replaced in one
@@ -48,7 +53,29 @@ class FileStore implements LocalStore {
   }
 }
 
+/// The app's files, encrypted with a key kept in the phone's key store
+/// (Android Keystore, iOS Keychain).
 Future<LocalStore?> openDeviceStore() async {
   final base = await getApplicationSupportDirectory();
-  return FileStore(Directory('${base.path}/rembo'));
+  final files = FileStore(Directory('${base.path}/rembo'));
+  try {
+    return EncryptedStore(files, await _deviceKey());
+  } catch (e, st) {
+    // No key store on this device (rare): the data stays as before.
+    logFailure('no key store: local data kept unencrypted', e, st);
+    return files;
+  }
+}
+
+/// Created once, on first use, and never written anywhere else.
+Future<SecretKey> _deviceKey() async {
+  const storage = FlutterSecureStorage();
+  const name = 'rembo_local_store_key';
+  var encoded = await storage.read(key: name);
+  if (encoded == null) {
+    final key = await AesGcm.with256bits().newSecretKey();
+    encoded = base64Encode(await key.extractBytes());
+    await storage.write(key: name, value: encoded);
+  }
+  return SecretKey(base64Decode(encoded));
 }

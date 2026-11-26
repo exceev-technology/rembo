@@ -19,8 +19,15 @@ const arabic = <String, String>{
   'Dépense introuvable.': 'المصروف غير موجود.',
   'Créez ou rejoignez d’abord une entreprise.':
       'أنشئ شركة أو انضم إلى شركة أولا.',
+  '{company} vous invite': '{company} تدعوك',
+  'Votre rôle : {role}.': 'دورك: {role}.',
+  'Rejoindre l’entreprise': 'الانضمام إلى الشركة',
+  'Ou créez votre propre entreprise :': 'أو أنشئ شركتك الخاصة:',
+  'Cette invitation n’est plus valable.': 'لم تعد هذه الدعوة صالحة.',
   'Cette dépense ne peut plus être modifiée.':
       'لم يعد ممكنا تعديل هذا المصروف.',
+  'Ce justificatif est verrouillé : la dépense a été soumise.':
+      'هذا الإثبات مقفل: تم إرسال المصروف.',
   'Seul un brouillon peut être supprimé.': 'لا يمكن حذف إلا المسودات.',
   'Vous ne pouvez soumettre que vos dépenses.': 'لا يمكنك إرسال إلا مصاريفك.',
   'Complétez d’abord : {join}.': 'أكمل أولا: {join}.',
@@ -393,9 +400,6 @@ const arabic = <String, String>{
   'Dépense traitée': 'مصروف معالج',
   'Le contrôle automatique a relevé un point.': 'رصدت المراقبة الآلية نقطة.',
   'Statut actuel : {label}.': 'الحالة الحالية: {label}.',
-  'C’est votre dépense': 'هذا مصروفك',
-  'Un autre responsable doit prendre la décision.':
-      'يجب أن يتخذ القرار مسؤول آخر.',
   'Règle interne {category} : {limitCents}':
       'القاعدة الداخلية {category}: {limitCents}',
   'Justification de la décision': 'تعليل القرار',
@@ -474,6 +478,15 @@ const arabic = <String, String>{
   'Ouvrir WhatsApp': 'فتح واتساب',
   'WhatsApp n’a pas pu être ouvert.': 'تعذر فتح واتساب.',
   'Retirer mon numéro': 'حذف رقمي',
+  'Obtenez un code à usage unique.': 'احصل على رمز يُستعمل مرة واحدة.',
+  'Envoyez « LIER » suivi du code depuis votre WhatsApp : ce numéro est relié.':
+      'أرسل «LIER» متبوعة بالرمز من واتساب: يُربط هذا الرقم.',
+  'Obtenir un code': 'الحصول على رمز',
+  'Envoyez ce message depuis votre WhatsApp :': 'أرسل هذه الرسالة من واتساب:',
+  'Valable jusqu’à {time}.': 'صالح حتى {time}.',
+  'J’ai envoyé le code': 'أرسلت الرمز',
+  'Pas encore reçu. Envoyez le message, puis réessayez.':
+      'لم يصل بعد. أرسل الرسالة ثم أعد المحاولة.',
   'Démonstration : aucun message n’est réellement reçu. Une dépense d’exemple vous attend sur l’accueil.':
       'عرض تجريبي: لا تستقبل أي رسالة فعليا. ينتظرك مصروف نموذجي في الرئيسية.',
   'WhatsApp demande un serveur : il sera disponible quand votre entreprise sera connectée à REMBO en ligne.': 'واتساب يحتاج إلى خادم: سيصبح متاحا عندما تتصل شركتك بـREMBO عبر الإنترنت.',

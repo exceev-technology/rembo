@@ -315,6 +315,31 @@ class AppUser {
       fullName.trim().isEmpty ? '?' : fullName.trim()[0].toUpperCase();
 }
 
+/// A company waiting for the signed-in person to join it, with the role
+/// it gives them. Joined only when the person accepts.
+class CompanyInvitation {
+  const CompanyInvitation({required this.companyName, required this.role});
+  final String companyName;
+  final UserRole role;
+}
+
+/// One-time code that links a WhatsApp number: the person sends
+/// « LIER [code] » from that number before [expiresAt].
+class WhatsAppLinkCode {
+  const WhatsAppLinkCode({required this.code, required this.expiresAt});
+  final String code;
+  final DateTime expiresAt;
+
+  /// The message to send, as typed in WhatsApp.
+  String get message => 'LIER $code';
+
+  factory WhatsAppLinkCode.fromJson(Map<String, dynamic> json) =>
+      WhatsAppLinkCode(
+        code: json['code'] as String,
+        expiresAt: DateTime.parse(json['expires_at'] as String).toLocal(),
+      );
+}
+
 class Member {
   const Member({
     required this.name,

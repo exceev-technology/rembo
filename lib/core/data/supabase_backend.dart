@@ -10,6 +10,7 @@ import 'csv_export.dart';
 import 'ids.dart';
 import 'models.dart';
 import '../l10n/l10n.dart';
+import '../log.dart';
 
 /// Real backend. Rights are enforced by the database (row level security)
 /// and every decision is taken by an SQL function: see supabase/migrations.
@@ -101,17 +102,12 @@ class SupabaseBackend extends RemboBackend {
   Future<AppUser?> _loadUser() async {
     final auth = _client.auth.currentUser;
     if (auth == null) return _user = null;
-    Future<Map<String, dynamic>?> membership() => _client
+    // An invitation is joined only on the person's answer (acceptInvitation).
+    final m = await _client
         .from('memberships')
         .select('role, company_id, companies(name)')
         .eq('profile_id', auth.id)
         .maybeSingle();
-    var m = await membership();
-    if (m == null) {
-      // Joins the company that invited this (confirmed) address, if any.
-      final joined = await _client.rpc<dynamic>('accept_invitation');
-      if (joined == true) m = await membership();
-    }
     final link = await _client
         .from('whatsapp_links')
         .select('phone')
@@ -163,7 +159,8 @@ class SupabaseBackend extends RemboBackend {
     _user = null;
     try {
       await _client.auth.signOut();
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('sign out on the server', e, st);
       // The local session is cleared even when the server is unreachable.
     }
   }
@@ -178,6 +175,26 @@ class SupabaseBackend extends RemboBackend {
       'create_company',
       params: {'p_name': name.trim(), 'p_ice': ice, 'p_city': city},
     );
+    return (await _loadUser())!;
+  });
+
+  @override
+  Future<CompanyInvitation?> pendingInvitation() => _guard(() async {
+    final rows = await _client.rpc<dynamic>('my_invitation') as List? ?? [];
+    if (rows.isEmpty) return null;
+    final row = Map<String, dynamic>.from(rows.first as Map);
+    return CompanyInvitation(
+      companyName: row['company_name'] as String,
+      role: UserRole.parse(row['role'] as String?),
+    );
+  });
+
+  @override
+  Future<AppUser> acceptInvitation() => _guard(() async {
+    final joined = await _client.rpc<dynamic>('accept_invitation');
+    if (joined != true) {
+      throw RemboException(tr('Cette invitation n’est plus valable.'));
+    }
     return (await _loadUser())!;
   });
 
@@ -237,13 +254,23 @@ class SupabaseBackend extends RemboBackend {
       };
       // One object per expense, in the owner's folder (see storage rules).
       final path = '$_uid/$id';
-      await _client.storage
-          .from(_bucket)
-          .uploadBinary(
-            path,
-            receiptBytes,
-            fileOptions: FileOptions(upsert: true, contentType: type),
+      try {
+        await _client.storage
+            .from(_bucket)
+            .uploadBinary(
+              path,
+              receiptBytes,
+              fileOptions: FileOptions(upsert: true, contentType: type),
+            );
+      } on StorageException catch (e) {
+        // The storage rules lock the receipt of a submitted expense.
+        if (isLockedReceipt(e)) {
+          throw RemboException(
+            tr('Ce justificatif est verrouillé : la dépense a été soumise.'),
           );
+        }
+        rethrow;
+      }
       await _updateEditable(id, {'receipt_path': path});
     }
     return _one(id);
@@ -270,7 +297,8 @@ class SupabaseBackend extends RemboBackend {
     if (e.hasReceipt) {
       try {
         await _client.storage.from(_bucket).remove([e.receiptPath!]);
-      } catch (_) {
+      } catch (e, st) {
+        logFailure('orphan receipt not removed', e, st);
         // An orphan picture is harmless; the row is gone.
       }
     }
@@ -319,7 +347,8 @@ class SupabaseBackend extends RemboBackend {
         amountCents: (data['amount_cents'] as num?)?.toInt(),
         vatCents: (data['vat_cents'] as num?)?.toInt(),
       );
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('receipt reading', e, st);
       return null; // No reading: the person types the values.
     }
   }
@@ -331,7 +360,8 @@ class SupabaseBackend extends RemboBackend {
       return await _client.storage
           .from(_bucket)
           .createSignedUrl(expense.receiptPath!, 300);
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('receipt link', e, st);
       return null;
     }
   }
@@ -343,31 +373,22 @@ class SupabaseBackend extends RemboBackend {
       return await _client.storage
           .from(_bucket)
           .createSignedUrl(expense.voicePath!, 300);
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('voice note link', e, st);
       return null;
     }
   }
 
   @override
-  Future<AppUser> linkWhatsApp(String? phone) => _guard(() async {
-    if (phone == null) {
-      await _client.from('whatsapp_links').delete().eq('profile_id', _uid);
-    } else {
-      try {
-        await _client.from('whatsapp_links').upsert({
-          'profile_id': _uid,
-          'phone': phone,
-        });
-      } on PostgrestException catch (e) {
-        if (e.code == '23505') {
-          throw RemboException(
-            tr('Ce numéro est déjà relié à un autre compte.'),
-          );
-        }
-        rethrow;
-      }
-    }
-    return _user = _user!.withWhatsApp(phone);
+  Future<WhatsAppLinkCode> requestWhatsAppCode() => _guard(() async {
+    final row = await _client.rpc<dynamic>('create_whatsapp_link_code');
+    return WhatsAppLinkCode.fromJson(Map<String, dynamic>.from(row as Map));
+  });
+
+  @override
+  Future<AppUser> unlinkWhatsApp() => _guard(() async {
+    await _client.from('whatsapp_links').delete().eq('profile_id', _uid);
+    return _user = _user!.withWhatsApp(null);
   });
 
   // Company ---------------------------------------------------------------
@@ -475,3 +496,9 @@ class SupabaseBackend extends RemboBackend {
     return [for (final r in rows) ExportBatch.fromJson(r)];
   });
 }
+
+/// True when Storage refused a write by its row level security rules. For a
+/// receipt in its owner's folder, that means its expense was submitted.
+bool isLockedReceipt(StorageException e) =>
+    e.statusCode == '403' ||
+    e.message.toLowerCase().contains('row-level security');

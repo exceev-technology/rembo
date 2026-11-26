@@ -27,5 +27,9 @@ jobs:
           deny-licenses: GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
           # Packages whose license is fine but reported as a non-SPDX id, which fails the check.
           # Verify the license by hand before adding one. cupertino_icons: MIT, reported as "mit".
-          allow-dependencies-licenses: pkg:pub/cupertino_icons
+          # Checked 2026-11-23 in each package's LICENSE: dbus is MPL-2.0, all the others MIT
+          # (file_picker and its platform packages, pdfx, petitparser, synchronized, xml).
+          # Checked 2026-11-26: flutter_secure_storage and its platform packages are BSD-3-Clause.
+          allow-dependencies-licenses: >-
+            pkg:pub/cupertino_icons, pkg:pub/android_file_picker, pkg:pub/dbus, pkg:pub/file_picker, pkg:pub/file_picker_darwin, pkg:pub/file_picker_linux, pkg:pub/file_picker_platform_interface, pkg:pub/file_picker_web, pkg:pub/flutter_secure_storage, pkg:pub/flutter_secure_storage_darwin, pkg:pub/flutter_secure_storage_linux, pkg:pub/flutter_secure_storage_platform_interface, pkg:pub/pdfx, pkg:pub/petitparser, pkg:pub/synchronized, pkg:pub/windows_file_picker, pkg:pub/xml
           comment-summary-in-pr: on-failure

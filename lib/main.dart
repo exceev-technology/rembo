@@ -5,6 +5,7 @@ import 'core/data/app_state.dart';
 import 'core/data/backend_factory.dart';
 import 'core/l10n/l10n.dart';
 import 'core/motion/rembo_motion.dart';
+import 'features/expenses/receipt_picker.dart';
 import 'features/onboarding/splash_screen.dart';
 
 void main() {
@@ -15,7 +16,11 @@ void main() {
 /// Draws at once, then prepares the app behind the logo: opening the
 /// backend and restoring the session may take a few seconds on a phone.
 class RemboBoot extends StatefulWidget {
-  const RemboBoot({super.key});
+  const RemboBoot({super.key, this.receiptPicker = pickWithDevice});
+
+  /// How the screens obtain a receipt; a test on a phone hands over a
+  /// picture instead.
+  final ReceiptPicker receiptPicker;
 
   @override
   State<RemboBoot> createState() => _RemboBootState();
@@ -56,7 +61,7 @@ class _RemboBootState extends State<RemboBoot> {
           // Built behind the opening as soon as it is ready, so that
           // nothing has to be prepared once the light has spread.
           if (state != null)
-            RemboApp(state: state)
+            RemboApp(state: state, receiptPicker: widget.receiptPicker)
           else
             const ColoredBox(color: SplashScreen.night),
           AnimatedSwitcher(

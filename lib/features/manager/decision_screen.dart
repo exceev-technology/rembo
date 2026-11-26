@@ -71,7 +71,8 @@ class _DecisionScreenState extends State<DecisionScreen> {
     final state = AppScope.of(context);
     final e = state.byId(widget.expenseId);
     if (e == null) return const RemboPage(children: []);
-    final own = e.employeeId == state.user?.id;
+    // Never shown for the manager's own expense: the lists that open this
+    // screen leave it out, and decide_expense refuses it on the server.
     final open = e.status == ExpenseStatus.needsReview;
     final rule = state.policyOf(e.category);
 
@@ -85,13 +86,13 @@ class _DecisionScreenState extends State<DecisionScreen> {
                   key: const ValueKey('decision-approve'),
                   label: tr('Approuver l’exception'),
                   loading: _loading,
-                  onPressed: own ? null : () => _decide(approve: true),
+                  onPressed: () => _decide(approve: true),
                 ),
                 const SizedBox(height: RemboSpace.sm),
                 RemboSecondaryButton(
                   key: const ValueKey('decision-reject'),
                   label: tr('Rejeter'),
-                  onPressed: own || _loading ? null : () => _reject(e),
+                  onPressed: _loading ? null : () => _reject(e),
                 ),
               ],
             ),
@@ -103,15 +104,6 @@ class _DecisionScreenState extends State<DecisionScreen> {
               : tr('Statut actuel : {label}.', {'label': e.status.label}),
           illustration: RemboArt.warning,
         ),
-        if (own) ...[
-          RemboMessage(
-            key: ValueKey('decision-own'),
-            tone: MessageTone.info,
-            title: tr('C’est votre dépense'),
-            message: tr('Un autre responsable doit prendre la décision.'),
-          ),
-          const SizedBox(height: RemboSpace.lg),
-        ],
         if (_failure != null) ...[
           RemboMessage(tone: MessageTone.error, title: _failure!),
           const SizedBox(height: RemboSpace.lg),
@@ -206,7 +198,7 @@ class _DecisionScreenState extends State<DecisionScreen> {
             ],
           ),
         ),
-        if (open && !own) ...[
+        if (open) ...[
           const SizedBox(height: RemboSpace.lg),
           RemboTextField(
             fieldKey: const ValueKey('decision-note'),

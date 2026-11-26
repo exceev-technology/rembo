@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import 'export_tab.dart';
+import '../../core/log.dart';
 
 /// « Export prêt » : the file exists; save or share it.
 class ExportReadyScreen extends StatelessWidget {
@@ -30,7 +31,8 @@ class ExportReadyScreen extends StatelessWidget {
           subject: batch.fileName,
         ),
       );
-    } catch (_) {
+    } catch (e, st) {
+      logFailure('CSV not shared, copied instead', e, st);
       if (!context.mounted) return;
       await Clipboard.setData(ClipboardData(text: csv));
       if (!context.mounted) return;

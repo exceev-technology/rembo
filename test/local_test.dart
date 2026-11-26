@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rembo/app/rembo_app.dart';
 import 'package:rembo/core/data/app_state.dart';
-import 'package:rembo/core/data/demo_backend.dart';
+import 'package:rembo/core/data/local_backend.dart';
 import 'package:rembo/core/data/local_store.dart';
 import 'package:rembo/core/data/local_store_io.dart';
 import 'package:rembo/core/data/models.dart';
@@ -50,12 +50,14 @@ Future<LocalBackend> _company(LocalStore store) async {
     password: 'Secret#2',
     fullName: 'Omar',
   );
+  await b.acceptInvitation();
   await b.signOut();
   await b.signUp(
     email: 'lina@exemple.ma',
     password: 'Secret#3',
     fullName: 'Lina',
   );
+  await b.acceptInvitation();
   await b.signOut();
   return b;
 }

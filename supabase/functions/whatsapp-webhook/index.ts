@@ -1,6 +1,9 @@
 // WhatsApp → REMBO. Receives the messages of the WhatsApp Cloud API and
 // turns them into draft expenses of the person who linked that number.
 //
+//   « LIER 123456 »                            → links the sender's number to
+//                                                the account that asked for
+//                                                that code in the app
 //   text   « Taxi, 45 dirhams, client Atlas »  → draft, summary sent back
 //   « oui »                                    → latest draft is submitted
 //   voice note                                 → stored; transcribed only
@@ -45,10 +48,16 @@ export type Parsed = {
   reason: string;
 };
 
+/** An amount as people type it: 45, 45.5, 45,50. */
+const NUMBER = String.raw`(\d{1,7})(?:[.,](\d{1,2}))?`;
+
 /** Reads what it can from a short sentence; missing parts stay empty. */
 export function parseMessage(text: string): Parsed {
   const clean = text.trim().replace(/\s+/g, " ");
-  const amount = clean.match(/(\d{1,7})(?:[.,](\d{1,2}))?\s*(?:dhs?|dirhams?|mad|درهم)?/i);
+  // The number written with a currency is the amount (« 2 taxis, 45 dh »
+  // costs 45); without one, the first number.
+  const amount = clean.match(new RegExp(`${NUMBER}\\s*(?:dhs?|dirhams?|mad|درهم)(?![a-z])`, "i")) ??
+    clean.match(new RegExp(NUMBER));
   const amountCents = amount
     ? parseInt(amount[1], 10) * 100 + parseInt((amount[2] ?? "0").padEnd(2, "0"), 10)
     : 0;
@@ -66,6 +75,7 @@ export function parseMessage(text: string): Parsed {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 const isYes = (t: string) => /^\s*(oui|ok|d'accord|wah|ah|iyeh|نعم|واه)\s*[.!]?\s*$/i.test(t);
+const linkCode = (t: string) => /^\s*lier\s+(\d{6})\s*$/i.exec(t)?.[1] ?? null;
 const mad = (cents: number) =>
   `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")} MAD`;
 
@@ -117,7 +127,8 @@ async function transcribe(audio: Uint8Array<ArrayBuffer>, type: string): Promise
     });
     if (!res.ok) return "";
     return String((await res.json()).text ?? "").slice(0, 500);
-  } catch {
+  } catch (e) {
+    console.error("transcription failed", e);
     return "";
   }
 }
@@ -210,11 +221,15 @@ type Handling = { wrote: boolean };
 // deno-lint-ignore no-explicit-any
 async function answer(message: any, state: Handling) {
   const from = `+${message.from}`;
+  // A number not linked yet may send its code: checked before the owner.
+  const code = message.type === "text" ? linkCode(String(message.text?.body ?? "")) : null;
+  if (code) return linkNumber(from, code, message.from, state);
   const owner = await ownerOf(from);
   if (!owner) {
     await reply(
       message.from,
-      "Ce numéro n’est relié à aucun compte REMBO. Ouvrez l’application → Profil → WhatsApp.",
+      "Ce numéro n’est relié à aucun compte REMBO. Ouvrez l’application → Profil → WhatsApp " +
+        "pour obtenir un code, puis envoyez « LIER » suivi du code.",
     );
     return;
   }
@@ -276,6 +291,28 @@ async function answer(message: any, state: Handling) {
   }
 
   await reply(message.from, "Envoyez un message, une note vocale ou la photo d’un ticket.");
+}
+
+const LINK_REPLIES: Record<string, string> = {
+  linked: "Numéro relié à votre compte REMBO. Vous pouvez envoyer vos dépenses ici.",
+  expired:
+    "Ce code a expiré. Demandez un nouveau code dans l’application → Profil → WhatsApp.",
+  invalid:
+    "Code inconnu. Vérifiez-le, ou demandez un nouveau code dans l’application → Profil → WhatsApp.",
+  too_many: "Trop d’essais depuis ce numéro. Réessayez dans une heure.",
+};
+
+// The server checks the code and links the number it came from: the person
+// proves they hold the number, nobody can link someone else's.
+async function linkNumber(phone: string, code: string, to: string, state: Handling) {
+  const { data, error } = await db.rpc("claim_whatsapp_link", {
+    p_phone: phone,
+    p_code: code,
+  });
+  if (error) throw error;
+  // The code is used up (or the attempt counted): never claim it twice.
+  state.wrote = true;
+  await reply(to, LINK_REPLIES[String(data)] ?? LINK_REPLIES.invalid);
 }
 
 async function confirmLatest(owner: Owner, to: string, state: Handling) {
