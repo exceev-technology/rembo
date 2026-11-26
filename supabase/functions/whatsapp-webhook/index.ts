@@ -527,6 +527,16 @@ if (import.meta.main) {
     let failed = false;
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
+        // Meta accepts a reply, then reports here when it could not deliver
+        // it: without this line the failure is invisible.
+        for (const status of change.value?.statuses ?? []) {
+          if (status?.status === "failed") {
+            console.error(
+              "reply not delivered",
+              JSON.stringify(status.errors ?? []),
+            );
+          }
+        }
         for (const message of change.value?.messages ?? []) {
           try {
             await handle(message);
