@@ -77,12 +77,14 @@ Mise en service (environ 15 min, numéro de test gratuit de Meta) :
 1. **developers.facebook.com** → Créer une app → cas d’usage « Se connecter avec les clients via WhatsApp » (type Business) → produit **WhatsApp** → *Configuration de l’API* : relevez l’**identifiant du numéro de test**, ajoutez votre propre numéro comme destinataire autorisé (5 au plus).
 2. Jeton d’accès : celui de la page expire en 24 h ; pour durer, *Paramètres Business* → *Utilisateurs système* → jeton avec `whatsapp_business_messaging` et `whatsapp_business_management`. Secret de l’app : *Paramètres de l’app → Général*. Inventez un jeton de vérification.
 3. `supabase secrets set WHATSAPP_TOKEN=… WHATSAPP_PHONE_NUMBER_ID=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…` (tapez-les vous-même : ils ne vont jamais dans le dépôt).
+   Pour vérifier la ligne de bout en bout (jeton, numéro, abonnement de l’app au compte WhatsApp Business, webhook) sans afficher les secrets, rangés dans `~/.config/rembo/whatsapp.env` : `python3 tool/whatsapp/diagnose.py --compte <id du compte WhatsApp Business>` (`--envoyer 2126…` envoie en plus le modèle « hello_world »).
 4. `supabase functions deploy whatsapp-webhook --no-verify-jwt` (la fonction vérifie elle-même la signature de Meta ; les messages non signés sont refusés).
 5. Console Meta → *WhatsApp → Configuration* → webhook : `https://<ref>.supabase.co/functions/v1/whatsapp-webhook`, même jeton de vérification, abonnement au champ **messages**.
 6. Dans l’application, chacun relie son numéro (Profil → WhatsApp) ; `REMBO_WHATSAPP_NUMBER` dans `.env` affiche « Ouvrir WhatsApp ».
 
 Ce que la fonction comprend :
 - **Texte** (« Taxi, 45 dirhams, client Atlas ») : montant, catégorie par mots-clés, client ou projet ; résumé renvoyé, « oui » soumet.
+- **Fil de la conversation** : chaque message est lu par **l’agent de conversation** (`whatsapp-webhook/conversation.ts`, moteur des reçus), avec les échanges du jour (`whatsapp_turns`, oubliés après 30 jours) et le dernier brouillon. « Il manque le client Marjane » ou « c’était 50 dh » complètent ce brouillon, « annule » le supprime, une autre dépense en crée un nouveau. Sans moteur, des règles simples font de même pour un client ou un projet ajouté et pour « annule ».
 - **Photo** : gardée comme justificatif et **lue par le moteur de reçus** (`RECEIPT_API_URL`, le même que `read-receipt`) : fournisseur, ICE, date, montant, TVA, devise ; la légende ajoute le contexte. Sans moteur, brouillon à compléter.
 ### Moteur d’IA retenu : Gemini (Google AI Studio)
 
