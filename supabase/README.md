@@ -83,6 +83,7 @@ Mise en service (environ 15 min, numéro de test gratuit de Meta) :
 
 Ce que la fonction comprend :
 - **Texte** (« Taxi, 45 dirhams, client Atlas ») : montant, catégorie par mots-clés, client ou projet ; résumé renvoyé, « oui » soumet.
+- **Fil de la conversation** : chaque message est lu par **l’agent de conversation** (`whatsapp-webhook/conversation.ts`, moteur des reçus), avec les échanges du jour (`whatsapp_turns`, oubliés après 30 jours) et le dernier brouillon. « Il manque le client Marjane » ou « c’était 50 dh » complètent ce brouillon, « annule » le supprime, une autre dépense en crée un nouveau. Sans moteur, des règles simples font de même pour un client ou un projet ajouté et pour « annule ».
 - **Photo** : gardée comme justificatif et **lue par le moteur de reçus** (`RECEIPT_API_URL`, le même que `read-receipt`) : fournisseur, ICE, date, montant, TVA, devise ; la légende ajoute le contexte. Sans moteur, brouillon à compléter.
 ### Moteur d’IA retenu : Gemini (Google AI Studio)
 

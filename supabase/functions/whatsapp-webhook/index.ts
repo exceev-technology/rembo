@@ -5,6 +5,11 @@
 //                                                the account that asked for
 //                                                that code in the app
 //   text   « Taxi, 45 dirhams, client Atlas »  → draft, summary sent back
+//   « il manque le client Marjane »            → that draft is completed
+//   « annule »                                 → that draft is deleted
+//                                                (the conversation agent
+//                                                reads each message with the
+//                                                day's turns: conversation.ts)
 //   « oui »                                    → latest draft is submitted
 //   voice note                                 → stored and transcribed
 //                                                (Gemini), then read as text
@@ -37,6 +42,14 @@ import {
   readPicture,
   transcribeAudio,
 } from "../_shared/engines.ts";
+import {
+  applyUpdate,
+  type Draft,
+  followUpByRules,
+  type Turn,
+  understand,
+  type Understanding,
+} from "./conversation.ts";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
 // Meta Graph API; WHATSAPP_GRAPH_URL points elsewhere only for local tests
@@ -285,6 +298,74 @@ async function ownerOf(phone: string): Promise<Owner | null> {
   };
 }
 
+// --- The conversation -------------------------------------------------------
+
+/** The day's turns with this person, oldest first. */
+async function history(owner: Owner): Promise<Turn[]> {
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data, error } = await db().from("whatsapp_turns")
+    .select("author, body").eq("profile_id", owner.profile_id)
+    .gte("created_at", since).order("created_at", { ascending: false })
+    .limit(12);
+  if (error) {
+    console.error("history", error.message);
+    return [];
+  }
+  return (data ?? []).reverse() as Turn[];
+}
+
+/** Best effort: a turn that cannot be kept never fails the handling. */
+async function remember(
+  owner: Owner,
+  author: Turn["author"],
+  body: string,
+  expenseId: string | null = null,
+) {
+  if (!body.trim()) return;
+  const { error } = await db().from("whatsapp_turns").insert({
+    profile_id: owner.profile_id,
+    author,
+    body: body.slice(0, 2000),
+    expense_id: expenseId,
+  });
+  if (error) console.error("turn not kept", error.message);
+}
+
+/** Replies and keeps the reply in the conversation. */
+async function answerTo(
+  owner: Owner,
+  to: string,
+  body: string,
+  expenseId: string | null = null,
+) {
+  await reply(to, body);
+  await remember(owner, "rembo", body, expenseId);
+}
+
+/** The person's WhatsApp draft of the last 24 hours, if any. */
+async function lastDraft(owner: Owner): Promise<Draft | null> {
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data, error } = await db().from("expenses")
+    .select("id, supplier_name, amount_cents, category, project, reason")
+    .eq("employee_id", owner.profile_id).eq("source", "whatsapp")
+    .eq("status", "draft").gte("created_at", since)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data
+    ? {
+      id: data.id,
+      supplier: data.supplier_name ?? "",
+      amountCents: data.amount_cents ?? 0,
+      category: data.category ?? "",
+      project: data.project ?? "",
+      reason: data.reason ?? "",
+    }
+    : null;
+}
+
+const CONFIRM_HINT =
+  "Répondez « oui » pour confirmer, ou complétez dans l’application.";
+
 async function createDraft(
   owner: Owner,
   p: Parsed,
@@ -369,15 +450,73 @@ async function answer(message: any, state: Handling) {
 
   if (message.type === "text") {
     const text = String(message.text?.body ?? "");
+    const turns = await history(owner);
+    await remember(owner, "person", text);
     if (isYes(text)) return confirmLatest(owner, message.from, state);
-    const parsed = parseMessage(text);
-    await createDraft(owner, parsed, { transcript: text.slice(0, 500) });
+    const draft = await lastDraft(owner);
+    const read = parseMessage(text);
+    const agent = engine("RECEIPT");
+    const understood: Understanding =
+      (agent ? await understand(agent, turns, draft, text) : null) ??
+        followUpByRules(text, draft, read) ??
+        { intent: "new", fields: null };
+
+    if (understood.intent === "update" && draft) {
+      const updated = applyUpdate(draft, understood.fields);
+      const { error } = await db().from("expenses").update({
+        supplier_name: updated.supplier,
+        amount_cents: updated.amountCents,
+        category: updated.category,
+        project: updated.project,
+        reason: updated.reason,
+      }).eq("id", draft.id).eq("status", "draft");
+      if (error) throw error;
+      state.wrote = true;
+      await answerTo(
+        owner,
+        message.from,
+        `C’est noté : ${summary(updated)}\n${CONFIRM_HINT}`,
+        draft.id,
+      );
+      return;
+    }
+    if (understood.intent === "cancel" && draft) {
+      const { error } = await db().from("expenses").delete()
+        .eq("id", draft.id).eq("status", "draft");
+      if (error) throw error;
+      state.wrote = true;
+      await answerTo(
+        owner,
+        message.from,
+        `Dépense annulée : ${summary(draft)}.`,
+      );
+      return;
+    }
+    if (understood.intent === "other") {
+      await answerTo(
+        owner,
+        message.from,
+        "Je n’ai pas trouvé de dépense dans ce message. Envoyez par exemple « Taxi 45 DH, client Atlas », une note vocale ou la photo d’un ticket.",
+      );
+      return;
+    }
+    const f = "fields" in understood ? understood.fields : null;
+    const parsed: Parsed = {
+      supplier: f?.supplier ?? read.supplier,
+      amountCents: f?.amountCents ?? read.amountCents,
+      category: f?.category ?? read.category,
+      project: f?.project ?? read.project,
+      reason: f?.reason ?? read.reason,
+    };
+    const id = await createDraft(owner, parsed, {
+      transcript: text.slice(0, 500),
+    });
     state.wrote = true;
-    await reply(
+    await answerTo(
+      owner,
       message.from,
-      `${
-        summary(parsed)
-      }\nRépondez « oui » pour confirmer, ou complétez dans l’application.`,
+      `${summary(parsed)}\n${CONFIRM_HINT}`,
+      id,
     );
     return;
   }
@@ -396,6 +535,11 @@ async function answer(message: any, state: Handling) {
     const caption = String(message.image?.caption ?? "");
     const text = voice ? await transcribe(media.bytes, media.type) : "";
     const reading = voice ? null : await readPhoto(media.bytes, media.type);
+    await remember(
+      owner,
+      "person",
+      voice ? `(note vocale) ${text}` : `(photo d’un ticket) ${caption}`,
+    );
     const { parsed, extra } = reading
       ? fromReading(reading, caption)
       : { parsed: parseMessage(text || caption), extra: {} };
@@ -423,7 +567,8 @@ async function answer(message: any, state: Handling) {
       );
       return;
     }
-    await reply(
+    await answerTo(
+      owner,
       message.from,
       text || reading
         ? `${voice ? `« ${text} »\n` : "Ticket lu : "}${summary(parsed)}\n` +
@@ -435,7 +580,8 @@ async function answer(message: any, state: Handling) {
     return;
   }
 
-  await reply(
+  await answerTo(
+    owner,
     message.from,
     "Envoyez un message, une note vocale ou la photo d’un ticket.",
   );
@@ -480,7 +626,7 @@ async function confirmLatest(owner: Owner, to: string, state: Handling) {
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (draftError) throw draftError;
   if (!draft) {
-    await reply(to, "Aucune dépense en attente de confirmation.");
+    await answerTo(owner, to, "Aucune dépense en attente de confirmation.");
     return;
   }
   // Same control as in the app; the server decides the outcome.
@@ -489,14 +635,16 @@ async function confirmLatest(owner: Owner, to: string, state: Handling) {
     p_actor: owner.profile_id,
   });
   if (error) {
-    await reply(
+    await answerTo(
+      owner,
       to,
       `${error.message}\nComplétez la dépense dans l’application.`,
     );
     return;
   }
   state.wrote = true;
-  await reply(
+  await answerTo(
+    owner,
     to,
     data.status === "approved"
       ? `Dépense validée : ${mad(data.amount_cents)}.`
