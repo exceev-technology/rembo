@@ -548,6 +548,21 @@ class SupabaseBackend extends RemboBackend {
     () => _client.rpc<dynamic>('set_auto_approve', params: {'p_on': on}),
   );
 
+  @override
+  Future<bool> fetchManagersDeclare() => _guard(() async {
+    final row = await _client
+        .from('companies')
+        .select('managers_declare')
+        .eq('id', _companyId)
+        .maybeSingle();
+    return row?['managers_declare'] == true;
+  });
+
+  @override
+  Future<void> setManagersDeclare(bool on) => _guard(
+    () => _client.rpc<dynamic>('set_managers_declare', params: {'p_on': on}),
+  );
+
   // Exports ---------------------------------------------------------------
   @override
   Future<ExportBatch> createExport(

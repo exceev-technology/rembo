@@ -34,6 +34,8 @@ select public.create_company('Atelier Sara', '', 'Casablanca');
 select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 select public.create_company('Autre SARL', '', 'Rabat');
 select pg_temp.as_admin();
+-- These tests are about managers who declare their own expenses too.
+update public.companies set managers_declare = true;
 insert into public.memberships (company_id, profile_id, role)
 select id, '22222222-2222-2222-2222-222222222222'::uuid,
   'employee'::public.member_role

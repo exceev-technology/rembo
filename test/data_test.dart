@@ -10,10 +10,14 @@ import 'package:rembo/core/format/phone_countries.dart';
 
 final _now = DateTime(2026, 11, 10, 15);
 
-DemoBackend _backend({bool autoApprove = false}) => DemoBackend(
+DemoBackend _backend({
+  bool autoApprove = false,
+  bool managersDeclare = false,
+}) => DemoBackend(
   clock: () => _now,
   latency: Duration.zero,
   autoApprove: autoApprove,
+  managersDeclare: managersDeclare,
 );
 
 Expense _draft({
@@ -275,17 +279,15 @@ void main() {
       );
     });
 
-    test('only a manager decides, their own expense included', () async {
-      final b = _backend();
+    test('only a manager decides, never on their own expense', () async {
+      final b = _backend(managersDeclare: true);
       await b.signIn(DemoBackend.marius.email, 'x');
       await _expectRefused(b.decide('EXP-1036', approve: true), 'responsables');
 
       await b.signIn(DemoBackend.salma.email, 'x');
       final own = await b.submit((await b.saveDraft(_draft(cents: 99000))).id);
       expect(own.status, ExpenseStatus.needsReview);
-      final mine = await b.decide(own.id, approve: true);
-      expect(mine.status, ExpenseStatus.approved);
-      expect(mine.events.last.actorName, DemoBackend.salma.fullName);
+      await _expectRefused(b.decide(own.id, approve: true), 'propre dépense');
       await _expectRefused(b.decide('EXP-1037', approve: false), 'motif');
 
       final rejected = await b.decide(

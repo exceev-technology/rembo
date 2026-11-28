@@ -5,13 +5,17 @@ part of 'local_backend.dart';
 class DemoBackend extends LocalBackend {
   /// [autoApprove] lets the control approve compliant expenses itself;
   /// by default, as in a new company, a manager confirms them.
+  /// [managersDeclare] lets managers declare their own expenses; by default
+  /// they only decide.
   DemoBackend({
     super.clock,
     super.latency = const Duration(milliseconds: 250),
     bool autoApprove = false,
+    bool managersDeclare = false,
   }) {
     _users.addAll([marius, ahmed, salma, nadia]);
     if (autoApprove) _autoApprove.add('c-atlas');
+    if (managersDeclare) _managersDeclare.add('c-atlas');
     _nextId = 1043;
     _seed();
   }

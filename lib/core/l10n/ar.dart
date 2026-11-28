@@ -32,7 +32,8 @@ const arabic = <String, String>{
   'Vous ne pouvez soumettre que vos dépenses.': 'لا يمكنك إرسال إلا مصاريفك.',
   'Complétez d’abord : {join}.': 'أكمل أولا: {join}.',
   'Cette action est réservée aux responsables.': 'هذا الإجراء خاص بالمسؤولين.',
-  'Décider': 'البتّ',
+  'Vous ne pouvez pas décider de votre propre dépense.':
+      'لا يمكنك البت في مصروفك الخاص.',
   'Cette dépense a déjà été traitée.': 'تمت معالجة هذا المصروف من قبل.',
   'Le motif du rejet est obligatoire.': 'سبب الرفض إلزامي.',
   'Cette personne est déjà dans l’équipe.': 'هذا الشخص موجود في الفريق من قبل.',
@@ -535,6 +536,19 @@ const arabic = <String, String>{
   // Sprint 4 · Approval workflow
   'Motif : {text}': 'السبب: {text}',
   'Commentaire : {text}': 'تعليق: {text}',
+  'Vous êtes le seul responsable': 'أنت المسؤول الوحيد',
+  'Personne ne décide de sa propre dépense. Invitez un autre responsable : il pourra approuver ou rejeter celle-ci.': 'لا أحد يقرّر في مصروفه الخاص. ادعُ مسؤولاً آخر ليتمكّن من قبول هذا المصروف أو رفضه.',
+  'Inviter un responsable': 'دعوة مسؤول',
+  'Les responsables déclarent aussi leurs dépenses':
+      'المسؤولون يصرّحون أيضاً بمصاريفهم',
+  'Un autre responsable décide de leurs dépenses. Seul responsable, vous devez en inviter un second.': 'يبتّ مسؤول آخر في مصاريفهم. إذا كنت المسؤول الوحيد، فعليك دعوة مسؤول ثانٍ.',
+  'Les responsables décident seulement : pas de saisie de dépense dans leur espace.':
+      'المسؤولون يبتّون فقط: لا إدخال للمصاريف في فضائهم.',
+  'Conformes': 'مطابقة',
+  'À décider': 'في انتظار القرار',
+  'Invitez votre équipe': 'ادعُ فريقك',
+  'Dans votre entreprise, les responsables ne déclarent pas de dépenses.':
+      'في شركتكم، لا يصرّح المسؤولون بالمصاريف.',
   'Un compte existe déjà pour cet e-mail. Connectez-vous, ou utilisez « Mot de passe oublié ».': 'يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول، أو استخدم « نسيت كلمة المرور ».',
   'Conforme, en attente de validation': 'مطابق، في انتظار القبول',
   'Aucun écart relevé : votre responsable la valide avec les autres dépenses conformes.':

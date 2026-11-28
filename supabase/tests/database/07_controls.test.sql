@@ -37,6 +37,8 @@ select public.create_company('Atelier Sara', '', 'Casablanca');
 select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 select public.create_company('Autre SARL', '', 'Rabat');
 select pg_temp.as_admin();
+-- These tests are about managers who declare their own expenses too.
+update public.companies set managers_declare = true;
 insert into public.memberships (company_id, profile_id, role)
 select c.id, m.id, 'employee'::public.member_role
 from public.companies c, (values
@@ -98,7 +100,7 @@ select is((select flags -> 0 ->> 'message' from public.expenses
   'Plafond Repas dépassé de 120,00 MAD',
   'C4: with the reason written for the manager');
 
--- C1 · only a manager decides; a manager decides on their own expense too -------
+-- C1 · no self-approval, by any path -------------------------------------------
 select throws_ok($$select public.decide_expense(
     'c0000000-0000-0000-0000-000000000001', true, '')$$,
   'P0001', 'Cette action est réservée aux responsables.',
@@ -107,13 +109,13 @@ select pg_temp.as_admin();
 update public.memberships set role = 'manager'
 where profile_id = '22222222-2222-2222-2222-222222222222';
 select pg_temp.as_user('22222222-2222-2222-2222-222222222222');
-select is((public.decide_expense(
-    'c0000000-0000-0000-0000-000000000001', true, '')).status,
-  'approved'::public.expense_status,
-  'C1: promoted manager, Omar approves his own expense');
+select throws_ok($$select public.decide_expense(
+    'c0000000-0000-0000-0000-000000000001', true, '')$$,
+  'P0001', 'Vous ne pouvez pas décider de votre propre dépense.',
+  'C1: promoted manager, Omar still cannot approve his own expense');
 select is(public.approve_compliant(
-    array['c0000000-0000-0000-0000-000000000002'::uuid]), 1,
-  'C1: and confirms his own compliant expense in a batch');
+    array['c0000000-0000-0000-0000-000000000002'::uuid]), 0,
+  'C1: nor confirm his own compliant expense in a batch');
 
 select pg_temp.as_admin();
 select * from finish();

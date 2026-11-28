@@ -40,6 +40,8 @@ $$;
 
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 select public.create_company('Atelier Sara', '', 'Casablanca');
+-- Sara, the manager, declares her own expenses in these tests.
+select public.set_managers_declare(true);
 
 select is(pg_temp.submit('dddddddd-0000-0000-0000-000000000001', 'Station Afriquia',
     5, 49875, 6125, 14, '001234567000089', 'MAD', null), '[]'::jsonb,

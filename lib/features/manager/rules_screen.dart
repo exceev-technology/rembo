@@ -18,6 +18,8 @@ class RulesScreen extends StatelessWidget {
           subtitle: tr('Plafonds par dépense et justificatifs exigés.'),
         ),
         const _ValidationMode(),
+        const SizedBox(height: RemboSpace.md),
+        const _ManagersDeclare(),
         const SizedBox(height: RemboSpace.lg),
         for (final category in expenseCategories)
           if (category != 'Autre')
@@ -87,6 +89,66 @@ class _ValidationModeState extends State<_ValidationMode> {
                     'Le contrôle signale les dépenses conformes ; vous les '
                     'validez toutes en un geste. Aucun agent ne valide à '
                     'votre place.',
+                  ),
+            style: RemboText.caption,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Whether managers declare their own expenses. Off by default: they only
+/// decide. On, their expenses go to another manager, never to themselves.
+class _ManagersDeclare extends StatefulWidget {
+  const _ManagersDeclare();
+
+  @override
+  State<_ManagersDeclare> createState() => _ManagersDeclareState();
+}
+
+class _ManagersDeclareState extends State<_ManagersDeclare> {
+  bool _saving = false;
+
+  Future<void> _set(bool on) async {
+    setState(() => _saving = true);
+    try {
+      await AppScope.read(context).setManagersDeclare(on);
+    } on RemboException catch (e) {
+      if (mounted) {
+        showRemboSnackBar(context, e.message, tone: MessageTone.error);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = AppScope.of(context).managersDeclare;
+    return RemboCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            key: const ValueKey('rules-managers-declare'),
+            contentPadding: EdgeInsets.zero,
+            value: on,
+            onChanged: _saving ? null : _set,
+            title: Text(
+              tr('Les responsables déclarent aussi leurs dépenses'),
+              style: RemboText.subtitle,
+            ),
+          ),
+          Text(
+            on
+                ? tr(
+                    'Un autre responsable décide de leurs dépenses. Seul '
+                    'responsable, vous devez en inviter un second.',
+                  )
+                : tr(
+                    'Les responsables décident seulement : pas de saisie de '
+                    'dépense dans leur espace.',
                   ),
             style: RemboText.caption,
           ),

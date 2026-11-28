@@ -22,6 +22,7 @@ Future<void> _start(
   double textScale = 1,
   ReceiptPicker receiptPicker = pickWithDevice,
   bool autoApprove = false,
+  bool managersDeclare = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -31,7 +32,11 @@ Future<void> _start(
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  backend = DemoBackend(latency: Duration.zero, autoApprove: autoApprove);
+  backend = DemoBackend(
+    latency: Duration.zero,
+    autoApprove: autoApprove,
+    managersDeclare: managersDeclare,
+  );
   state = AppState(backend);
   await tester.pumpWidget(
     RemboApp(state: state, initialRoute: route, receiptPicker: receiptPicker),
@@ -149,9 +154,14 @@ void main() {
     await _type(tester, 'company-name', 'Amrani Études');
     await _type(tester, 'company-ice', '');
     await _tap(tester, 'company-submit');
-    // First expense screen, as the first manager of the new company.
-    expect(find.text('Votre première dépense commence ici.'), findsOneWidget);
+    // The first manager only decides: nothing waits yet, the team is next.
     expect(state.role, UserRole.manager);
+    expect(
+      find.byKey(const ValueKey('home-nothing-to-decide')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('home-invite-team')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-add')), findsNothing);
   });
 
   testWidgets('Collaborator: a compliant expense is validated automatically', (
@@ -405,17 +415,17 @@ void main() {
     );
   });
 
-  testWidgets('A manager decides on their own expense too', (tester) async {
-    await _start(tester);
+  testWidgets('A manager cannot decide on their own expense', (tester) async {
+    await _start(tester, managersDeclare: true);
     await _signInAs(tester, UserRole.manager);
     await _declare(tester, amount: '900');
     await _tap(tester, 'summary-submit');
     await _tap(tester, 'result-home');
     final own = state.mine.first;
     expect(own.status, ExpenseStatus.needsReview);
-    // Offered in the list of exceptions, like the others.
+    // Not offered in the list of exceptions to decide.
     await _tap(tester, 'tab-exceptions');
-    expect(find.byKey(ValueKey('exception-${own.id}')), findsOneWidget);
+    expect(find.byKey(ValueKey('exception-${own.id}')), findsNothing);
   });
 
   testWidgets('Duplicate: same day and amount is announced before submitting', (

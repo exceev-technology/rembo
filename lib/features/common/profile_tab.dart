@@ -120,7 +120,7 @@ class ProfileTab extends StatelessWidget {
                   tr('Mesures des agents'),
                   onTap: () => AgentMetricsScreen.open(context),
                 ),
-              if (whatsAppOffered(state.isDemo))
+              if (whatsAppOffered(state.isDemo) && state.canDeclare)
                 _Entry(
                   key: const ValueKey('profile-whatsapp'),
                   Icons.chat_outlined,

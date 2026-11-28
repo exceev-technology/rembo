@@ -58,7 +58,8 @@ Seule la clé publique (`anon` / `publishable`) va dans `.env`. La clé `service
 | `submit_expense(id)` | Contrôle automatique (agent de conformité) : plafond, justificatif exigé, doublon (même jour et même montant, ou même fournisseur et même montant à 3 jours près), catégorie « Autre », date de plus de 60 jours, TVA incohérente avec son taux, ICE invalide, dépense en devise (montant payé exigé, conversion à vérifier). Tout passe par `needs_review` ; une dépense conforme n’y porte aucun signalement. Si l’entreprise a activé `auto_approve`, une dépense conforme passe directement à `approved` (agent) |
 | `approve_compliant(ids)` | Responsable uniquement : valide en un geste les dépenses conformes (sans signalement) de son équipe, jamais la sienne ; renvoie le nombre validé |
 | `set_auto_approve(on)` | Responsable uniquement : laisse le contrôle valider seul les dépenses conformes (désactivé par défaut) |
-| `decide_expense(id, approve, reason)` | Responsable de l’entreprise uniquement, y compris sur sa propre dépense (l’historique le nomme) ; motif obligatoire pour un rejet |
+| `decide_expense(id, approve, reason)` | Responsable de l’entreprise uniquement, jamais sur sa propre dépense ; motif obligatoire pour un rejet |
+| `set_managers_declare(on)`, `can_declare(profil)` | Par défaut, un responsable ne déclare pas de dépense (déclencheur sur `expenses`, WhatsApp compris) ; activé, un autre responsable décide de ses dépenses |
 | `create_export(ids, request_id, file_name)` | Comptable uniquement ; tout ou rien ; le même `request_id` renvoie le même lot |
 | `create_company(...)`, `accept_invitation()` | Création d’entreprise ; adhésion par invitation |
 

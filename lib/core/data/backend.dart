@@ -119,6 +119,11 @@ abstract class RemboBackend {
   Future<bool> fetchAutoApprove();
   Future<void> setAutoApprove(bool on);
 
+  /// True when managers declare their own expenses too; false (the default)
+  /// when they only decide.
+  Future<bool> fetchManagersDeclare();
+  Future<void> setManagersDeclare(bool on);
+
   // Exports ---------------------------------------------------------------
   /// Marks [ids] as exported and returns the batch with its CSV content.
   /// [requestId] makes a retry return the same batch.

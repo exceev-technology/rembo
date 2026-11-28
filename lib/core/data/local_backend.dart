@@ -80,6 +80,9 @@ class LocalBackend extends RemboBackend {
   /// Companies that let the control approve compliant expenses itself.
   final _autoApprove = <String>{};
 
+  /// Companies whose managers declare their own expenses too.
+  final _managersDeclare = <String>{};
+
   /// Accounting account of each category, by company.
   final _accounts = <String, Map<String, String>>{};
   AppUser? _user;
@@ -150,6 +153,9 @@ class LocalBackend extends RemboBackend {
     _autoApprove.addAll([
       for (final c in (data['auto_approve'] as List? ?? const [])) '$c',
     ]);
+    _managersDeclare.addAll([
+      for (final c in (data['managers_declare'] as List? ?? const [])) '$c',
+    ]);
     final session = data['session'] as String?;
     _user = _users.where((u) => u.id == session).firstOrNull;
   }
@@ -184,6 +190,7 @@ class LocalBackend extends RemboBackend {
             x.key: [for (final b in x.value) b.toJson()],
         },
         'auto_approve': _autoApprove.toList(),
+        'managers_declare': _managersDeclare.toList(),
         'accounts': _accounts,
       }),
     );
@@ -476,6 +483,15 @@ class LocalBackend extends RemboBackend {
     if (me.companyId == null) {
       throw RemboException(tr('Créez ou rejoignez d’abord une entreprise.'));
     }
+    if (draft.id.isEmpty &&
+        me.role == UserRole.manager &&
+        !_managersDeclare.contains(me.companyId)) {
+      throw RemboException(
+        tr(
+          'Dans votre entreprise, les responsables ne déclarent pas de dépenses.',
+        ),
+      );
+    }
     Expense saved;
     final created = createId == null ? null : _createdIds[createId];
     if (draft.id.isEmpty && created != null) {
@@ -604,7 +620,7 @@ class LocalBackend extends RemboBackend {
       final i = _expenses.indexWhere((e) => e.id == id);
       if (i < 0 || !_visible(_expenses[i])) continue;
       final e = _expenses[i];
-      if (!e.compliantToConfirm) continue;
+      if (!e.compliantToConfirm || e.employeeId == me.id) continue;
       _expenses[i] = e.copyWith(
         status: ExpenseStatus.approved,
         events: [
@@ -636,6 +652,11 @@ class LocalBackend extends RemboBackend {
     }
     final i = _indexOf(id);
     final e = _expenses[i];
+    if (e.employeeId == me.id) {
+      throw RemboException(
+        tr('Vous ne pouvez pas décider de votre propre dépense.'),
+      );
+    }
     if (e.status != ExpenseStatus.needsReview) {
       throw RemboException(tr('Cette dépense a déjà été traitée.'));
     }
@@ -775,6 +796,25 @@ class LocalBackend extends RemboBackend {
       throw RemboException(tr('Cette action est réservée aux responsables.'));
     }
     on ? _autoApprove.add(me.companyId!) : _autoApprove.remove(me.companyId);
+    await _save();
+  }
+
+  @override
+  Future<bool> fetchManagersDeclare() async {
+    await _latency();
+    return _managersDeclare.contains(_me.companyId);
+  }
+
+  @override
+  Future<void> setManagersDeclare(bool on) async {
+    await _latency();
+    final me = _me;
+    if (me.role != UserRole.manager || me.companyId == null) {
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
+    }
+    on
+        ? _managersDeclare.add(me.companyId!)
+        : _managersDeclare.remove(me.companyId);
     await _save();
   }
 
