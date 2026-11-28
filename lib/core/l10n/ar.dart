@@ -725,4 +725,26 @@ const arabic = <String, String>{
   'Texte lu sur la photo ({kb} Ko)': 'النص المقروء على الصورة ({kb} ك.ب)',
   'Aucun texte reconnu sur cette photo.':
       'لم يُتعرَّف على أي نص في هذه الصورة.',
+  // Profile.
+  'Entreprise': 'الشركة',
+  '{n} membres': '{n} أعضاء',
+  'Mon compte': 'حسابي',
+  'Outils de l’équipe REMBO': 'أدوات فريق REMBO',
+  'Membres': 'الأعضاء',
+  'Ce mois': 'هذا الشهر',
+  'Voir le détail de mon profil': 'عرض تفاصيل ملفي الشخصي',
+  '{role} chez {company}': '{role} في {company}',
+  'Vous déclarez vos dépenses avec la photo du reçu ou par WhatsApp, puis vous suivez leur remboursement.':
+      'تصرّح بمصاريفك بصورة الوصل أو عبر واتساب، ثم تتابع استرجاعها.',
+  'Vous décidez des dépenses de votre équipe et déclarez aussi les vôtres : un autre responsable les décide.':
+      'تقرّر في مصاريف فريقك وتصرّح أيضًا بمصاريفك: يقرّر فيها مسؤول آخر.',
+  'Vous décidez des dépenses de votre équipe : les conformes se confirment d’un geste, les exceptions attendent votre avis.':
+      'تقرّر في مصاريف فريقك: المطابقة تُؤكَّد بلمسة، والاستثناءات تنتظر رأيك.',
+  'Vous préparez les exports comptables des dépenses validées.':
+      'تُعِدّ التصديرات المحاسبية للمصاريف المعتمدة.',
+  'E-mail': 'البريد الإلكتروني',
+  'Données': 'البيانات',
+  'Démonstration': 'عرض تجريبي',
+  'Sur ce téléphone': 'على هذا الهاتف',
+  'En ligne, sur le serveur de l’entreprise': 'عبر الإنترنت، على خادم الشركة',
 };
