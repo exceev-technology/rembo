@@ -733,7 +733,8 @@ const arabic = <String, String>{
   'Mon compte': 'حسابي',
   'Outils de l’équipe REMBO': 'أدوات فريق REMBO',
   'Membres': 'الأعضاء',
-  'Ce mois': 'هذا الشهر',
+  'Déclaré ce mois': 'المصرّح به هذا الشهر',
+  'Dépenses à exporter': 'مصاريف للتصدير',
   'Voir le détail de mon profil': 'عرض تفاصيل ملفي الشخصي',
   '{role} chez {company}': '{role} في {company}',
   'Vous déclarez vos dépenses avec la photo du reçu ou par WhatsApp, puis vous suivez leur remboursement.':
