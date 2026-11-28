@@ -663,6 +663,9 @@ void main() {
       );
       await _signInDirectly(tester, role);
       await _tap(tester, 'tab-profile');
+      // The avatar shows first and last initials, e.g. « SB ».
+      expect(state.user!.initials, hasLength(2));
+      expect(find.text(state.user!.initials), findsOneWidget);
       // The whole card opens the detail; its centre may be below the
       // fold with large text.
       await _tap(tester, 'profile-name');
