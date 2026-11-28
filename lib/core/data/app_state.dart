@@ -37,6 +37,9 @@ class AppState extends ChangeNotifier {
   /// Managers declare their own expenses too (company setting).
   bool managersDeclare = false;
 
+  /// Deadline, project rule and imported policy document of the company.
+  CompanyPolicy companyPolicy = CompanyPolicy.defaults;
+
   /// This person may declare expenses: a manager only when the company
   /// allows it. The server applies the same rule.
   bool get canDeclare => role != UserRole.manager || managersDeclare;
@@ -168,6 +171,7 @@ class AppState extends ChangeNotifier {
     accounts = const {};
     autoApprove = false;
     managersDeclare = false;
+    companyPolicy = CompanyPolicy.defaults;
     _read.clear();
     _readUntil = null;
     _readUntilOf = null;
@@ -207,6 +211,7 @@ class AppState extends ChangeNotifier {
     try {
       expenses = await backend.fetchExpenses();
       policies = await backend.fetchPolicies();
+      companyPolicy = await backend.fetchCompanyPolicy();
       if (role == UserRole.manager) {
         members = await backend.fetchMembers();
         membersLoaded = true;
@@ -393,6 +398,37 @@ class AppState extends ChangeNotifier {
   Future<void> savePolicy(PolicyRule rule) async {
     await backend.savePolicy(rule);
     policies = await backend.fetchPolicies();
+    notifyListeners();
+  }
+
+  /// Proposals read in a policy document; nothing changes yet.
+  Future<PolicyProposal> readPolicy(PolicySource source) =>
+      backend.readPolicy(source);
+
+  Future<void> applyPolicy(PolicyProposal proposal) async {
+    await backend.applyPolicy(proposal);
+    await _reloadPolicy();
+  }
+
+  Future<void> saveCompanyRules({
+    required int deadlineDays,
+    required bool projectRequired,
+  }) async {
+    await backend.saveCompanyRules(
+      deadlineDays: deadlineDays,
+      projectRequired: projectRequired,
+    );
+    await _reloadPolicy();
+  }
+
+  Future<void> resetPolicy() async {
+    await backend.resetPolicy();
+    await _reloadPolicy();
+  }
+
+  Future<void> _reloadPolicy() async {
+    policies = await backend.fetchPolicies();
+    companyPolicy = await backend.fetchCompanyPolicy();
     notifyListeners();
   }
 

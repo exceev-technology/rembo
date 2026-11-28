@@ -70,8 +70,9 @@ Out of scope for the MVP: web app and PWA, desktop apps, direct ERP connectors (
 | Layer | Technology |
 | --- | --- |
 | Mobile app | [Flutter](https://flutter.dev) 3.47 / Dart 3.13 for Android and iOS |
-| Backend | [Supabase](https://supabase.com): Postgres, Auth, Row Level Security, Storage, Edge Functions (`read-receipt`, `whatsapp-webhook`) |
+| Backend | [Supabase](https://supabase.com): Postgres, Auth, Row Level Security, Storage, Edge Functions (`read-receipt`, `read-policy`, `whatsapp-webhook`) |
 | Receipt reading | Text recognition on the phone (Google ML Kit); the `read-receipt` Edge Function reads what the phone cannot, off by default (`REMBO_OCR=false`) |
+| Company policy | A manager imports the company's reimbursement policy; `read-policy` has it read by the receipt engine and proposes rules, applied only once the manager has checked them (REMBO's rules by default) |
 | CI/CD | GitHub Actions: format, analyze, test, Android and iOS builds, security scans |
 
 ```mermaid
@@ -81,7 +82,7 @@ flowchart LR
         auth["Auth + roles"]
         db[("Postgres + RLS")]
         storage[("Private storage<br/>receipts")]
-        fn["Edge Functions<br/>read-receipt · whatsapp-webhook"]
+        fn["Edge Functions<br/>read-receipt · read-policy · whatsapp-webhook"]
     end
     fn --> ext["Receipt reader<br/>WhatsApp Cloud API"]
     app --> csv["📄 CSV export"]

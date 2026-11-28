@@ -276,6 +276,7 @@ class _Preview extends StatelessWidget {
       policies: state.policies,
       others: state.mine,
       today: DateTime(now.year, now.month, now.day),
+      company: state.companyPolicy,
     );
     if (flags.isEmpty) {
       return InfoStrip(

@@ -11,6 +11,7 @@ import 'local_store.dart';
 import 'models.dart';
 import '../l10n/l10n.dart';
 import '../agents/compliance_agent.dart';
+import '../agents/policy_reader.dart';
 
 part 'demo_backend.dart';
 
@@ -82,6 +83,10 @@ class LocalBackend extends RemboBackend {
 
   /// Companies whose managers declare their own expenses too.
   final _managersDeclare = <String>{};
+
+  /// Deadline, project rule and imported document, by company; absent:
+  /// REMBO's defaults.
+  final _companyPolicies = <String, CompanyPolicy>{};
 
   /// Accounting account of each category, by company.
   final _accounts = <String, Map<String, String>>{};
@@ -156,6 +161,11 @@ class LocalBackend extends RemboBackend {
     _managersDeclare.addAll([
       for (final c in (data['managers_declare'] as List? ?? const [])) '$c',
     ]);
+    (data['company_policy'] as Map? ?? const {}).forEach((company, json) {
+      _companyPolicies['$company'] = CompanyPolicy.fromJson(
+        Map<String, dynamic>.from(json as Map),
+      );
+    });
     final session = data['session'] as String?;
     _user = _users.where((u) => u.id == session).firstOrNull;
   }
@@ -191,6 +201,9 @@ class LocalBackend extends RemboBackend {
         },
         'auto_approve': _autoApprove.toList(),
         'managers_declare': _managersDeclare.toList(),
+        'company_policy': {
+          for (final c in _companyPolicies.entries) c.key: c.value.toJson(),
+        },
         'accounts': _accounts,
       }),
     );
@@ -578,6 +591,7 @@ class LocalBackend extends RemboBackend {
       policies: _policiesOf(me.companyId!),
       others: _expenses,
       today: _day(0),
+      company: _companyPolicies[me.companyId] ?? CompanyPolicy.defaults,
     );
     final decided = flags.isEmpty && _autoApprove.contains(me.companyId)
         ? ExpenseStatus.approved
@@ -815,6 +829,117 @@ class LocalBackend extends RemboBackend {
     on
         ? _managersDeclare.add(me.companyId!)
         : _managersDeclare.remove(me.companyId);
+    await _save();
+  }
+
+  /// The signed-in manager; anyone else is refused.
+  AppUser get _manager {
+    final me = _me;
+    if (me.role != UserRole.manager || me.companyId == null) {
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
+    }
+    return me;
+  }
+
+  static void _checkDeadline(int days) {
+    if (days < 1 || days > 365) {
+      throw RemboException(
+        tr('Le délai de déclaration doit être compris entre 1 et 365 jours.'),
+      );
+    }
+  }
+
+  @override
+  Future<CompanyPolicy> fetchCompanyPolicy() async {
+    await _latency();
+    return _companyPolicies[_me.companyId] ?? CompanyPolicy.defaults;
+  }
+
+  @override
+  Future<PolicyProposal> readPolicy(PolicySource source) async {
+    await _latency();
+    _manager;
+    final text = source.text;
+    if (text == null) {
+      throw RemboException(
+        tr(
+          'Sans serveur, REMBO lit seulement du texte : collez le texte de '
+          'votre politique.',
+        ),
+      );
+    }
+    final proposal = readPolicyText(text, documentName: source.fileName);
+    if (proposal.isEmpty) {
+      throw RemboException(
+        tr('REMBO n’a trouvé aucune règle de remboursement dans ce document.'),
+      );
+    }
+    return proposal;
+  }
+
+  @override
+  Future<void> applyPolicy(PolicyProposal proposal) async {
+    await _latency();
+    final me = _manager;
+    final company = me.companyId!;
+    if (proposal.deadlineDays != null) _checkDeadline(proposal.deadlineDays!);
+    for (final rule in proposal.rules) {
+      if (!expenseCategories.contains(rule.category) ||
+          rule.category == 'Autre') {
+        throw RemboException(
+          tr('Catégorie inconnue : {category}.', {'category': rule.category}),
+        );
+      }
+      if (rule.limitCents <= 0) {
+        throw RemboException(
+          tr('Plafond invalide pour {category}.', {'category': rule.category}),
+        );
+      }
+    }
+    final current = _companyPolicies[company] ?? CompanyPolicy.defaults;
+    _companyPolicies[company] = CompanyPolicy(
+      deadlineDays: proposal.deadlineDays ?? current.deadlineDays,
+      projectRequired: proposal.projectRequired ?? current.projectRequired,
+      document: PolicyDocument(
+        name: proposal.documentName,
+        summary: proposal.summary,
+        notApplied: proposal.notApplied,
+        appliedAt: _now,
+        appliedBy: me.fullName,
+      ),
+    );
+    final rules = _policiesOf(company);
+    for (final rule in proposal.rules) {
+      rules
+        ..removeWhere((p) => p.category == rule.category)
+        ..add(rule);
+    }
+    await _save();
+  }
+
+  @override
+  Future<void> saveCompanyRules({
+    required int deadlineDays,
+    required bool projectRequired,
+  }) async {
+    await _latency();
+    final company = _manager.companyId!;
+    _checkDeadline(deadlineDays);
+    final current = _companyPolicies[company] ?? CompanyPolicy.defaults;
+    _companyPolicies[company] = CompanyPolicy(
+      deadlineDays: deadlineDays,
+      projectRequired: projectRequired,
+      document: current.document,
+    );
+    await _save();
+  }
+
+  @override
+  Future<void> resetPolicy() async {
+    await _latency();
+    final company = _manager.companyId!;
+    _companyPolicies.remove(company);
+    _policies[company] = List.of(_defaultPolicies);
     await _save();
   }
 

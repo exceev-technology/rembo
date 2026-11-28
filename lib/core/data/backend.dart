@@ -124,6 +124,25 @@ abstract class RemboBackend {
   Future<bool> fetchManagersDeclare();
   Future<void> setManagersDeclare(bool on);
 
+  /// Deadline, project rule and imported document of the company.
+  Future<CompanyPolicy> fetchCompanyPolicy();
+
+  /// Has a policy document read: proposals for the manager to check.
+  /// Throws when nothing applicable was found.
+  Future<PolicyProposal> readPolicy(PolicySource source);
+
+  /// Applies rules a manager checked (managers only).
+  Future<void> applyPolicy(PolicyProposal proposal);
+
+  /// Changes the deadline and the project rule by hand.
+  Future<void> saveCompanyRules({
+    required int deadlineDays,
+    required bool projectRequired,
+  });
+
+  /// Back to REMBO's rules: limits, deadline, project; document forgotten.
+  Future<void> resetPolicy();
+
   // Exports ---------------------------------------------------------------
   /// Marks [ids] as exported and returns the batch with its CSV content.
   /// [requestId] makes a retry return the same batch.

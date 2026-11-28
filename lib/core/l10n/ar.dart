@@ -523,6 +523,8 @@ const arabic = <String, String>{
       'نفس التاريخ ونفس المبلغ لمصروف مصرح به من قبل',
   'Catégorie à préciser': 'الفئة تحتاج إلى توضيح',
   'Dépense datée de plus de 60 jours': 'مصروف مؤرخ بأكثر من 60 يوما',
+  'Dépense datée de plus de {days} jours': 'مصروف مؤرخ بأكثر من {days} يوما',
+  'Projet ou client manquant': 'المشروع أو العميل غير محدد',
   'Contrôle automatique': 'المراقبة الآلية',
   'Plafond {category} dépassé de {over}': 'تجاوز سقف {category} بمبلغ {over}',
   'Chargement…': 'جار التحميل…',
@@ -747,4 +749,65 @@ const arabic = <String, String>{
   'Démonstration': 'عرض تجريبي',
   'Sur ce téléphone': 'على هذا الهاتف',
   'En ligne, sur le serveur de l’entreprise': 'عبر الإنترنت، على خادم الشركة',
+  // Reimbursement policy.
+  'Appliquer ces règles': 'تطبيق هذه القواعد',
+  'Appliquée le {date} par {name}': 'طُبِّقت في {date} من طرف {name}',
+  'Au-delà, la dépense est signalée au responsable.':
+      'بعد ذلك، يُنبَّه المسؤول إلى المصروف.',
+  'Catégorie inconnue : {category}.': 'فئة غير معروفة: {category}.',
+  'Ce PDF ne peut pas être lu. Essayez une photo ou collez le texte.':
+      'تعذّرت قراءة ملف PDF هذا. جرّب صورة أو الصق النص.',
+  'Ce que le contrôle vérifie sur chaque dépense.':
+      'ما تتحقق منه المراقبة في كل مصروف.',
+  'Coller le texte': 'لصق النص',
+  'Coller le texte de votre politique': 'الصق نص سياستك',
+  'Délai de déclaration': 'أجل التصريح',
+  'Délai de déclaration (jours)': 'أجل التصريح (بالأيام)',
+  'Délai et projet': 'الأجل والمشروع',
+  'Importer un document': 'استيراد وثيقة',
+  'Importer une nouvelle version': 'استيراد نسخة جديدة',
+  'La lecture de documents n’est pas activée sur ce serveur.':
+      'قراءة الوثائق غير مفعّلة على هذا الخادم.',
+  'Le document n’a pas pu être lu. Réessayez.':
+      'تعذّرت قراءة الوثيقة. أعد المحاولة.',
+  'Le délai de déclaration doit être compris entre 1 et 365 jours.':
+      'يجب أن يكون أجل التصريح بين 1 و365 يوما.',
+  'Le lecteur a mis trop de temps. Réessayez.':
+      'استغرق القارئ وقتا طويلا. أعد المحاولة.',
+  'Le lecteur est occupé. Réessayez dans un instant.':
+      'القارئ مشغول. أعد المحاولة بعد لحظة.',
+  'Lecture du document…': 'جارٍ قراءة الوثيقة…',
+  'Les plafonds, le délai et la règle du projet reprennent les valeurs de REMBO. Le document importé est oublié.': 'تعود السقوف والأجل وقاعدة المشروع إلى قيم REMBO، ويُنسى المستند المستورد.',
+  'Lire ce texte': 'قراءة هذا النص',
+  'Lues dans « {name} ». Vérifiez avant d’appliquer.':
+      'مقروءة في «{name}». تحقّق قبل التطبيق.',
+  'Obligatoire': 'إلزامي',
+  'Plafond invalide pour {category}.': 'سقف غير صالح لفئة {category}.',
+  'Plafonds par catégorie': 'السقوف حسب الفئة',
+  'Projet ou client': 'المشروع أو العميل',
+  'Projet ou client obligatoire': 'المشروع أو العميل إلزامي',
+  'REMBO applique ses règles par défaut. Importez la politique de votre entreprise : REMBO la lit et vous propose les règles à appliquer. Rien ne change sans votre accord.': 'يطبّق REMBO قواعده الافتراضية. استورد سياسة شركتك: يقرؤها REMBO ويقترح عليك القواعد التي ستُطبَّق. لا يتغيّر شيء دون موافقتك.',
+  'REMBO ne contrôle pas ces règles automatiquement.':
+      'لا يراقب REMBO هذه القواعد تلقائيا.',
+  'REMBO n’a trouvé aucune règle de remboursement dans ce document.':
+      'لم يجد REMBO أي قاعدة استرجاع في هذه الوثيقة.',
+  'Revenir aux règles par défaut': 'العودة إلى القواعد الافتراضية',
+  'Revenir aux règles par défaut ?': 'العودة إلى القواعد الافتراضية؟',
+  'Règles appliquées.': 'طُبِّقت القواعد.',
+  'Règles enregistrées.': 'حُفظت القواعد.',
+  'Règles par défaut rétablies.': 'أُعيدت القواعد الافتراضية.',
+  'Règles proposées': 'القواعد المقترحة',
+  'Saisissez un nombre de jours entre 1 et 365.': 'أدخل عدد أيام بين 1 و365.',
+  'Sans projet ni client, la dépense est signalée.':
+      'بدون مشروع أو عميل، يُنبَّه إلى المصروف.',
+  'Sans serveur, REMBO lit seulement du texte : collez le texte de votre politique.':
+      'بدون خادم، لا يقرأ REMBO إلا النص: الصق نص سياستك.',
+  'Texte collé': 'نص ملصوق',
+  'Texte de la politique': 'نص السياسة',
+  'Validation': 'المصادقة',
+  'Votre politique de remboursement': 'سياسة الاسترجاع الخاصة بكم',
+  '{amount}, justificatif requis': '{amount}، مع إلزامية المبرر',
+  '{n} jours': '{n} يوما',
+  '{value} (déjà en place)': '{value} (مطبّق مسبقا)',
+  'À vérifier par les responsables': 'يتحقق منها المسؤولون',
 };

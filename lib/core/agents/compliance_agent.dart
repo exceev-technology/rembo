@@ -19,6 +19,7 @@ List<ExpenseFlag> controlExpense(
   required List<PolicyRule> policies,
   required Iterable<Expense> others,
   required DateTime today,
+  CompanyPolicy company = CompanyPolicy.defaults,
 }) {
   final flags = <ExpenseFlag>[];
   final rule = policies.where((p) => p.category == expense.category);
@@ -35,6 +36,9 @@ List<ExpenseFlag> controlExpense(
     if (rule.first.receiptRequired && !expense.hasReceipt) {
       flags.add(const ExpenseFlag(FlagKind.policy, 'Justificatif manquant'));
     }
+  }
+  if (company.projectRequired && expense.project.trim().isEmpty) {
+    flags.add(const ExpenseFlag(FlagKind.policy, 'Projet ou client manquant'));
   }
   bool counts(Expense o) =>
       o.id != expense.id &&
@@ -67,11 +71,12 @@ List<ExpenseFlag> controlExpense(
   if (expense.category == 'Autre') {
     flags.add(const ExpenseFlag(FlagKind.ambiguity, 'Catégorie à préciser'));
   }
-  if (expense.date != null && today.difference(expense.date!).inDays > 60) {
+  if (expense.date != null &&
+      today.difference(expense.date!).inDays > company.deadlineDays) {
     flags.add(
-      const ExpenseFlag(
+      ExpenseFlag(
         FlagKind.ambiguity,
-        'Dépense datée de plus de 60 jours',
+        'Dépense datée de plus de ${company.deadlineDays} jours',
       ),
     );
   }

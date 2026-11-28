@@ -563,6 +563,90 @@ class SupabaseBackend extends RemboBackend {
     () => _client.rpc<dynamic>('set_managers_declare', params: {'p_on': on}),
   );
 
+  @override
+  Future<CompanyPolicy> fetchCompanyPolicy() => _guard(() async {
+    final row = await _client
+        .from('companies')
+        .select('deadline_days, project_required, policy_document')
+        .eq('id', _companyId)
+        .maybeSingle();
+    return row == null ? CompanyPolicy.defaults : CompanyPolicy.fromJson(row);
+  });
+
+  /// Contract of the `read-policy` Edge Function: see its index.ts.
+  @override
+  Future<PolicyProposal> readPolicy(PolicySource source) async {
+    final Object? data;
+    try {
+      final response = await _client.functions
+          .invoke(
+            'read-policy',
+            body: {
+              'file_name': source.fileName,
+              if (source.text != null) 'text': source.text,
+              if (source.text == null)
+                'pages_base64': [for (final p in source.pages) base64Encode(p)],
+            },
+          )
+          // The server gives up at 55 s.
+          .timeout(const Duration(seconds: 60));
+      data = response.data;
+    } on FunctionException catch (e) {
+      throw RemboException(switch (e.status) {
+        403 => tr('Cette action est réservée aux responsables.'),
+        429 => tr('Le lecteur est occupé. Réessayez dans un instant.'),
+        503 => tr('La lecture de documents n’est pas activée sur ce serveur.'),
+        _ => tr('Le document n’a pas pu être lu. Réessayez.'),
+      });
+    } on TimeoutException {
+      throw RemboException(
+        tr('Le lecteur a mis trop de temps. Réessayez.'),
+        network: true,
+      );
+    } on SocketException {
+      throw _offline;
+    }
+    if (data is! Map || data['unreadable'] == true) throw _noRules();
+    final proposal = PolicyProposal.fromJson(
+      Map<String, dynamic>.from(data),
+      documentName: source.fileName,
+    );
+    if (proposal.isEmpty) throw _noRules();
+    return proposal;
+  }
+
+  static RemboException _noRules() => RemboException(
+    tr('REMBO n’a trouvé aucune règle de remboursement dans ce document.'),
+  );
+
+  @override
+  Future<void> applyPolicy(PolicyProposal proposal) => _guard(
+    () => _client.rpc<dynamic>(
+      'apply_policy',
+      params: {'p_policy': proposal.toJson()},
+    ),
+  );
+
+  @override
+  Future<void> saveCompanyRules({
+    required int deadlineDays,
+    required bool projectRequired,
+  }) => _guard(
+    () => _client.rpc<dynamic>(
+      'apply_policy',
+      params: {
+        'p_policy': {
+          'deadline_days': deadlineDays,
+          'project_required': projectRequired,
+        },
+      },
+    ),
+  );
+
+  @override
+  Future<void> resetPolicy() =>
+      _guard(() => _client.rpc<dynamic>('reset_policy'));
+
   // Exports ---------------------------------------------------------------
   @override
   Future<ExportBatch> createExport(

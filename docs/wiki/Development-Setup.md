@@ -84,6 +84,7 @@ To install a build on a phone: `flutter build apk --debug --dart-define-from-fil
 supabase link --project-ref <ref>
 supabase db push                         # migrations only; never the seed
 supabase functions deploy read-receipt   # optional, see supabase/README.md
+supabase functions deploy read-policy    # company policy import, same engine
 supabase secrets set RECEIPT_API_URL=… RECEIPT_MODEL=…
 ```
 
@@ -106,6 +107,7 @@ The other checks of the CI, to run when you touch their part:
 |---|---|
 | Database (migrations, rights, SQL functions) | `supabase start && supabase test db` |
 | Server receipt reader | `deno test supabase/functions/read-receipt/` |
+| Company policy reader | `deno test supabase/functions/read-policy/` |
 | End-to-end journey (no server needed) | `flutter test integration_test/journey_test.dart -d <device or linux>` |
 | OCR bench on a phone | `flutter test integration_test/bench_device_test.dart -d <phone>` |
 
