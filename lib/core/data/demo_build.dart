@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 /// The fictional demo (people, expenses, sample receipt) is part of debug
@@ -6,7 +8,9 @@ import 'package:flutter/foundation.dart';
 /// compiled, and the compiler leaves the demo code out of the release.
 const demoAllowed = !kReleaseMode || bool.fromEnvironment('REMBO_DEMO');
 
-/// Tools for the team (the OCR bench): in debug builds and tests only, or
-/// when built with --dart-define=REMBO_TOOLS=true. People using the app,
-/// testers with a profile build included, never see them.
-const teamTools = kDebugMode || bool.fromEnvironment('REMBO_TOOLS');
+/// Tools for the team (the OCR bench): in tests, or when built with
+/// --dart-define=REMBO_TOOLS=true. The debug APK handed to testers and to
+/// the jury does not show them.
+bool get teamTools =>
+    const bool.fromEnvironment('REMBO_TOOLS') ||
+    (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'));

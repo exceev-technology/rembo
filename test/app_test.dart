@@ -596,6 +596,30 @@ void main() {
     expect(state.user!.whatsappPhone, isNull);
   });
 
+  for (final role in UserRole.values) {
+    testWidgets('${role.label}: the member card opens the profile in detail', (
+      tester,
+    ) async {
+      await _start(
+        tester,
+        route: AppRoutes.home,
+        size: const Size(320, 640),
+        textScale: 2,
+      );
+      await _signInDirectly(tester, role);
+      await _tap(tester, 'tab-profile');
+      // The avatar shows first and last initials, e.g. « SB ».
+      expect(state.user!.initials, hasLength(2));
+      expect(find.text(state.user!.initials), findsOneWidget);
+      // The whole card opens the detail; its centre may be below the
+      // fold with large text.
+      await _tap(tester, 'profile-name');
+      expect(find.byKey(const ValueKey('profile-sheet')), findsOneWidget);
+      expect(find.text(state.user!.email), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('Accountant overview adds up the validated expenses', (
     tester,
   ) async {
