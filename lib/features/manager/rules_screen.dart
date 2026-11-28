@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
+import 'policy_section.dart';
 
-/// « Règles de remboursement » : one limit per category. The automatic
-/// control on the server applies them at submission.
+/// « Règles de remboursement » : the company's policy (imported or
+/// REMBO's), deadline and project, one limit per category, and how
+/// compliant expenses are validated. The automatic control on the server
+/// applies them at submission.
 class RulesScreen extends StatelessWidget {
   const RulesScreen({super.key});
 
@@ -15,12 +18,12 @@ class RulesScreen extends StatelessWidget {
       children: [
         RemboHero(
           title: tr('Règles de remboursement'),
-          subtitle: tr('Plafonds par dépense et justificatifs exigés.'),
+          subtitle: tr('Ce que le contrôle vérifie sur chaque dépense.'),
         ),
-        const _ValidationMode(),
-        const SizedBox(height: RemboSpace.md),
-        const _ManagersDeclare(),
-        const SizedBox(height: RemboSpace.lg),
+        const PolicyDocumentCard(),
+        _Heading(tr('Délai et projet')),
+        const CompanyRulesCard(),
+        _Heading(tr('Plafonds par catégorie')),
         for (final category in expenseCategories)
           if (category != 'Autre')
             _RuleCard(
@@ -32,9 +35,27 @@ class RulesScreen extends StatelessWidget {
         InfoStrip(
           tr('Tout écart, et la catégorie « Autre », va au responsable.'),
         ),
+        _Heading(tr('Validation')),
+        const _ValidationMode(),
+        const SizedBox(height: RemboSpace.md),
+        const _ManagersDeclare(),
       ],
     );
   }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: RemboSpace.xl, bottom: RemboSpace.sm),
+    child: Semantics(
+      header: true,
+      child: Text(text, style: RemboText.subtitle),
+    ),
+  );
 }
 
 /// Who approves an expense that complies with every rule: a manager, in

@@ -2,6 +2,8 @@
 /// are civil days; the JSON shape matches the Supabase tables.
 library;
 
+import 'dart:typed_data';
+
 import '../l10n/l10n.dart';
 
 enum UserRole {
@@ -448,6 +450,146 @@ class PolicyRule {
     limitCents: (json['limit_cents'] as num).toInt(),
     receiptRequired: (json['receipt_required'] as bool?) ?? true,
   );
+}
+
+/// The company's policy that imported or typed rules can change, besides
+/// the limits per category. Without any, REMBO's defaults.
+class CompanyPolicy {
+  const CompanyPolicy({
+    this.deadlineDays = 60,
+    this.projectRequired = false,
+    this.document,
+  });
+  static const defaults = CompanyPolicy();
+
+  /// An expense older than this is flagged at submission.
+  final int deadlineDays;
+
+  /// An expense without project or client is flagged at submission.
+  final bool projectRequired;
+
+  /// The imported document the rules come from; null with REMBO's rules.
+  final PolicyDocument? document;
+
+  factory CompanyPolicy.fromJson(Map<String, dynamic> json) => CompanyPolicy(
+    deadlineDays: (json['deadline_days'] as num?)?.toInt() ?? 60,
+    projectRequired: json['project_required'] == true,
+    document: json['policy_document'] is Map
+        ? PolicyDocument.fromJson(
+            Map<String, dynamic>.from(json['policy_document'] as Map),
+          )
+        : null,
+  );
+
+  Map<String, Object?> toJson() => {
+    'deadline_days': deadlineDays,
+    'project_required': projectRequired,
+    'policy_document': document?.toJson(),
+  };
+}
+
+/// An imported policy, as applied by a manager.
+class PolicyDocument {
+  const PolicyDocument({
+    required this.name,
+    this.summary = '',
+    this.notApplied = const [],
+    this.appliedAt,
+    this.appliedBy = '',
+  });
+  final String name;
+  final String summary;
+
+  /// Rules read in the document that REMBO does not check by itself.
+  final List<String> notApplied;
+  final DateTime? appliedAt;
+  final String appliedBy;
+
+  factory PolicyDocument.fromJson(Map<String, dynamic> json) => PolicyDocument(
+    name: json['name'] as String? ?? '',
+    summary: json['summary'] as String? ?? '',
+    notApplied: [
+      for (final n in json['not_applied'] as List? ?? const [])
+        if (n is String) n,
+    ],
+    appliedAt: DateTime.tryParse(json['applied_at'] as String? ?? '')
+        ?.toLocal(),
+    appliedBy: json['applied_by'] as String? ?? '',
+  );
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'summary': summary,
+    'not_applied': notApplied,
+    'applied_at': appliedAt?.toUtc().toIso8601String(),
+    'applied_by': appliedBy,
+  };
+}
+
+/// What the reader understood in a policy document: proposals, applied
+/// only once a manager has checked them. A null value: the document says
+/// nothing about it, the current rule stays.
+class PolicyProposal {
+  const PolicyProposal({
+    required this.documentName,
+    this.summary = '',
+    this.deadlineDays,
+    this.projectRequired,
+    this.rules = const [],
+    this.notApplied = const [],
+  });
+  final String documentName;
+  final String summary;
+  final int? deadlineDays;
+  final bool? projectRequired;
+  final List<PolicyRule> rules;
+  final List<String> notApplied;
+
+  bool get isEmpty =>
+      deadlineDays == null &&
+      projectRequired == null &&
+      rules.isEmpty &&
+      notApplied.isEmpty;
+
+  factory PolicyProposal.fromJson(
+    Map<String, dynamic> json, {
+    required String documentName,
+  }) => PolicyProposal(
+    documentName: documentName,
+    summary: json['summary'] as String? ?? '',
+    deadlineDays: (json['deadline_days'] as num?)?.toInt(),
+    projectRequired: json['project_required'] as bool?,
+    rules: [
+      for (final r in json['rules'] as List? ?? const [])
+        if (r is Map) PolicyRule.fromJson(Map<String, dynamic>.from(r)),
+    ],
+    notApplied: [
+      for (final n in json['not_applied'] as List? ?? const [])
+        if (n is String) n,
+    ],
+  );
+
+  /// As apply_policy reads it.
+  Map<String, Object?> toJson() => {
+    'deadline_days': ?deadlineDays,
+    'project_required': ?projectRequired,
+    'rules': [for (final r in rules) r.toJson()],
+    'document': {
+      'name': documentName,
+      'summary': summary,
+      'not_applied': notApplied,
+    },
+  };
+}
+
+/// A policy document picked by a manager, ready for the reader: its text,
+/// or its pages as pictures (PNG or JPEG).
+class PolicySource {
+  const PolicySource.text(this.fileName, String this.text) : pages = const [];
+  const PolicySource.pages(this.fileName, this.pages) : text = null;
+  final String fileName;
+  final String? text;
+  final List<Uint8List> pages;
 }
 
 class ExportBatch {

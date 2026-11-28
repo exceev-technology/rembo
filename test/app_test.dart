@@ -292,6 +292,61 @@ void main() {
     expect(await backend.fetchAutoApprove(), isTrue);
   });
 
+  testWidgets('The manager imports the company policy and applies it', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-rules');
+    await _tap(tester, 'rules-policy-paste');
+    await _type(
+      tester,
+      'policy-text',
+      'Déclarer les dépenses dans les 20 jours. '
+          'Repas : 120 DH maximum. Pas d’alcool remboursé.',
+    );
+    await _tap(tester, 'policy-text-read');
+    // Nothing changes before the manager applies the proposal.
+    expect(find.byKey(const ValueKey('policy-changes')), findsOneWidget);
+    expect(state.companyPolicy.deadlineDays, 60);
+    await tester.ensureVisible(find.byKey(const ValueKey('policy-apply')));
+    await _tap(tester, 'policy-apply');
+    expect(state.companyPolicy.deadlineDays, 20);
+    expect(state.policyOf('Repas')!.limitCents, 12000);
+    expect(state.companyPolicy.document!.notApplied, [
+      'Pas d’alcool remboursé',
+    ]);
+    // Back on the rules, the document is shown and can be undone.
+    expect(find.byKey(const ValueKey('rules-policy-reset')), findsOneWidget);
+    await _tap(tester, 'rules-policy-reset');
+    await _tap(tester, 'confirm-reset-policy');
+    expect(state.companyPolicy.document, isNull);
+    expect(state.companyPolicy.deadlineDays, 60);
+  });
+
+  testWidgets('The rules fit a narrow phone, large text', (tester) async {
+    await _start(
+      tester,
+      route: AppRoutes.home,
+      size: const Size(320, 640),
+      textScale: 2,
+    );
+    await _signInDirectly(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    // The list builds its rows as they scroll into view.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('profile-rules')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.byKey(const ValueKey('profile-rules')));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'profile-rules');
+    expect(find.byKey(const ValueKey('rules-policy')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('A receipt in euros keeps what was paid; a rate fills the VAT', (
     tester,
   ) async {

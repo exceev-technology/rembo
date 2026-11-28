@@ -145,6 +145,21 @@ Puis `REMBO_OCR=true` dans `.env`. Chaque lecture est journalisée dans `receipt
 - **Tests RLS automatisés** (pgTAP) : à écrire ; exigés par la Definition of Done.
 - Une entreprise avec un seul responsable ne peut pas faire valider les exceptions de ce responsable.
 
+## Politique de remboursement de l’entreprise (`read-policy`)
+
+Par défaut, REMBO applique ses propres règles : un plafond par catégorie, un délai de déclaration de 60 jours, et le projet ou client facultatif. Dans **Profil → Règles de remboursement**, un responsable peut importer la politique de son entreprise (PDF de 6 pages au plus, photo ou fichier texte) ou en coller le texte.
+
+1. `functions/read-policy` la fait lire par **le moteur des reçus** (mêmes secrets `RECEIPT_*`, même règle de confidentialité). Le moteur en tire ce que REMBO sait vérifier : délai, projet obligatoire, plafond et justificatif par catégorie. Les autres règles (« pas d’alcool », « classe économique »…) sont listées à part, pour que les responsables les vérifient eux-mêmes.
+2. L’application montre ces **propositions** face aux règles en place. Rien ne change tant que le responsable n’a pas touché **Appliquer ces règles**.
+3. `apply_policy` (SQL) vérifie et enregistre ce qu’il a accepté. `control_expense` suit ensuite le délai et la règle du projet de l’entreprise. `reset_policy` revient aux règles de REMBO.
+
+```bash
+supabase db push                       # migration 20261128000000_company_policy
+supabase functions deploy read-policy
+```
+Sans serveur (mode local ou démo), seul un texte collé est lu, par des règles simples (`lib/core/agents/policy_reader.dart`). Tests : `deno test supabase/functions/read-policy/` et `supabase/tests/database/10_company_policy.test.sql`.
+À terme, un modèle hébergé par l’entreprise est préférable : la politique interne ne quitte alors pas ses serveurs.
+
 ## E-mails de confirmation (projet hébergé)
 
 L’appli confirme une adresse et change un mot de passe avec un **code à 6 chiffres** reçu par e-mail et tapé dans l’appli : aucun lien à ouvrir, aucune page web nécessaire.

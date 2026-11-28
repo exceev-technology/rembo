@@ -52,8 +52,15 @@ String trData(String? stored) {
       'over': '${over.group(2)} ${tr('MAD')}',
     });
   }
+  final late = _tooOld.firstMatch(stored);
+  if (late != null) {
+    return tr('Dépense datée de plus de {days} jours', {'days': late.group(1)});
+  }
   return stored;
 }
+
+/// « Dépense datée de plus de 30 jours »: the company's deadline.
+final _tooOld = RegExp(r'^Dépense datée de plus de (\d+) jours$');
 
 /// « 1 dépense », « 3 dépenses »; Arabic has its own forms for 1, 2, 3–10
 /// and above.
