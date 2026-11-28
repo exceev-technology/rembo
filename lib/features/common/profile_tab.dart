@@ -151,22 +151,49 @@ class ProfileTab extends StatelessWidget {
   }
 }
 
-/// Three figures that matter to this role, as on the stub of a receipt.
-List<(String, String)> _figures(AppState state) {
+/// A figure on the stub of the card: a count, or an amount in dirhams.
+typedef _Figure = ({String label, String value, bool money});
+
+/// 1 234 567 centimes → « 12 346 »: whole dirhams, as on a summary.
+String _dirhams(int cents) =>
+    formatMad((cents / 100).round() * 100).split(',').first;
+
+/// The figures that matter to this role, as on the stub of a receipt.
+List<_Figure> _figures(AppState state) {
   int sum(Iterable<Expense> list) =>
       list.fold(0, (total, e) => total + e.amountCents);
   switch (state.role) {
     case UserRole.manager:
       return [
-        (tr('À décider'), '${state.toReview.length}'),
-        (tr('Exceptions'), '${state.exceptions.length}'),
-        (tr('Membres'), state.membersLoaded ? '${state.members.length}' : '–'),
+        (
+          label: tr('À décider'),
+          value: '${state.toReview.length}',
+          money: false,
+        ),
+        (
+          label: tr('Exceptions'),
+          value: '${state.exceptions.length}',
+          money: false,
+        ),
+        (
+          label: tr('Membres'),
+          value: state.membersLoaded ? '${state.members.length}' : '–',
+          money: false,
+        ),
       ];
     case UserRole.accountant:
       return [
-        (tr('À exporter'), '${state.toExport.length}'),
-        (tr('Montant'), formatMad(sum(state.toExport))),
-        (tr('Exports'), '${state.exports.length}'),
+        (
+          label: tr('À exporter'),
+          value: _dirhams(sum(state.toExport)),
+          money: true,
+        ),
+        (
+          label: tr('Dépenses à exporter'),
+          value: '${state.toExport.length}',
+          money: false,
+        ),
+        (label: tr('Exports'), value: '${state.exports.length}', money: false),
       ];
     case UserRole.employee:
       final now = DateTime.now();
@@ -187,9 +214,13 @@ List<(String, String)> _figures(AppState state) {
             e.status == ExpenseStatus.exported,
       );
       return [
-        (tr('Ce mois'), formatMad(sum(thisMonth))),
-        (tr('En attente'), '${waiting.length}'),
-        (tr('Validées'), '${approved.length}'),
+        (
+          label: tr('Déclaré ce mois'),
+          value: _dirhams(sum(thisMonth)),
+          money: true,
+        ),
+        (label: tr('En attente'), value: '${waiting.length}', money: false),
+        (label: tr('Validées'), value: '${approved.length}', money: false),
       ];
   }
 }
@@ -270,59 +301,57 @@ class _MemberCard extends StatelessWidget {
                     painter: _Perforation(Colors.white.withValues(alpha: 0.35)),
                   ),
                   const SizedBox(height: RemboSpace.md),
-                  if (roomy)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final (label, value) in figures)
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: Text(
-                                    value,
-                                    style: RemboText.amount.copyWith(
-                                      fontSize: 19,
-                                      color: onNight,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  label,
-                                  style: RemboText.caption.copyWith(
-                                    color: soft,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  // An amount gets a line of its own: it is often long.
+                  for (final f in figures.where((f) => f.money)) ...[
+                    Text(
+                      f.label,
+                      style: RemboText.caption.copyWith(color: soft),
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text.rich(
+                        TextSpan(
+                          text: f.value,
+                          style: RemboText.amount.copyWith(
+                            fontSize: 26,
+                            color: onNight,
                           ),
-                      ],
-                    )
-                  else
-                    for (final (label, value) in figures)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: RemboSpace.xs),
-                        child: Wrap(
-                          spacing: RemboSpace.sm,
-                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text(
-                              value,
-                              style: RemboText.amount.copyWith(
-                                fontSize: 17,
-                                color: onNight,
-                              ),
-                            ),
-                            Text(
-                              label,
-                              style: RemboText.caption.copyWith(color: soft),
+                            TextSpan(
+                              text: ' ${tr('MAD')}',
+                              style: RemboText.body.copyWith(color: soft),
                             ),
                           ],
                         ),
                       ),
+                    ),
+                    const SizedBox(height: RemboSpace.md),
+                  ],
+                  Wrap(
+                    spacing: RemboSpace.xl,
+                    runSpacing: RemboSpace.sm,
+                    children: [
+                      for (final f in figures.where((f) => !f.money))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              f.value,
+                              style: RemboText.amount.copyWith(
+                                fontSize: 19,
+                                color: onNight,
+                              ),
+                            ),
+                            Text(
+                              f.label,
+                              style: RemboText.caption.copyWith(color: soft),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
