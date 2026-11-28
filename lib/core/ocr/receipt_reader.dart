@@ -15,6 +15,15 @@ typedef ReceiptReader = Future<ReceiptReading?> Function(
 /// sends the picture anywhere. Null where there is none (desktop, web).
 ReceiptReader? deviceReceiptReader = platformReceiptReader();
 
+/// The raw rows of text the phone recognises on a picture (diagnostic of
+/// the OCR bench). Null where there is no reader.
+typedef RowsReader = Future<List<String>?> Function(
+  Uint8List bytes,
+  String name,
+);
+
+RowsReader? deviceRowsReader = platformRowsReader();
+
 /// Reads a receipt with the phone first, and asks the server's reader only
 /// when the phone could not find the essentials (typically a receipt in
 /// Arabic or handwritten, which the phone's reader does not know).
@@ -30,7 +39,10 @@ Future<ReceiptReading?> readReceipt(
   final local = onDevice == null ? null : await onDevice(bytes, name);
   if (local != null && isComplete(local)) return local;
   final remote = await onServer(bytes, name);
-  if (remote == null) return local;
+  // No answer from the server (busy, out of quota, slow network, or no
+  // server reader): that says nothing about the picture. The form opens
+  // with what the phone found, never the « unreadable » screen.
+  if (remote == null) return local == null || local.unreadable ? null : local;
   // The server found nothing either: keep whatever the phone had.
   if (remote.unreadable && local != null && !local.unreadable) return local;
   return remote;

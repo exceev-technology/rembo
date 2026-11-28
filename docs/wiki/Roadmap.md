@@ -16,7 +16,7 @@ Scrum with **one-week sprints, Monday to Friday**. Each sprint maps to:
 | Sprint 4 | 16 → 20 Nov | **Sprint 4 · Approval workflow** | Submit, approve/reject with a reason, expense policy, status history |
 | Sprint 5 | 23 → 27 Nov | **Sprint 5 · Mobile MVP complete** | Capture, correction, submission and decision working end to end on **Android and iOS** |
 | Sprint 6 | 30 Nov → 4 Dec | **Sprint 6 · CSV export & user tests** | Accounting **CSV export**, user tests, fixes |
-| Wrap-up | 7 Dec | **MVP · Handover & demo day** | Handover package: code, installation guide, licences, test report, known limits |
+| Wrap-up | 7 Dec | **MVP · Handover & demo day** | Handover package: code, installation guide, licences, test report, known limits (`docs/handover/`) |
 | Demo day | 8 Dec | **MVP · Handover & demo day** | MVP demo and presentation of the results |
 
 ## Public holidays

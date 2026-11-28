@@ -101,6 +101,16 @@ class ExpenseEvent {
   );
 }
 
+/// Moroccan VAT rates, in percent; 0 when the receipt says exempt.
+const vatRates = [20, 14, 10, 7, 0];
+
+/// Currencies a receipt can be paid in. The amount reimbursed is always in
+/// dirhams: another currency also keeps what was paid in it.
+const receiptCurrencies = ['MAD', 'EUR', 'USD', 'GBP'];
+
+/// Marks a field [Expense.copyWith] keeps; null means « clear it ».
+const _keep = Object();
+
 const expenseCategories = [
   'Repas',
   'Transport',
@@ -119,6 +129,9 @@ class Expense {
     this.date,
     this.amountCents = 0,
     this.vatCents = 0,
+    this.vatRate,
+    this.currency = 'MAD',
+    this.foreignAmountCents,
     this.category = '',
     this.project = '',
     this.reason = '',
@@ -129,6 +142,8 @@ class Expense {
     this.source = ExpenseSource.app,
     this.transcript,
     this.voicePath,
+    this.agentProposal,
+    this.captureStartedAt,
     required this.createdAt,
   });
 
@@ -140,6 +155,14 @@ class Expense {
   final DateTime? date;
   final int amountCents;
   final int vatCents;
+
+  /// VAT rate printed on the receipt, in percent (see [vatRates]).
+  final int? vatRate;
+
+  /// Currency of the receipt. [amountCents] stays in MAD; when the receipt
+  /// is in another currency, [foreignAmountCents] is what was paid in it.
+  final String currency;
+  final int? foreignAmountCents;
   final String category;
   final String project;
   final String reason;
@@ -154,12 +177,22 @@ class Expense {
 
   /// Voice note kept next to the receipts, when there is one.
   final String? voicePath;
+
+  /// What the agents proposed when the form opened, kept as it was to
+  /// measure what the person accepted or corrected:
+  /// `{engine, fields: {field: {value, confidence, reason, agent}}}`.
+  final Map<String, dynamic>? agentProposal;
+
+  /// When the person started declaring (picture taken, form opened).
+  final DateTime? captureStartedAt;
   final DateTime createdAt;
 
   bool get fromWhatsApp => source == ExpenseSource.whatsapp;
   bool get hasVoice => voicePath != null && voicePath!.isNotEmpty;
 
   bool get hasReceipt => receiptPath != null && receiptPath!.isNotEmpty;
+
+  bool get foreignCurrency => currency != 'MAD';
 
   /// What lists show: the reason when given, else the supplier.
   String get title => supplier.isNotEmpty
@@ -173,6 +206,8 @@ class Expense {
     if (amountCents <= 0) tr('montant'),
     if (category.trim().isEmpty) tr('catégorie'),
     if (reason.trim().isEmpty) tr('motif'),
+    if (foreignCurrency && (foreignAmountCents ?? 0) <= 0)
+      tr('montant payé en devise'),
   ];
 
   ExpenseEvent? get lastDecision {
@@ -187,6 +222,11 @@ class Expense {
 
   bool get approvedByAgent => lastDecision?.byAgent ?? false;
 
+  /// The control found nothing to say: it waits only for a manager to
+  /// confirm it (when the company does not let the control approve).
+  bool get compliantToConfirm =>
+      status == ExpenseStatus.needsReview && flags.isEmpty;
+
   Expense copyWith({
     String? id,
     String? supplier,
@@ -194,6 +234,9 @@ class Expense {
     DateTime? date,
     int? amountCents,
     int? vatCents,
+    Object? vatRate = _keep,
+    String? currency,
+    Object? foreignAmountCents = _keep,
     String? category,
     String? project,
     String? reason,
@@ -201,6 +244,8 @@ class Expense {
     String? receiptPath,
     List<ExpenseFlag>? flags,
     List<ExpenseEvent>? events,
+    Map<String, dynamic>? agentProposal,
+    DateTime? captureStartedAt,
   }) => Expense(
     id: id ?? this.id,
     employeeId: employeeId,
@@ -210,6 +255,11 @@ class Expense {
     date: date ?? this.date,
     amountCents: amountCents ?? this.amountCents,
     vatCents: vatCents ?? this.vatCents,
+    vatRate: identical(vatRate, _keep) ? this.vatRate : vatRate as int?,
+    currency: currency ?? this.currency,
+    foreignAmountCents: identical(foreignAmountCents, _keep)
+        ? this.foreignAmountCents
+        : foreignAmountCents as int?,
     category: category ?? this.category,
     project: project ?? this.project,
     reason: reason ?? this.reason,
@@ -220,6 +270,8 @@ class Expense {
     source: source,
     transcript: transcript,
     voicePath: voicePath,
+    agentProposal: agentProposal ?? this.agentProposal,
+    captureStartedAt: captureStartedAt ?? this.captureStartedAt,
     createdAt: createdAt,
   );
 
@@ -242,6 +294,9 @@ class Expense {
           : DateTime.parse(json['expense_date'] as String),
       amountCents: (json['amount_cents'] as num?)?.toInt() ?? 0,
       vatCents: (json['vat_cents'] as num?)?.toInt() ?? 0,
+      vatRate: (json['vat_rate'] as num?)?.toInt(),
+      currency: (json['currency'] as String?) ?? 'MAD',
+      foreignAmountCents: (json['foreign_amount_cents'] as num?)?.toInt(),
       category: (json['category'] as String?) ?? '',
       project: (json['project'] as String?) ?? '',
       reason: (json['reason'] as String?) ?? '',
@@ -255,6 +310,12 @@ class Expense {
       source: ExpenseSource.parse(json['source'] as String?),
       transcript: json['transcript'] as String?,
       voicePath: json['voice_path'] as String?,
+      agentProposal: json['agent_proposal'] is Map
+          ? Map<String, dynamic>.from(json['agent_proposal'] as Map)
+          : null,
+      captureStartedAt: json['capture_started_at'] == null
+          ? null
+          : DateTime.parse(json['capture_started_at'] as String).toLocal(),
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
     );
   }
@@ -267,9 +328,15 @@ class Expense {
     'expense_date': date == null ? null : isoDay(date!),
     'amount_cents': amountCents,
     'vat_cents': vatCents,
+    'vat_rate': vatRate,
+    'currency': currency,
+    'foreign_amount_cents': foreignCurrency ? foreignAmountCents : null,
     'category': category,
     'project': project.trim(),
     'reason': reason.trim(),
+    if (agentProposal != null) 'agent_proposal': agentProposal,
+    if (captureStartedAt != null)
+      'capture_started_at': captureStartedAt!.toUtc().toIso8601String(),
   };
 }
 
@@ -380,6 +447,7 @@ class ExportBatch {
     required this.createdAt,
     required this.count,
     required this.totalCents,
+    this.vatCents = 0,
     this.csv,
   });
   final String id;
@@ -387,6 +455,9 @@ class ExportBatch {
   final DateTime createdAt;
   final int count;
   final int totalCents;
+
+  /// VAT total recorded by the server for the batch.
+  final int vatCents;
 
   /// File content, available for the batch created in this session.
   final String? csv;
@@ -398,8 +469,36 @@ class ExportBatch {
         createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
         count: (json['expense_count'] as num).toInt(),
         totalCents: (json['total_cents'] as num).toInt(),
+        vatCents: (json['vat_cents'] as num?)?.toInt() ?? 0,
         csv: csv,
       );
+}
+
+/// How sure an agent is of a value it proposes.
+enum Confidence {
+  high('Sûr'),
+  medium('Probable'),
+  low('À vérifier');
+
+  const Confidence(this._label);
+  final String _label;
+  String get label => tr(_label);
+
+  static Confidence parse(String? name) =>
+      values.firstWhere((c) => c.name == name, orElse: () => medium);
+}
+
+/// Why an agent proposes a value, and how sure it is. [reason] is French,
+/// shown through [trData].
+class FieldNote {
+  const FieldNote(this.confidence, this.reason);
+  final Confidence confidence;
+  final String reason;
+
+  Map<String, dynamic> toJson() => {
+    'confidence': confidence.name,
+    'reason': reason,
+  };
 }
 
 /// Values read on a receipt, when a reader is available.
@@ -410,18 +509,42 @@ class ReceiptReading {
     this.date,
     this.amountCents,
     this.vatCents,
+    this.vatRate,
+    this.currency,
     this.unreadable = false,
     this.simulated = false,
+    this.notes = const {},
+    this.engine = 'device',
   });
   final String? supplier;
   final String? supplierIce;
   final DateTime? date;
   final int? amountCents;
   final int? vatCents;
+
+  /// VAT rate printed on the receipt, in percent.
+  final int? vatRate;
+
+  /// Currency printed on the receipt (MAD, EUR, USD, GBP), when it says.
+  final String? currency;
   final bool unreadable;
 
   /// Demo values, not read from the picture.
   final bool simulated;
+
+  /// For each field read (supplier, ice, date, amount, vat, rate,
+  /// currency): how it was found and how sure the reader is.
+  final Map<String, FieldNote> notes;
+
+  /// Who read it: `device` (on the phone) or `server`.
+  final String engine;
+
+  /// The fields a submission needs that the reader could not find.
+  List<String> get missing => [
+    if (supplier == null) 'supplier',
+    if (date == null) 'date',
+    if (amountCents == null) 'amount',
+  ];
 }
 
 /// A problem the user can act on; [message] is shown as is.
@@ -504,6 +627,7 @@ extension ExportBatchStorage on ExportBatch {
     'created_at': createdAt.toUtc().toIso8601String(),
     'expense_count': count,
     'total_cents': totalCents,
+    'vat_cents': vatCents,
     'csv': csv,
   };
 }

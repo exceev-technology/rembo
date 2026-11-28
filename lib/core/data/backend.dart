@@ -27,6 +27,21 @@ abstract class RemboBackend {
     required String fullName,
   });
   Future<void> sendPasswordReset(String email);
+
+  /// Confirms a new account with the code e-mailed to [email], and signs
+  /// in. A code rather than a link: nothing to open outside the app.
+  Future<AppUser> confirmSignUp({required String email, required String code});
+
+  /// Sends the code of [confirmSignUp] again.
+  Future<void> resendSignUpCode(String email);
+
+  /// Sets a new password with the code sent by [sendPasswordReset], and
+  /// signs in.
+  Future<AppUser> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
   Future<void> signOut();
 
   /// Creates a company; the current user becomes its first manager.
@@ -64,6 +79,11 @@ abstract class RemboBackend {
   /// Manager decision on an expense waiting for review.
   Future<Expense> decide(String id, {required bool approve, String? reason});
 
+  /// Manager confirms, in one gesture, the expenses the control found
+  /// compliant. Never their own; flagged ones are left for a decision.
+  /// Returns how many were approved.
+  Future<int> approveCompliant(List<String> ids);
+
   /// Tries to read a receipt. Null when no reader is available.
   Future<ReceiptReading?> readReceipt(Uint8List bytes, String name);
 
@@ -94,6 +114,11 @@ abstract class RemboBackend {
   Future<List<PolicyRule>> fetchPolicies();
   Future<void> savePolicy(PolicyRule rule);
 
+  /// True when the control approves compliant expenses itself; false (the
+  /// default) when a manager confirms them.
+  Future<bool> fetchAutoApprove();
+  Future<void> setAutoApprove(bool on);
+
   // Exports ---------------------------------------------------------------
   /// Marks [ids] as exported and returns the batch with its CSV content.
   /// [requestId] makes a retry return the same batch.
@@ -103,4 +128,11 @@ abstract class RemboBackend {
     String delimiter = ';',
   });
   Future<List<ExportBatch>> fetchExports();
+
+  /// Accounting account of each category, as the company set it.
+  Future<Map<String, String>> fetchAccounts();
+
+  /// Sets (or, with an empty [code], removes) the account of [category].
+  /// Accountants and managers only.
+  Future<void> saveAccount(String category, String code);
 }

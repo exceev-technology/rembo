@@ -33,7 +33,58 @@ void main() {
     expect(r.date, DateTime(2026, 11, 10));
     expect(r.amountCents, 24000);
     expect(r.vatCents, 2182);
+    expect(r.vatRate, 10);
   });
+
+  test('the currency printed on the receipt, dirhams first', () {
+    ReceiptReading read(List<String> rows) =>
+        parseReceiptText(rows, today: _today);
+    expect(
+      read(['HOTEL FARAH', '10/11/2026', 'TOTAL 950,00 DH']).currency,
+      'MAD',
+    );
+    expect(
+      read(['CAFE DE FLORE', '10/11/2026', 'TOTAL 18,50 €']).currency,
+      'EUR',
+    );
+    expect(
+      read(['STARBUCKS NYC', '11/10/2026', 'TOTAL USD 12.40']).currency,
+      'USD',
+    );
+    expect(read(['PETIT TAXI', '10/11/2026', 'TOTAL 45,00']).currency, isNull);
+    expect(
+      read(['RIAD SALAM', '10/11/2026', 'Prix 90,00 EUR', 'TOTAL 980,00 MAD'])
+          .currency,
+      'MAD',
+    );
+  });
+
+  test(
+    'the VAT rate: printed, or the Moroccan rate VAT and total agree on',
+    () {
+      final printed = parseReceiptText([
+        'LIBRAIRIE NATIONALE',
+        'Date 09/11/2026',
+        'TVA 20% 30,00',
+        'TOTAL TTC 180,00',
+      ], today: _today);
+      expect(printed.vatRate, 20);
+      final computed = parseReceiptText([
+        'STATION AFRIQUIA',
+        'Date 09/11/2026',
+        'Montant TVA 61,25',
+        'TOTAL TTC 498,75',
+      ], today: _today);
+      expect(computed.vatCents, 6125);
+      expect(computed.vatRate, 14);
+      final none = parseReceiptText([
+        'PETIT TAXI',
+        'Date 09/11/2026',
+        'TOTAL 45,00',
+      ], today: _today);
+      expect(none.vatRate, isNull);
+    },
+  );
 
   test(
     'base and tax on the same line: the tax is the one matching the rate',
@@ -123,6 +174,75 @@ void main() {
     expect(r.vatCents, 2182);
   });
 
+  test('on a tilted ticket, rows follow the slope of the text', () {
+    // The ticket falls 0.1 px per px to the right: « Rendu 58,00 » lies,
+    // at the right edge, as low as the next label on the left.
+    final pieces = [
+      (text: 'TOTAL TTC', left: 20.0, top: 100.0, bottom: 120.0),
+      (text: '42,00', left: 420.0, top: 140.0, bottom: 160.0),
+      (text: 'Rendu', left: 20.0, top: 140.0, bottom: 160.0),
+      (text: '58,00', left: 420.0, top: 180.0, bottom: 200.0),
+    ];
+    expect(rowsOf(pieces, slope: .1), ['TOTAL TTC 42,00', 'Rendu 58,00']);
+    final r = parseReceiptText([
+      'CAFE DE FRANCE',
+      '13/11/2026',
+      ...rowsOf(pieces, slope: .1),
+    ], today: _today);
+    expect(r.amountCents, 4200);
+  });
+
+  test('without « TTC » read, the amount without taxes plus VAT wins', () {
+    final r = parseReceiptText([
+      'MARJANE CALIFORNIE',
+      'Date : 02/11/2026',
+      'TOTAL 130,33',
+      'TVA 20% 26,07',
+      'T0TAL TT C 156,40',
+    ], today: _today);
+    expect(r.amountCents, 15640);
+    expect(r.vatCents, 2607);
+    expect(r.notes['amount']!.confidence, Confidence.medium);
+  });
+
+  test('rows as the phone really read them (bench, 19 Nov.)', () {
+    // ML Kit puts a space after the decimal comma, and a hotel is not a
+    // phone number: these rows were missed before.
+    final marjane = parseReceiptText([
+      'MARJANE CALIFORNIE',
+      'Casablan ca',
+      'ICE : 0089012 34000034',
+      'Date : 02/11/2026 15: 00',
+      'Cahiers A4 62, 56',
+      'TOTAL HT 130,33',
+      'TVA 20% 26,07',
+      'TOTAL TTC 156, 40 DH',
+      'Espèces 200, 00',
+      'Rendu 43,60',
+    ], today: _today);
+    expect(marjane.amountCents, 15640);
+    expect(marjane.vatCents, 2607);
+    expect(marjane.supplierIce, '008901234000034');
+    final cafe = parseReceiptText([
+      'CAFE DE FRANCE',
+      'Date : 13/11/2026 18: 20',
+      'Tajine poulet 18,90',
+      'TOTAL TTC',
+      '42, 00 DH',
+      'Espèces',
+      'Rendu 100, 00',
+      '58,00',
+    ], today: _today);
+    expect(cafe.amountCents, 4200);
+    final hotel = parseReceiptText([
+      'HOTEL FARAH TANGER',
+      'Casablanca',
+      'Date : 05/11/2026 20:36',
+      'TOTAL TTC 950,00 DH',
+    ], today: _today);
+    expect(hotel.supplier, 'Hotel Farah Tanger');
+  });
+
   group('phone first, server only when needed', () {
     final bytes = Uint8List(0);
     const full = ReceiptReading(supplier: 'Café Atlas', amountCents: 24000);
@@ -170,6 +290,19 @@ void main() {
       );
       expect(r, same(partial));
     });
+
+    test(
+      'a server that does not answer never calls the picture unreadable',
+      () async {
+        final r = await readReceipt(
+          bytes,
+          't.jpg',
+          onDevice: gives(const ReceiptReading(unreadable: true)),
+          onServer: gives(null),
+        );
+        expect(r, isNull);
+      },
+    );
 
     test(
       'a server that reads nothing does not erase a partial reading',

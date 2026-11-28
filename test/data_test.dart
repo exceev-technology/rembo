@@ -10,8 +10,11 @@ import 'package:rembo/core/format/phone_countries.dart';
 
 final _now = DateTime(2026, 11, 10, 15);
 
-DemoBackend _backend() =>
-    DemoBackend(clock: () => _now, latency: Duration.zero);
+DemoBackend _backend({bool autoApprove = false}) => DemoBackend(
+  clock: () => _now,
+  latency: Duration.zero,
+  autoApprove: autoApprove,
+);
 
 Expense _draft({
   int cents = 15000,
@@ -116,10 +119,54 @@ void main() {
   });
 
   group('Automatic control', () {
+    test('by default a compliant expense waits for a manager, who confirms '
+        'the compliant ones in one gesture', () async {
+      final b = _backend();
+      await b.signIn(DemoBackend.marius.email, 'x');
+      final saved = await b.saveDraft(
+        _draft(),
+        receiptBytes: Uint8List(4),
+        receiptName: 'r.jpg',
+      );
+      final sent = await b.submit(saved.id);
+      expect(sent.status, ExpenseStatus.needsReview);
+      expect(sent.flags, isEmpty);
+      expect(sent.compliantToConfirm, isTrue);
+      expect(sent.events.last.byAgent, isTrue);
+      expect(sent.events.last.reason, 'Conforme aux règles');
+      await _expectRefused(b.approveCompliant([sent.id]), 'responsables');
+
+      await b.signIn(DemoBackend.salma.email, 'x');
+      expect(await b.fetchAutoApprove(), isFalse);
+      final flagged = (await b.fetchExpenses()).firstWhere(
+        (e) => e.status == ExpenseStatus.needsReview && e.flags.isNotEmpty,
+      );
+      expect(await b.approveCompliant([sent.id, flagged.id]), 1);
+      final mine = (await b.fetchExpenses()).firstWhere((e) => e.id == sent.id);
+      expect(mine.status, ExpenseStatus.approved);
+      expect(mine.approvedByAgent, isFalse);
+      expect(mine.lastDecision!.actorName, DemoBackend.salma.fullName);
+      expect(
+        (await b.fetchExpenses()).firstWhere((e) => e.id == flagged.id).status,
+        ExpenseStatus.needsReview,
+      );
+      // Confirming again changes nothing.
+      expect(await b.approveCompliant([sent.id]), 0);
+
+      await b.setAutoApprove(true);
+      await b.signIn(DemoBackend.marius.email, 'x');
+      final next = await b.saveDraft(
+        _draft(cents: 9000, date: DateTime(2026, 11, 7)),
+        receiptBytes: Uint8List(4),
+        receiptName: 'r.jpg',
+      );
+      expect((await b.submit(next.id)).approvedByAgent, isTrue);
+    });
+
     test(
       'a compliant expense with a receipt is approved by the agent',
       () async {
-        final b = _backend();
+        final b = _backend(autoApprove: true);
         await b.signIn(DemoBackend.marius.email, 'x');
         final saved = await b.saveDraft(
           _draft(),
@@ -228,7 +275,7 @@ void main() {
       );
     });
 
-    test('only a manager decides, never on their own expense', () async {
+    test('only a manager decides, their own expense included', () async {
       final b = _backend();
       await b.signIn(DemoBackend.marius.email, 'x');
       await _expectRefused(b.decide('EXP-1036', approve: true), 'responsables');
@@ -236,7 +283,9 @@ void main() {
       await b.signIn(DemoBackend.salma.email, 'x');
       final own = await b.submit((await b.saveDraft(_draft(cents: 99000))).id);
       expect(own.status, ExpenseStatus.needsReview);
-      await _expectRefused(b.decide(own.id, approve: true), 'propre dépense');
+      final mine = await b.decide(own.id, approve: true);
+      expect(mine.status, ExpenseStatus.approved);
+      expect(mine.events.last.actorName, DemoBackend.salma.fullName);
       await _expectRefused(b.decide('EXP-1037', approve: false), 'motif');
 
       final rejected = await b.decide(
@@ -340,13 +389,13 @@ void main() {
       final row = csv.split('\r\n')[1];
       expect(row, contains('"A; B"'));
       expect(row, contains("'=SUM(A1)"));
-      expect(row, contains(';1100.00;100.00;1000.00;'));
+      expect(row, contains(';1100.00;;100.00;1000.00;MAD;;'));
       expect(row, contains('"Dîner ""client"""'));
     });
   });
 
   test('a WhatsApp draft is only submitted by its author', () async {
-    final b = _backend();
+    final b = _backend(autoApprove: true);
     await b.signIn(DemoBackend.marius.email, 'x');
     final draft = (await b.fetchExpenses()).firstWhere((e) => e.fromWhatsApp);
     expect(draft.status, ExpenseStatus.draft);

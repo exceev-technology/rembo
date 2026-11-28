@@ -13,21 +13,148 @@ import '../data/models.dart';
 ReceiptReading parseReceiptText(List<String> rows, {DateTime? today}) {
   final lines = [
     for (final r in rows)
-      if (r.trim().isNotEmpty) r.replaceAll(RegExp(r'\s+'), ' ').trim(),
+      if (r.trim().isNotEmpty)
+        r
+            .replaceAll(RegExp(r'\s+'), ' ')
+            // The phone's reader often puts a space after the decimal
+            // comma: « 156, 40 » is 156,40.
+            .replaceAllMapped(
+              RegExp(r'(\d)([.,]) (\d{2})(?![\d.,])'),
+              (m) => '${m[1]}${m[2]}${m[3]}',
+            )
+            .trim(),
   ];
   final letters = lines.join().replaceAll(RegExp(r'[^A-Za-zÀ-ÿ]'), '').length;
-  final total = _total(lines);
+  final notes = <String, FieldNote>{};
+  var total = _total(lines, notes);
   final date = _date(lines, today ?? DateTime.now());
   if (letters < 8 || (total == null && date == null)) {
     return const ReceiptReading(unreadable: true);
   }
+  var vat = total == null ? null : _vat(lines, total, notes);
+  // A « TTC » badly read can leave the amount without taxes as the total:
+  // when the receipt also prints that amount plus its VAT, that is the
+  // amount paid.
+  final withTaxes = total == null || vat == null
+      ? null
+      : _amountEqualTo(lines, total + vat);
+  if (withTaxes != null) {
+    total = withTaxes;
+    notes['amount'] = const FieldNote(
+      Confidence.medium,
+      'Montant hors taxes plus la TVA imprimés sur le ticket',
+    );
+    vat = _vat(lines, withTaxes, notes);
+  }
+  final supplier = _supplier(lines);
+  final ice = _ice(lines);
+  final rate = _vatRate(lines, total, vat, notes);
+  final currency = _currency(lines);
+  if (date != null) {
+    notes['date'] = const FieldNote(
+      Confidence.high,
+      'Date imprimée sur le ticket',
+    );
+  }
+  if (supplier != null) {
+    notes['supplier'] = const FieldNote(
+      Confidence.medium,
+      'Première ligne du ticket qui ressemble à un nom',
+    );
+  }
+  if (ice != null) {
+    notes['ice'] = const FieldNote(
+      Confidence.high,
+      'Lu après la mention « ICE »',
+    );
+  }
+  if (currency != null) {
+    notes['currency'] = const FieldNote(
+      Confidence.high,
+      'Devise imprimée sur le ticket',
+    );
+  }
   return ReceiptReading(
-    supplier: _supplier(lines),
-    supplierIce: _ice(lines),
+    supplier: supplier,
+    supplierIce: ice,
     date: date,
     amountCents: total,
-    vatCents: total == null ? null : _vat(lines, total),
+    vatCents: vat,
+    vatRate: rate,
+    currency: currency,
+    notes: notes,
   );
+}
+
+/// An amount printed on the receipt equal to [cents], give or take a
+/// centime of rounding.
+int? _amountEqualTo(List<String> lines, int cents) {
+  for (final line in lines) {
+    for (final a in _amounts(line)) {
+      if ((a - cents).abs() <= 1) return a;
+    }
+  }
+  return null;
+}
+
+// Currency and VAT rate ----------------------------------------------------
+
+final _mad = RegExp(
+  r'\b(?:mad|dhs?|dirhams?)\b|درهم|د\.م',
+  caseSensitive: false,
+);
+final _foreign = <String, RegExp>{
+  'EUR': RegExp(r'€|\beur(?:os?)?\b', caseSensitive: false),
+  'USD': RegExp(r'\$|\busd\b', caseSensitive: false),
+  'GBP': RegExp(r'£|\bgbp\b', caseSensitive: false),
+};
+
+/// The currency the receipt prints. Dirhams win when they appear at all:
+/// a Moroccan receipt may quote a euro price as a reminder.
+String? _currency(List<String> lines) {
+  final text = lines.join(' ');
+  if (_mad.hasMatch(text)) return 'MAD';
+  for (final e in _foreign.entries) {
+    if (e.value.hasMatch(text)) return e.key;
+  }
+  return null;
+}
+
+/// The rate printed on the VAT lines, when there is a single one; else the
+/// Moroccan rate that the printed VAT and total agree on.
+int? _vatRate(
+  List<String> lines,
+  int? total,
+  int? vat,
+  Map<String, FieldNote> notes,
+) {
+  final printed = <int>{};
+  for (final line in lines) {
+    if (!_vatLine.hasMatch(line)) continue;
+    for (final m in _rate.allMatches(line)) {
+      final r = int.parse(m[1]!);
+      if (vatRates.contains(r)) printed.add(r);
+    }
+  }
+  if (printed.length == 1) {
+    notes['rate'] = const FieldNote(
+      Confidence.high,
+      'Taux imprimé sur le ticket',
+    );
+    return printed.single;
+  }
+  if (total == null || vat == null || vat <= 0) return null;
+  for (final r in vatRates.where((r) => r > 0)) {
+    final expected = total * r / (100 + r);
+    if ((vat - expected).abs() <= (expected * .005).clamp(2, 100)) {
+      notes['rate'] = const FieldNote(
+        Confidence.medium,
+        'Taux qui correspond à la TVA et au total imprimés',
+      );
+      return r;
+    }
+  }
+  return null;
 }
 
 // Amounts ---------------------------------------------------------------
@@ -70,18 +197,30 @@ int? _amountAt(List<String> lines, int index) {
   return null;
 }
 
-int? _total(List<String> lines) {
+int? _total(List<String> lines, Map<String, FieldNote> notes) {
   // The last « net à payer / total TTC » wins: it closes the receipt.
   for (var i = lines.length - 1; i >= 0; i--) {
     if (_strongTotal.hasMatch(lines[i])) {
       final amount = _amountAt(lines, i);
-      if (amount != null && amount > 0) return amount;
+      if (amount != null && amount > 0) {
+        notes['amount'] = const FieldNote(
+          Confidence.high,
+          'Lu sur la ligne du total TTC ou du net à payer',
+        );
+        return amount;
+      }
     }
   }
   for (var i = lines.length - 1; i >= 0; i--) {
     if (_plainTotal.hasMatch(lines[i]) && !_notTotal.hasMatch(lines[i])) {
       final amount = _amountAt(lines, i);
-      if (amount != null && amount > 0) return amount;
+      if (amount != null && amount > 0) {
+        notes['amount'] = const FieldNote(
+          Confidence.medium,
+          'Lu sur une ligne « total » sans mention TTC',
+        );
+        return amount;
+      }
     }
   }
   // No label at all: the largest amount that is not what was handed over.
@@ -97,7 +236,12 @@ int? _total(List<String> lines) {
       if (a > largest) largest = a;
     }
   }
-  return largest > 0 ? largest : null;
+  if (largest <= 0) return null;
+  notes['amount'] = const FieldNote(
+    Confidence.low,
+    'Aucun total imprimé : plus grand montant du ticket',
+  );
+  return largest;
 }
 
 final _vatLine = RegExp(r't\.?\s?v\.?\s?a\b|\bvat\b', caseSensitive: false);
@@ -106,7 +250,7 @@ final _rate = RegExp(r'(\d{1,2})(?:[.,]\d{1,2})?\s?%');
 /// VAT printed on the receipt. A line often carries the base and the tax
 /// (« TVA 20% 200,00 40,00 »): the tax is the amount that matches the rate
 /// when one is printed, else the smallest. Several rates are added up.
-int? _vat(List<String> lines, int total) {
+int? _vat(List<String> lines, int total, Map<String, FieldNote> notes) {
   int? pick(String line) {
     final amounts = _amounts(line).where((a) => a > 0 && a < total).toList();
     if (amounts.isEmpty) return null;
@@ -131,7 +275,13 @@ int? _vat(List<String> lines, int total) {
       caseSensitive: false,
     ).hasMatch(line)) {
       final v = pick(line);
-      if (v != null) return v;
+      if (v != null) {
+        notes['vat'] = const FieldNote(
+          Confidence.high,
+          'Lu sur la ligne du total de TVA',
+        );
+        return v;
+      }
     }
   }
   var sum = 0;
@@ -142,7 +292,12 @@ int? _vat(List<String> lines, int total) {
     final v = pick(line);
     if (v != null) sum += v;
   }
-  return sum > 0 && sum < total ? sum : null;
+  if (sum <= 0 || sum >= total) return null;
+  notes['vat'] = const FieldNote(
+    Confidence.medium,
+    'Somme des lignes de TVA du ticket',
+  );
+  return sum;
 }
 
 // Date --------------------------------------------------------------------
@@ -233,7 +388,7 @@ String? _ice(List<String> lines) {
 }
 
 final _notAName = RegExp(
-  r'ticket|facture|re[çc]u|bienvenue|merci|t[ée]l|fax|adresse|www\.|http|@|'
+  r'ticket|facture|re[çc]u|bienvenue|merci|\bt[ée]l\b|fax|adresse|www\.|http|@|'
   r'caisse|table|serveur|date|heure|\bice\b|\bif\b|\brc\b|patente|tva|total|'
   r'duplicata|client',
   caseSensitive: false,

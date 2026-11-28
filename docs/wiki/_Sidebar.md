@@ -4,6 +4,7 @@
 - [Product Vision](Product-Vision)
 - [Roadmap](Roadmap)
 - [Glossary](Glossary)
+- [Traction](Traction)
 
 **Engineering**
 - [Architecture](Architecture)

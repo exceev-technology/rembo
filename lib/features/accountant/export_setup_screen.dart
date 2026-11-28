@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/agents/export_agent.dart';
 import '../../core/data/app_state.dart';
 import '../../core/data/ids.dart';
 import '../../core/widgets/rembo_widgets.dart';
+import 'accounts_screen.dart';
 import 'export_ready_screen.dart';
 
 /// « Préparer l’export » : format, delimiter and a preview of the rows.
@@ -21,7 +23,7 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
   bool _loading = false;
   String? _failure;
 
-  Future<void> _generate() async {
+  Future<void> _generate(ExportCheck check) async {
     final state = AppScope.read(context);
     final navigator = Navigator.of(context);
     setState(() {
@@ -36,7 +38,7 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
       );
       navigator.pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => ExportReadyScreen(batch: batch),
+          builder: (_) => ExportReadyScreen(batch: batch, expected: check),
         ),
       );
     } on RemboException catch (e) {
@@ -56,25 +58,21 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
       for (final id in widget.expenseIds)
         if (state.byId(id) != null) state.byId(id)!,
     ];
-    final total = rows.fold<int>(0, (s, e) => s + e.amountCents);
+    final check = prepareExport(rows, accounts: state.accounts);
     return RemboPage(
       bottom: RemboPrimaryButton(
         key: const ValueKey('export-generate'),
         label: tr('Générer le CSV'),
         icon: Icons.download_rounded,
         loading: _loading,
-        onPressed: rows.isEmpty ? null : _generate,
+        onPressed: rows.isEmpty ? null : () => _generate(check),
       ),
       children: [
         RemboHero(
           title: tr('Préparer l’export'),
           illustration: RemboArt.download,
         ),
-        InfoStrip(
-          '${expenseCount(rows.length)} · '
-          '${formatMad(total)}',
-          icon: Icons.layers_outlined,
-        ),
+        _ExportAgentCard(check: check),
         if (_failure != null) ...[
           const SizedBox(height: RemboSpace.lg),
           RemboMessage(tone: MessageTone.error, title: _failure!),
@@ -157,6 +155,65 @@ class _ExportSetupScreenState extends State<ExportSetupScreen> {
           ),
         InfoStrip(tr('Une dépense exportée ne peut plus l’être à nouveau.')),
       ],
+    );
+  }
+}
+
+/// What the export agent prepared: the totals of the batch and what an
+/// accountant would look at before importing it.
+class _ExportAgentCard extends StatelessWidget {
+  const _ExportAgentCard({required this.check});
+  final ExportCheck check;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget line(String label, String value) => Padding(
+      padding: const EdgeInsets.only(top: RemboSpace.xs),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: RemboText.caption)),
+          Text(value, style: RemboText.amount),
+        ],
+      ),
+    );
+    return RemboCard(
+      key: const ValueKey('export-agent'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tr('Agent d’export'), style: RemboText.subtitle),
+          line(tr('Dépenses'), expenseCount(check.count)),
+          line(tr('Total TTC'), formatMad(check.totalCents)),
+          line(tr('Dont TVA'), formatMad(check.vatCents)),
+          line(tr('Total HT'), formatMad(check.netCents)),
+          if (check.missingAccounts.isNotEmpty) ...[
+            const SizedBox(height: RemboSpace.sm),
+            InfoStrip(
+              tr('Compte comptable manquant : {categories}', {
+                'categories': check.missingAccounts.map(tr).join(', '),
+              }),
+              icon: Icons.account_balance_outlined,
+              color: RemboColors.warningText,
+              background: RemboColors.warningTint,
+            ),
+            TextButton(
+              key: const ValueKey('export-accounts'),
+              onPressed: () => AccountsScreen.open(context),
+              child: Text(tr('Renseigner les comptes')),
+            ),
+          ],
+          for (final issue in check.issues)
+            Padding(
+              padding: const EdgeInsets.only(top: RemboSpace.xs),
+              child: Text(
+                '• ${isolate(issue.expense.title)} : ${trData(issue.message)}',
+                style: RemboText.caption.copyWith(
+                  color: RemboColors.warningText,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

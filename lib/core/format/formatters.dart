@@ -58,6 +58,18 @@ String formatMad(int centimes) {
   return '$sign$grouped,$cents$_thinSpace${tr('MAD')}';
 }
 
+/// [centimes] in [currency]: « 85,00 EUR »; dirhams read as [formatMad].
+String formatMoney(int centimes, String currency) {
+  if (currency == 'MAD') return formatMad(centimes);
+  final mad = formatMad(centimes);
+  return '${mad.substring(0, mad.lastIndexOf(_thinSpace))}$_thinSpace'
+      '$currency';
+}
+
+/// « 21,82 MAD · 10 % » : the VAT and its rate, when known.
+String formatVat(int centimes, int? rate) =>
+    rate == null ? formatMad(centimes) : '${formatMad(centimes)} · $rate %';
+
 /// 27 October 2026 → « 27 oct. 2026 ».
 String formatDate(DateTime date) =>
     '${date.day} ${_short(date.month)} ${date.year}';

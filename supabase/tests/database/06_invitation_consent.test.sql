@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at,
   raw_user_meta_data, created_at, updated_at)
@@ -58,9 +58,11 @@ select is((select count(*)::int from public.my_invitation()), 0,
   'nobody sees the invitation of someone else');
 
 select pg_temp.as_user('22222222-2222-2222-2222-222222222222');
-select ok(public.accept_invitation() and
-  (select count(*) from public.my_invitation()) = 0,
-  'once Omar accepts, he is a member and nothing waits any more');
+-- Two statements: my_invitation() is stable, so within the statement that
+-- accepts it would still see the invitation as it was.
+select ok(public.accept_invitation(), 'Omar accepts the invitation');
+select is((select count(*)::int from public.my_invitation()), 0,
+  'once Omar has accepted, nothing waits any more');
 
 select set_config('role', 'postgres', true);
 select * from finish();

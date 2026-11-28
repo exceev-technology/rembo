@@ -253,6 +253,17 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# A code to type in the app rather than a link: nothing to open outside it
+# (the app has no web page to land on). Same templates to paste in the
+# dashboard of a hosted project (Authentication → Emails).
+[auth.email.template.confirmation]
+subject = "Votre code Rembo"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Votre code Rembo pour un nouveau mot de passe"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

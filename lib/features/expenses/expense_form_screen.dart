@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../core/agents/classification_agent.dart';
 import '../../core/data/app_state.dart';
 import '../../core/data/ids.dart';
 import '../../core/widgets/rembo_widgets.dart';
@@ -21,6 +22,7 @@ class ExpenseFormScreen extends StatefulWidget {
     this.receipt,
     this.reading,
     this.readerMissing = false,
+    this.startedAt,
   });
 
   /// Existing draft or rejected expense; null for a new one.
@@ -31,6 +33,9 @@ class ExpenseFormScreen extends StatefulWidget {
   /// A picture was taken but nothing could read it.
   final bool readerMissing;
 
+  /// When the person started declaring; the form opening by default.
+  final DateTime? startedAt;
+
   static Future<void> open(
     BuildContext context, {
     Expense? expense,
@@ -38,6 +43,7 @@ class ExpenseFormScreen extends StatefulWidget {
     ReceiptReading? reading,
     bool readerMissing = false,
     bool replace = false,
+    DateTime? startedAt,
   }) {
     final route = MaterialPageRoute<void>(
       builder: (_) => ExpenseFormScreen(
@@ -45,6 +51,7 @@ class ExpenseFormScreen extends StatefulWidget {
         receipt: receipt,
         reading: reading,
         readerMissing: readerMissing,
+        startedAt: startedAt,
       ),
     );
     final navigator = Navigator.of(context);
@@ -62,7 +69,35 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _date = TextEditingController();
   final _project = TextEditingController();
   final _reason = TextEditingController();
+  final _foreign = TextEditingController();
+  String _currency = 'MAD';
+  int? _vatRate;
+
+  /// Currency and VAT rate are folded away for the usual receipt (dirhams,
+  /// no rate): shown when asked for, read on the receipt, or already set.
+  bool _detailsAsked = false;
+  bool get _details =>
+      _detailsAsked ||
+      _currency != 'MAD' ||
+      _vatRate != null ||
+      _proposed.contains('currency') ||
+      _proposed.contains('rate');
   String? _category;
+
+  /// Proposals of the classification agent still shown as such, and why.
+  final _agentNotes = <String, FieldNote>{};
+  bool _categoryTouched = false;
+  bool _projectTouched = false;
+  bool _classified = false;
+
+  /// Rebuilds the category field when the agent changes its value: the
+  /// field only reads its initial value.
+  int _categoryVersion = 0;
+
+  /// What the agents proposed when the form opened, saved once with the
+  /// draft to measure what the person kept (see agent_metrics).
+  Map<String, dynamic>? _proposal;
+  late final DateTime _startedAt = widget.startedAt ?? DateTime.now();
   final _errors = <String, String>{};
   final _proposed = <String>{};
   String? _failure;
@@ -96,14 +131,32 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       _project.text = e.project;
       _reason.text = e.reason;
       _category = e.category.isEmpty ? null : e.category;
+      _currency = e.currency;
+      _vatRate = e.vatRate;
+      if (e.foreignAmountCents != null) {
+        _foreign.text = amountInput(e.foreignAmountCents!);
+      }
     } else if (r != null) {
       if (r.supplier != null) {
         _supplier.text = r.supplier!;
         _proposed.add('supplier');
       }
-      if (r.amountCents != null) {
+      if (r.currency != null && r.currency != 'MAD') {
+        // Paid in another currency: what the receipt says is the amount
+        // paid in it; the person types what it cost in dirhams.
+        _currency = r.currency!;
+        _proposed.add('currency');
+        if (r.amountCents != null) {
+          _foreign.text = amountInput(r.amountCents!);
+          _proposed.add('foreign');
+        }
+      } else if (r.amountCents != null) {
         _amount.text = amountInput(r.amountCents!);
         _proposed.add('amount');
+      }
+      if (r.vatRate != null) {
+        _vatRate = r.vatRate;
+        _proposed.add('rate');
       }
       if (r.vatCents != null && r.vatCents! > 0) {
         _vat.text = amountInput(r.vatCents!);
@@ -119,8 +172,107 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_classified) return;
+    _classified = true;
+    if (widget.expense == null) {
+      _classify();
+      _proposal = _agentProposal();
+    }
+  }
+
+  /// The values the reading and classification agents put in the form,
+  /// written the way the columns store them.
+  Map<String, dynamic>? _agentProposal() {
+    final fields = <String, Map<String, String>>{};
+    void add(String field, Object? value, FieldNote? note, String agent) {
+      if (value == null || '$value'.isEmpty) return;
+      fields[field] = {
+        'value': '$value',
+        'confidence': (note?.confidence ?? Confidence.medium).name,
+        'reason': note?.reason ?? '',
+        'agent': agent,
+      };
+    }
+
+    final r = widget.reading;
+    if (r != null && !r.unreadable) {
+      final n = r.notes;
+      add('supplier', r.supplier, n['supplier'], 'reading');
+      add('ice', r.supplierIce, n['ice'], 'reading');
+      add(
+        'date',
+        r.date == null ? null : isoDay(r.date!),
+        n['date'],
+        'reading',
+      );
+      final foreign = r.currency != null && r.currency != 'MAD';
+      add(
+        foreign ? 'foreign' : 'amount',
+        r.amountCents,
+        n['amount'],
+        'reading',
+      );
+      if ((r.vatCents ?? 0) > 0) add('vat', r.vatCents, n['vat'], 'reading');
+      add('rate', r.vatRate, n['rate'], 'reading');
+      add('currency', r.currency, n['currency'], 'reading');
+    }
+    if (_agentNotes['category'] != null) {
+      add('category', _category, _agentNotes['category'], 'classification');
+    }
+    if (_agentNotes['project'] != null) {
+      add('project', _project.text, _agentNotes['project'], 'classification');
+    }
+    if (fields.isEmpty) return null;
+    return {
+      'engine': r == null ? '' : (r.simulated ? 'demo' : r.engine),
+      'fields': fields,
+    };
+  }
+
+  /// Asks the classification agent for a category and a project, without
+  /// ever overwriting what the person chose.
+  void _classify() {
+    final state = AppScope.read(context);
+    final result = classifyExpense(
+      supplier: _supplier.text,
+      ice: widget.reading?.supplierIce ?? _saved?.supplierIce ?? '',
+      history: state.mine,
+    );
+    if (!_categoryTouched) {
+      final proposed = result.category?.value ?? _category;
+      if (proposed != _category) _categoryVersion++;
+      _category = proposed;
+      if (result.category == null) {
+        _agentNotes.remove('category');
+      } else {
+        _agentNotes['category'] = result.category!.note;
+        _errors.remove('category');
+      }
+    }
+    if (!_projectTouched) {
+      if (result.project != null && _project.text.trim().isEmpty) {
+        _project.text = result.project!.value;
+        _agentNotes['project'] = result.project!.note;
+      } else if (result.project == null && _agentNotes.containsKey('project')) {
+        _project.clear();
+        _agentNotes.remove('project');
+      }
+    }
+  }
+
+  @override
   void dispose() {
-    for (final c in [_supplier, _amount, _vat, _date, _project, _reason]) {
+    for (final c in [
+      _supplier,
+      _amount,
+      _vat,
+      _date,
+      _project,
+      _reason,
+      _foreign,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -144,6 +296,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             'vat': tr('Saisissez un montant, ex. 21,82, ou laissez vide.')
           else if (vat > 0 && vat >= (parseAmount(amount) ?? vat + 1))
             'vat': tr('La TVA doit être inférieure au montant TTC.'),
+          if (_currency != 'MAD' &&
+              (strict || _foreign.text.trim().isNotEmpty) &&
+              parseAmount(_foreign.text.trim()) == null)
+            'foreign': tr('Saisissez le montant payé, ex. 85,00.'),
           if ((strict || date.isNotEmpty) && parseDay(date) == null)
             'date': tr('Date invalide : JJ/MM/AAAA, pas dans le futur.'),
           if (strict && _category == null)
@@ -184,6 +340,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       date: parseDay(_date.text),
       amountCents: amount,
       vatCents: _vatCents ?? 0,
+      vatRate: _vatRate,
+      currency: _currency,
+      foreignAmountCents: _currency == 'MAD'
+          ? null
+          : parseAmount(_foreign.text.trim()),
       category: _category ?? '',
       project: _project.text,
       reason: _reason.text,
@@ -194,6 +355,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       source: base.source,
       transcript: base.transcript,
       voicePath: base.voicePath,
+      agentProposal: base.agentProposal ?? _proposal,
+      captureStartedAt:
+          base.captureStartedAt ?? (widget.expense == null ? _startedAt : null),
       createdAt: base.createdAt,
     );
   }
@@ -333,7 +497,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   }
 
   Future<void> _pickReceipt() async {
-    final camera = await showRemboSheet<bool>(
+    final source = await showRemboSheet<String>(
       context,
       title: tr('Justificatif'),
       builder: (context) => Column(
@@ -341,22 +505,31 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           RemboPrimaryButton(
             label: tr('Prendre une photo'),
             icon: Icons.photo_camera_outlined,
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(context).pop('camera'),
           ),
           const SizedBox(height: RemboSpace.md),
           RemboSecondaryButton(
             label: tr('Importer une image'),
             icon: Icons.insert_drive_file_outlined,
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(context).pop('gallery'),
+          ),
+          const SizedBox(height: RemboSpace.md),
+          RemboSecondaryButton(
+            key: const ValueKey('form-receipt-pdf'),
+            label: tr('Une facture en PDF'),
+            icon: Icons.picture_as_pdf_outlined,
+            onPressed: () => Navigator.of(context).pop('pdf'),
           ),
         ],
       ),
     );
-    if (camera == null || !mounted) return;
+    if (source == null || !mounted) return;
     final state = AppScope.read(context);
     final picker = ReceiptPickerScope.read(context);
     try {
-      final picked = await picker(camera: camera);
+      final picked = source == 'pdf'
+          ? await pdfPicker()
+          : await picker(camera: source == 'camera');
       if (picked == null || !mounted) return;
       setState(() {
         _receiptBytes = picked.bytes;
@@ -384,16 +557,124 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     }
   }
 
-  Widget? _readBadge(String field) => _proposed.contains(field)
-      ? Padding(
-          padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
-          child: RemboBadge(
-            label: tr('Reçu'),
-            tone: BadgeTone.info,
-            icon: Icons.receipt_long_outlined,
+  /// Choosing a rate fills an empty VAT from the amount with taxes.
+  void _pickRate(int? rate) {
+    setState(() {
+      _vatRate = rate;
+      _proposed.remove('rate');
+      final amount = parseAmount(_amount.text.trim());
+      if (rate != null &&
+          rate > 0 &&
+          _vat.text.trim().isEmpty &&
+          amount != null) {
+        _vat.text = amountInput((amount * rate / (100 + rate)).round());
+        _proposed
+          ..remove('vat')
+          ..add('vat-computed');
+      }
+    });
+  }
+
+  /// « Reçu » on a value read on the receipt; « À vérifier » when the
+  /// reader was not sure of it.
+  Widget? _readBadge(String field) {
+    if (!_proposed.contains(field)) return null;
+    final unsure = widget.reading?.notes[field]?.confidence == Confidence.low;
+    return Padding(
+      padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
+      child: RemboBadge(
+        label: unsure ? Confidence.low.label : tr('Reçu'),
+        tone: unsure ? BadgeTone.warning : BadgeTone.info,
+        icon: unsure
+            ? Icons.warning_amber_rounded
+            : Icons.receipt_long_outlined,
+      ),
+    );
+  }
+
+  /// What the reading agent found, what it is unsure of, what it missed.
+  Widget _readingReport(ReceiptReading reading) {
+    String name(String field) => switch (field) {
+      'supplier' => tr('fournisseur'),
+      'date' => tr('date'),
+      'amount' => tr('montant'),
+      'vat' => tr('TVA'),
+      _ => field,
+    };
+    final unsure = [
+      for (final e in reading.notes.entries)
+        if (e.value.confidence == Confidence.low && _proposed.contains(e.key))
+          e.key,
+    ];
+    final missing = reading.missing;
+    return RemboCard(
+      key: const ValueKey('form-reading-report'),
+      color: RemboColors.surface,
+      borderColor: RemboColors.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome_outlined,
+                size: 18,
+                color: RemboColors.indigo,
+              ),
+              const SizedBox(width: RemboSpace.sm),
+              Expanded(
+                child: Text(
+                  reading.simulated
+                      ? tr(
+                          'Démonstration : valeurs simulées, non lues sur la photo.',
+                        )
+                      : tr('Valeurs lues sur le ticket : vérifiez-les.'),
+                  style: RemboText.caption,
+                ),
+              ),
+            ],
           ),
-        )
-      : null;
+          for (final field in unsure)
+            Padding(
+              padding: const EdgeInsets.only(top: RemboSpace.xs),
+              child: Text(
+                tr('À vérifier : {field} — {reason}', {
+                  'field': name(field),
+                  'reason': trData(reading.notes[field]!.reason),
+                }),
+                style: RemboText.caption.copyWith(
+                  color: RemboColors.warningText,
+                ),
+              ),
+            ),
+          if (missing.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: RemboSpace.xs),
+              child: Text(
+                tr('Non lu : {fields}', {
+                  'fields': missing.map(name).join(', '),
+                }),
+                style: RemboText.caption,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// « Proposé » on a value chosen by the classification agent.
+  Widget? _agentLine(String field) {
+    final note = _agentNotes[field];
+    if (note == null) return null;
+    return Padding(
+      padding: const EdgeInsets.only(top: RemboSpace.xs),
+      child: Text(
+        tr('Proposé par l’agent : {reason}', {'reason': trData(note.reason)}),
+        key: ValueKey('form-proposed-$field'),
+        style: RemboText.caption.copyWith(color: RemboColors.infoText),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -446,12 +727,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           const SizedBox(height: RemboSpace.lg),
         ],
         if (reading != null) ...[
-          InfoStrip(
-            reading.simulated
-                ? tr('Démonstration : valeurs simulées, non lues sur la photo.')
-                : tr('Valeurs lues sur le ticket : vérifiez-les.'),
-            icon: Icons.auto_awesome_outlined,
-          ),
+          _readingReport(reading),
           const SizedBox(height: RemboSpace.lg),
         ] else if (widget.readerMissing) ...[
           InfoStrip(
@@ -461,6 +737,16 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         ],
         if (_failure != null) ...[
           RemboMessage(tone: MessageTone.error, title: _failure!),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        if ((widget.receipt?.pdfPages ?? 1) > 1) ...[
+          InfoStrip(
+            key: const ValueKey('form-pdf-pages'),
+            tr('PDF de {pages} pages : seule la première est gardée et lue.', {
+              'pages': widget.receipt!.pdfPages,
+            }),
+            icon: Icons.picture_as_pdf_outlined,
+          ),
           const SizedBox(height: RemboSpace.lg),
         ],
         ReceiptCard(
@@ -489,7 +775,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           errorText: _errors['supplier'],
           suffix: _readBadge('supplier'),
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _proposed.remove('supplier')),
+          onChanged: (_) => setState(() {
+            _proposed.remove('supplier');
+            _classify();
+          }),
         ),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
@@ -505,6 +794,53 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           textInputAction: TextInputAction.next,
           onChanged: (_) => setState(() => _proposed.remove('amount')),
         ),
+        if (_details) const SizedBox(height: RemboSpace.sm),
+        if (_details)
+          Row(
+            children: [
+              Expanded(
+                child: Text(tr('Devise du reçu'), style: RemboText.caption),
+              ),
+              if (_proposed.contains('currency')) _readBadge('currency')!,
+              DropdownButton<String>(
+                key: const ValueKey('form-currency'),
+                value: _currency,
+                underline: const SizedBox.shrink(),
+                items: [
+                  for (final c in receiptCurrencies)
+                    DropdownMenuItem(value: c, child: Text(c)),
+                ],
+                onChanged: (c) => setState(() {
+                  _currency = c ?? 'MAD';
+                  _proposed.remove('currency');
+                  _errors.remove('foreign');
+                }),
+              ),
+            ],
+          ),
+        if (_currency != 'MAD') ...[
+          const SizedBox(height: RemboSpace.sm),
+          RemboTextField(
+            fieldKey: const ValueKey('form-foreign'),
+            label: tr('Montant payé ({currency})', {'currency': _currency}),
+            required: true,
+            hint: '0,00',
+            icon: Icons.currency_exchange_rounded,
+            controller: _foreign,
+            errorText: _errors['foreign'],
+            suffix: _readBadge('foreign'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            onChanged: (_) => setState(() => _proposed.remove('foreign')),
+          ),
+          const SizedBox(height: RemboSpace.sm),
+          InfoStrip(
+            tr(
+              'Le montant TTC en dirhams est celui remboursé : '
+              'reportez la conversion de votre relevé.',
+            ),
+          ),
+        ],
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-vat'),
@@ -513,11 +849,61 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           icon: Icons.percent_rounded,
           controller: _vat,
           errorText: _errors['vat'],
-          suffix: _readBadge('vat'),
+          suffix: _proposed.contains('vat-computed')
+              ? Padding(
+                  padding: EdgeInsetsDirectional.only(end: RemboSpace.md),
+                  child: RemboBadge(
+                    label: tr('Calculée'),
+                    tone: BadgeTone.info,
+                    icon: Icons.calculate_outlined,
+                  ),
+                )
+              : _readBadge('vat'),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _proposed.remove('vat')),
+          onChanged: (_) => setState(() {
+            _proposed
+              ..remove('vat')
+              ..remove('vat-computed');
+          }),
         ),
+        if (!_details)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('form-details'),
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: Text(tr('Devise étrangère ou taux de TVA')),
+              onPressed: () => setState(() => _detailsAsked = true),
+            ),
+          ),
+        if (_details) ...[
+          const SizedBox(height: RemboSpace.sm),
+          Row(
+            children: [
+              Text(tr('Taux de TVA'), style: RemboText.caption),
+              if (_proposed.contains('rate')) ...[
+                const SizedBox(width: RemboSpace.sm),
+                _readBadge('rate')!,
+              ],
+            ],
+          ),
+          const SizedBox(height: RemboSpace.xs),
+          Wrap(
+            spacing: RemboSpace.sm,
+            runSpacing: RemboSpace.xs,
+            children: [
+              for (final rate in vatRates)
+                ChoiceChip(
+                  key: ValueKey('form-rate-$rate'),
+                  label: Text('$rate %'),
+                  selected: _vatRate == rate,
+                  showCheckmark: false,
+                  onSelected: (on) => _pickRate(on ? rate : null),
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-date'),
@@ -550,27 +936,33 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           style: RemboText.subtitle,
         ),
         const SizedBox(height: RemboSpace.sm),
-        DropdownButtonFormField<String>(
-          key: const ValueKey('form-category'),
-          initialValue: _category,
-          isExpanded: true,
-          hint: Text(tr('Choisir')),
-          decoration: InputDecoration(
-            prefixIcon: Icon(
-              categoryIcon(_category ?? ''),
-              color: RemboColors.night,
+        KeyedSubtree(
+          key: ValueKey('form-category-v$_categoryVersion'),
+          child: DropdownButtonFormField<String>(
+            key: const ValueKey('form-category'),
+            initialValue: _category,
+            isExpanded: true,
+            hint: Text(tr('Choisir')),
+            decoration: InputDecoration(
+              prefixIcon: Icon(
+                categoryIcon(_category ?? ''),
+                color: RemboColors.night,
+              ),
+              errorText: _errors['category'],
             ),
-            errorText: _errors['category'],
+            items: [
+              for (final c in expenseCategories)
+                DropdownMenuItem(value: c, child: Text(tr(c))),
+            ],
+            onChanged: (c) => setState(() {
+              _category = c;
+              _categoryTouched = true;
+              _agentNotes.remove('category');
+              _errors.remove('category');
+            }),
           ),
-          items: [
-            for (final c in expenseCategories)
-              DropdownMenuItem(value: c, child: Text(tr(c))),
-          ],
-          onChanged: (c) => setState(() {
-            _category = c;
-            _errors.remove('category');
-          }),
         ),
+        ?_agentLine('category'),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-project'),
@@ -579,7 +971,12 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           icon: Icons.work_outline_rounded,
           controller: _project,
           textInputAction: TextInputAction.next,
+          onChanged: (_) => setState(() {
+            _projectTouched = true;
+            _agentNotes.remove('project');
+          }),
         ),
+        ?_agentLine('project'),
         const SizedBox(height: RemboSpace.lg),
         RemboTextField(
           fieldKey: const ValueKey('form-reason'),

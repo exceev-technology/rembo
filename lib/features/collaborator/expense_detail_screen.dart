@@ -4,7 +4,7 @@ import '../../core/data/app_state.dart';
 import '../../core/widgets/rembo_widgets.dart';
 import '../expenses/expense_form_screen.dart';
 import '../expenses/receipt_view.dart';
-import '../manager/alone_manager_notice.dart';
+import '../manager/decision_screen.dart';
 import '../whatsapp/whatsapp.dart';
 import '../whatsapp/whatsapp_expense_screen.dart';
 import 'decision_explanation_screen.dart';
@@ -135,8 +135,19 @@ class ExpenseDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: RemboSpace.lg),
         ],
-        if (AloneManagerNotice.appliesTo(state, e)) ...[
-          AloneManagerNotice(expense: e),
+        // The manager decides on their own expense as on the others.
+        if (state.role == UserRole.manager &&
+            e.status == ExpenseStatus.needsReview) ...[
+          RemboPrimaryButton(
+            key: const ValueKey('detail-decide'),
+            label: tr('Décider'),
+            icon: Icons.fact_check_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => DecisionScreen(expenseId: e.id),
+              ),
+            ),
+          ),
           const SizedBox(height: RemboSpace.lg),
         ],
         for (final f in e.flags)
@@ -171,7 +182,14 @@ class ExpenseDetailScreen extends StatelessWidget {
                 DetailRow(
                   Icons.percent_rounded,
                   tr('TVA incluse'),
-                  formatMad(e.vatCents),
+                  formatVat(e.vatCents, e.vatRate),
+                  mono: true,
+                ),
+              if (e.foreignCurrency && e.foreignAmountCents != null)
+                DetailRow(
+                  Icons.currency_exchange_rounded,
+                  tr('Montant payé ({currency})', {'currency': e.currency}),
+                  formatMoney(e.foreignAmountCents!, e.currency),
                   mono: true,
                 ),
               DetailRow(

@@ -10,7 +10,7 @@ import 'csv_export.dart';
 import 'local_store.dart';
 import 'models.dart';
 import '../l10n/l10n.dart';
-import 'expense_control.dart';
+import '../agents/compliance_agent.dart';
 
 part 'demo_backend.dart';
 
@@ -76,6 +76,12 @@ class LocalBackend extends RemboBackend {
   final _policies = <String, List<PolicyRule>>{}; // by company
   final _exports = <String, List<ExportBatch>>{}; // by company
   final _exportByRequest = <String, ExportBatch>{};
+
+  /// Companies that let the control approve compliant expenses itself.
+  final _autoApprove = <String>{};
+
+  /// Accounting account of each category, by company.
+  final _accounts = <String, Map<String, String>>{};
   AppUser? _user;
   var _nextId = 1;
 
@@ -136,6 +142,14 @@ class LocalBackend extends RemboBackend {
           ExportBatch.fromJson(b, csv: b['csv'] as String?),
       ];
     });
+    (data['accounts'] as Map? ?? const {}).forEach((company, map) {
+      _accounts['$company'] = {
+        for (final e in (map as Map).entries) '${e.key}': '${e.value}',
+      };
+    });
+    _autoApprove.addAll([
+      for (final c in (data['auto_approve'] as List? ?? const [])) '$c',
+    ]);
     final session = data['session'] as String?;
     _user = _users.where((u) => u.id == session).firstOrNull;
   }
@@ -169,6 +183,8 @@ class LocalBackend extends RemboBackend {
           for (final x in _exports.entries)
             x.key: [for (final b in x.value) b.toJson()],
         },
+        'auto_approve': _autoApprove.toList(),
+        'accounts': _accounts,
       }),
     );
   }
@@ -305,6 +321,29 @@ class LocalBackend extends RemboBackend {
     await _save();
     return user;
   }
+
+  @override
+  Future<AppUser> confirmSignUp({
+    required String email,
+    required String code,
+  }) async => throw RemboException(_noMail);
+
+  @override
+  Future<void> resendSignUpCode(String email) async =>
+      throw RemboException(_noMail);
+
+  @override
+  Future<AppUser> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async => throw RemboException(_noMail);
+
+  /// Accounts on the phone are created signed in: no code is ever needed.
+  String get _noMail => tr(
+    'Les comptes sont enregistrés sur ce téléphone uniquement : '
+    'aucun e-mail de réinitialisation ne peut être envoyé.',
+  );
 
   @override
   Future<void> sendPasswordReset(String email) async {
@@ -470,8 +509,16 @@ class LocalBackend extends RemboBackend {
       date: draft.date,
       amountCents: draft.amountCents,
       vatCents: draft.vatCents,
+      vatRate: draft.vatRate,
+      currency: draft.currency,
+      foreignAmountCents: draft.foreignCurrency
+          ? draft.foreignAmountCents
+          : null,
       category: draft.category,
       project: draft.project.trim(),
+      // What the agents proposed and the start are written once.
+      agentProposal: saved.agentProposal ?? draft.agentProposal,
+      captureStartedAt: saved.captureStartedAt ?? draft.captureStartedAt,
       reason: draft.reason.trim(),
       receiptPath: receiptBytes != null
           ? 'local/${saved.id}'
@@ -516,7 +563,7 @@ class LocalBackend extends RemboBackend {
       others: _expenses,
       today: _day(0),
     );
-    final decided = flags.isEmpty
+    final decided = flags.isEmpty && _autoApprove.contains(me.companyId)
         ? ExpenseStatus.approved
         : ExpenseStatus.needsReview;
     e = e.copyWith(
@@ -534,12 +581,46 @@ class LocalBackend extends RemboBackend {
           at: _now.add(const Duration(seconds: 1)),
           actorName: 'Contrôle automatique',
           byAgent: true,
+          reason: flags.isEmpty && decided == ExpenseStatus.needsReview
+              ? 'Conforme aux règles'
+              : null,
         ),
       ],
     );
     _expenses[i] = e;
     await _save();
     return e;
+  }
+
+  @override
+  Future<int> approveCompliant(List<String> ids) async {
+    await _latency();
+    final me = _me;
+    if (me.role != UserRole.manager) {
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
+    }
+    var done = 0;
+    for (final id in ids.toSet()) {
+      final i = _expenses.indexWhere((e) => e.id == id);
+      if (i < 0 || !_visible(_expenses[i])) continue;
+      final e = _expenses[i];
+      if (!e.compliantToConfirm) continue;
+      _expenses[i] = e.copyWith(
+        status: ExpenseStatus.approved,
+        events: [
+          ...e.events,
+          ExpenseEvent(
+            status: ExpenseStatus.approved,
+            at: _now,
+            actorName: me.fullName,
+            reason: 'Validation groupée des dépenses conformes',
+          ),
+        ],
+      );
+      done++;
+    }
+    await _save();
+    return done;
   }
 
   @override
@@ -555,11 +636,6 @@ class LocalBackend extends RemboBackend {
     }
     final i = _indexOf(id);
     final e = _expenses[i];
-    if (e.employeeId == me.id) {
-      throw RemboException(
-        tr('Vous ne pouvez pas décider de votre propre dépense.'),
-      );
-    }
     if (e.status != ExpenseStatus.needsReview) {
       throw RemboException(tr('Cette dépense a déjà été traitée.'));
     }
@@ -685,6 +761,23 @@ class LocalBackend extends RemboBackend {
     await _save();
   }
 
+  @override
+  Future<bool> fetchAutoApprove() async {
+    await _latency();
+    return _autoApprove.contains(_me.companyId);
+  }
+
+  @override
+  Future<void> setAutoApprove(bool on) async {
+    await _latency();
+    final me = _me;
+    if (me.role != UserRole.manager || me.companyId == null) {
+      throw RemboException(tr('Cette action est réservée aux responsables.'));
+    }
+    on ? _autoApprove.add(me.companyId!) : _autoApprove.remove(me.companyId);
+    await _save();
+  }
+
   // Exports ---------------------------------------------------------------
 
   @override
@@ -718,7 +811,13 @@ class LocalBackend extends RemboBackend {
       createdAt: _now,
       count: chosen.length,
       totalCents: chosen.fold(0, (s, e) => s + e.amountCents),
-      csv: CsvExport.build(chosen, batchId: batchId, delimiter: delimiter),
+      vatCents: chosen.fold(0, (s, e) => s + e.vatCents),
+      csv: CsvExport.build(
+        chosen,
+        batchId: batchId,
+        delimiter: delimiter,
+        accounts: _accounts[me.companyId!] ?? const {},
+      ),
     );
     for (final e in chosen) {
       _expenses[_indexOf(e.id)] = e.copyWith(
@@ -743,5 +842,31 @@ class LocalBackend extends RemboBackend {
     await _latency();
     final company = _me.companyId;
     return company == null ? [] : List.of(_exportsOf(company));
+  }
+
+  @override
+  Future<Map<String, String>> fetchAccounts() async {
+    await _latency();
+    return Map.of(_accounts[_me.companyId] ?? const {});
+  }
+
+  @override
+  Future<void> saveAccount(String category, String code) async {
+    await _latency();
+    final me = _me;
+    if (me.companyId == null || me.role == UserRole.employee) {
+      throw RemboException(
+        tr('Cette action est réservée aux comptables et aux responsables.'),
+      );
+    }
+    final clean = code.trim();
+    if (clean.isNotEmpty && !RegExp(r'^\d{3,10}$').hasMatch(clean)) {
+      throw RemboException(
+        tr('Un compte comptable est fait de 3 à 10 chiffres.'),
+      );
+    }
+    final map = _accounts.putIfAbsent(me.companyId!, () => {});
+    clean.isEmpty ? map.remove(category) : map[category] = clean;
+    await _save();
   }
 }

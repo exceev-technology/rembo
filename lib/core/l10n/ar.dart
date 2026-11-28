@@ -32,8 +32,7 @@ const arabic = <String, String>{
   'Vous ne pouvez soumettre que vos dépenses.': 'لا يمكنك إرسال إلا مصاريفك.',
   'Complétez d’abord : {join}.': 'أكمل أولا: {join}.',
   'Cette action est réservée aux responsables.': 'هذا الإجراء خاص بالمسؤولين.',
-  'Vous ne pouvez pas décider de votre propre dépense.':
-      'لا يمكنك البت في مصروفك الخاص.',
+  'Décider': 'البتّ',
   'Cette dépense a déjà été traitée.': 'تمت معالجة هذا المصروف من قبل.',
   'Le motif du rejet est obligatoire.': 'سبب الرفض إلزامي.',
   'Cette personne est déjà dans l’équipe.': 'هذا الشخص موجود في الفريق من قبل.',
@@ -49,8 +48,6 @@ const arabic = <String, String>{
       'رفض الخادم الطلب. أعد المحاولة بعد لحظة.',
   'Le justificatif n’a pas pu être enregistré.': 'تعذر حفظ وثيقة الإثبات.',
   'Une erreur inattendue est survenue.': 'حدث خطأ غير متوقع.',
-  'Confirmez d’abord votre adresse avec le lien reçu par e-mail.':
-      'أكد عنوانك أولا عبر الرابط الذي وصلك بالبريد الإلكتروني.',
   'Mot de passe trop faible.': 'كلمة المرور ضعيفة جدا.',
   'Trop de tentatives. Réessayez plus tard.':
       'محاولات كثيرة. أعد المحاولة لاحقا.',
@@ -134,16 +131,10 @@ const arabic = <String, String>{
   'Casablanca': 'الدار البيضاء',
   'Adresse e-mail invalide.': 'عنوان البريد الإلكتروني غير صالح.',
   'Mot de passe\noublié ?': 'نسيت\nكلمة المرور؟',
-  'Recevez un lien de réinitialisation par e-mail.':
-      'احصل على رابط إعادة التعيين عبر البريد الإلكتروني.',
   'Démonstration : aucun e-mail envoyé': 'عرض تجريبي: لم يرسل أي بريد',
-  'Demande envoyée': 'تم إرسال الطلب',
   'Avec un serveur configuré, un lien serait envoyé à {trim}.':
       'عند إعداد خادم، سيرسل رابط إلى {trim}.',
-  'Si un compte existe pour {trim}, vous recevrez un lien dans quelques minutes.':
-      'إذا وجد حساب للعنوان {trim} فسيصلك رابط خلال دقائق.',
   'Adresse e-mail': 'البريد الإلكتروني',
-  'Envoyer le lien': 'إرسال الرابط',
   'Retour à la connexion': 'العودة إلى تسجيل الدخول',
   'Saisissez votre adresse e-mail.': 'أدخل بريدك الإلكتروني.',
   'Saisissez votre mot de passe.': 'أدخل كلمة المرور.',
@@ -164,8 +155,6 @@ const arabic = <String, String>{
   'Saisissez votre nom.': 'أدخل اسمك العائلي.',
   'Le mot de passe ne respecte pas les règles.': 'كلمة المرور لا تحترم الشروط.',
   'Confirmez votre adresse': 'أكد عنوانك',
-  'Un e-mail de confirmation a été envoyé à {trim}. Ouvrez le lien puis connectez-vous.':
-      'أرسلنا بريد تأكيد إلى {trim}. افتح الرابط ثم سجل الدخول.',
   'Créer un compte': 'إنشاء حساب',
   'Invité ? Utilisez l’adresse qui a reçu l’invitation.':
       'مدعو؟ استعمل العنوان الذي وصلته الدعوة.',
@@ -287,9 +276,6 @@ const arabic = <String, String>{
   'Plus tôt': 'قبل ذلك',
   'Aucune activité': 'لا يوجد نشاط',
   'Tout marquer comme lues': 'تعليم الكل كمقروء',
-  'Démonstration : aucun e-mail n’est envoyé.': 'عرض تجريبي: لا يرسل أي بريد.',
-  'Un lien de réinitialisation a été envoyé à {email}.':
-      'أرسلنا رابط إعادة التعيين إلى {email}.',
   'Mon profil': 'ملفي الشخصي',
   'Équipe': 'الفريق',
   'Règles de remboursement': 'قواعد التعويض',
@@ -373,7 +359,6 @@ const arabic = <String, String>{
   'Soumettre la dépense': 'إرسال المصروف',
   'Modifier': 'تعديل',
   'Tout est correct ?': 'هل كل شيء صحيح؟',
-  'Hors règles, votre responsable décide.': 'خارج القواعد، مسؤولك يقرر.',
   'Retour à l’accueil': 'العودة إلى الرئيسية',
   'Voir le suivi': 'عرض التتبع',
   'Transmise à votre responsable': 'أحيل على مسؤولك',
@@ -550,7 +535,180 @@ const arabic = <String, String>{
   // Sprint 4 · Approval workflow
   'Motif : {text}': 'السبب: {text}',
   'Commentaire : {text}': 'تعليق: {text}',
-  'Vous êtes le seul responsable': 'أنت المسؤول الوحيد',
-  'Personne ne décide de sa propre dépense. Invitez un autre responsable : il pourra approuver ou rejeter celle-ci.': 'لا أحد يقرّر في مصروفه الخاص. ادعُ مسؤولاً آخر ليتمكّن من قبول هذا المصروف أو رفضه.',
-  'Inviter un responsable': 'دعوة مسؤول',
+  'Un compte existe déjà pour cet e-mail. Connectez-vous, ou utilisez « Mot de passe oublié ».': 'يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول، أو استخدم « نسيت كلمة المرور ».',
+  'Conforme, en attente de validation': 'مطابق، في انتظار القبول',
+  'Aucun écart relevé : votre responsable la valide avec les autres dépenses conformes.':
+      'لم تُرصد أي مخالفة: سيقبله مسؤولك مع باقي المصاريف المطابقة.',
+  'Valider les dépenses conformes': 'قبول المصاريف المطابقة',
+  'Le contrôle n’a relevé aucun écart sur ces dépenses. Votre validation est enregistrée dans leur historique.':
+      'لم ترصد المراقبة أي مخالفة في هذه المصاريف. يُسجَّل قبولك في سجلها.',
+  'Valider {count}': 'قبول {count}',
+  'Validation enregistrée : {count}.': 'تم تسجيل القبول: {count}.',
+  'Conformes aux règles': 'مطابقة للقواعد',
+  'Tout valider': 'قبول الكل',
+  'Les dépenses conformes attendent votre validation : réglage dans « Règles de remboursement ».':
+      'المصاريف المطابقة في انتظار قبولك: يمكن تغيير ذلك في «قواعد التعويض».',
+  'Validation automatique des dépenses conformes':
+      'القبول الآلي للمصاريف المطابقة',
+  'Le contrôle valide seul une dépense sans aucun écart. Vous ne voyez que les exceptions.': 'تقبل المراقبة وحدها كل مصروف بلا مخالفة. لا ترى إلا الحالات الاستثنائية.',
+  'Le contrôle signale les dépenses conformes ; vous les validez toutes en un geste. Aucun agent ne valide à votre place.': 'تشير المراقبة إلى المصاريف المطابقة، وتقبلها كلها بنقرة واحدة. لا يقبل أي وكيل نيابة عنك.',
+  'Conforme aux règles': 'مطابق للقواعد',
+  'Validation groupée des dépenses conformes': 'قبول جماعي للمصاريف المطابقة',
+  'Saisissez le montant payé, ex. 85,00.': 'أدخل المبلغ المدفوع، مثلاً 85,00.',
+  'Devise du reçu': 'عملة الوصل',
+  'Montant payé ({currency})': 'المبلغ المدفوع ({currency})',
+  'Le montant TTC en dirhams est celui remboursé : reportez la conversion de votre relevé.': 'المبلغ بالدرهم شامل الضريبة هو المبلغ المعوَّض: انقل قيمة التحويل من كشف حسابك.',
+  'Calculée': 'محسوبة',
+  'Taux de TVA': 'نسبة الضريبة على القيمة المضافة',
+  'Sûr': 'مؤكد',
+  'Probable': 'مرجّح',
+  'À vérifier': 'للتحقق',
+  'TVA': 'الضريبة على القيمة المضافة',
+  'Date imprimée sur le ticket': 'التاريخ مطبوع على الوصل',
+  'Première ligne du ticket qui ressemble à un nom':
+      'أول سطر في الوصل يشبه اسماً',
+  'Lu après la mention « ICE »': 'قُرئ بعد عبارة «ICE»',
+  'Devise imprimée sur le ticket': 'العملة مطبوعة على الوصل',
+  'Taux imprimé sur le ticket': 'النسبة مطبوعة على الوصل',
+  'Taux qui correspond à la TVA et au total imprimés':
+      'النسبة المتوافقة مع الضريبة والمجموع المطبوعين',
+  'Lu sur la ligne du total TTC ou du net à payer':
+      'قُرئ في سطر المجموع شامل الضريبة أو الصافي للأداء',
+  'Lu sur une ligne « total » sans mention TTC':
+      'قُرئ في سطر «المجموع» دون ذكر شمول الضريبة',
+  'Aucun total imprimé : plus grand montant du ticket':
+      'لا مجموع مطبوع: أكبر مبلغ في الوصل',
+  'Lu sur la ligne du total de TVA': 'قُرئ في سطر مجموع الضريبة',
+  'Somme des lignes de TVA du ticket': 'مجموع أسطر الضريبة في الوصل',
+  'Catégorie de vos dépenses précédentes chez ce fournisseur':
+      'فئة مصاريفك السابقة لدى هذا المورد',
+  'Type de fournisseur reconnu à son nom': 'نوع المورد معروف من اسمه',
+  'Projet de votre dernière dépense chez ce fournisseur':
+      'مشروع آخر مصروف لك لدى هذا المورد',
+  'Confirmez d’abord votre adresse avec le code reçu par e-mail.':
+      'أكّد عنوانك أولاً بالرمز الذي وصلك عبر البريد الإلكتروني.',
+  'Code incorrect ou expiré. Demandez-en un nouveau.':
+      'الرمز غير صحيح أو منتهي الصلاحية. اطلب رمزاً جديداً.',
+  'Choisissez un mot de passe différent de l’ancien.':
+      'اختر كلمة مرور مختلفة عن السابقة.',
+  'Saisissez le code à 6 chiffres reçu par e-mail.':
+      'أدخل الرمز المكوّن من 6 أرقام الذي وصلك عبر البريد الإلكتروني.',
+  'Un nouveau code a été envoyé.': 'تم إرسال رمز جديد.',
+  'Confirmer': 'تأكيد',
+  'Un code à 6 chiffres a été envoyé à {trim}. Saisissez-le ci-dessous.':
+      'تم إرسال رمز من 6 أرقام إلى {trim}. أدخله أدناه.',
+  'Code reçu par e-mail': 'الرمز المستلم عبر البريد الإلكتروني',
+  'Pas reçu ? Regardez dans les courriers indésirables.':
+      'لم يصلك؟ تحقّق من البريد غير المرغوب فيه.',
+  'Renvoyer le code': 'إعادة إرسال الرمز',
+  'Recevez un code par e-mail pour choisir un nouveau mot de passe.':
+      'استلم رمزاً عبر البريد الإلكتروني لاختيار كلمة مرور جديدة.',
+  'Code envoyé': 'تم إرسال الرمز',
+  'Si un compte existe pour {trim}, un code à 6 chiffres arrive dans quelques minutes (pensez aux courriers indésirables).': 'إذا كان هناك حساب لـ {trim}، سيصلك رمز من 6 أرقام خلال دقائق (تحقّق من البريد غير المرغوب فيه).',
+  'Nouveau mot de passe': 'كلمة المرور الجديدة',
+  'Au moins 8 caractères, une lettre, un chiffre et un caractère spécial.':
+      '8 أحرف على الأقل، حرف ورقم ورمز خاص.',
+  'Changer le mot de passe': 'تغيير كلمة المرور',
+  'Envoyer le code': 'إرسال الرمز',
+  'Devise étrangère ou taux de TVA': 'عملة أجنبية أو نسبة الضريبة',
+  'À vérifier : {field} — {reason}': 'للتحقق: {field} — {reason}',
+  'Non lu : {fields}': 'لم يُقرأ: {fields}',
+  'Proposé par l’agent : {reason}': 'اقتراح الوكيل: {reason}',
+  'Lu par le lecteur du serveur': 'قرأه قارئ الخادم',
+  'montant payé en devise': 'المبلغ المدفوع بالعملة الأجنبية',
+  'Indiquez le montant payé en devise.':
+      'أدخل المبلغ المدفوع بالعملة الأجنبية.',
+  'Même fournisseur et même montant à quelques jours d’intervalle':
+      'نفس المورد ونفس المبلغ بفارق أيام قليلة',
+  'Dépense en devise : conversion en dirhams à vérifier':
+      'مصروف بعملة أجنبية: يجب التحقق من تحويله إلى الدرهم',
+  'TVA incohérente avec le taux indiqué':
+      'الضريبة غير متوافقة مع النسبة المذكورة',
+  'ICE du fournisseur invalide : 15 chiffres attendus':
+      'رقم ICE للمورد غير صالح: يلزم 15 رقماً',
+  'L’agent de conformité ne relève aucun écart.':
+      'لم يرصد وكيل المطابقة أي مخالفة.',
+  'L’agent de conformité signalera :': 'سيشير وكيل المطابقة إلى:',
+  'Vous pouvez corriger avant de soumettre ; sinon votre responsable décide.':
+      'يمكنك التصحيح قبل الإرسال، وإلا فسيقرر مسؤولك.',
+  'Montant payé': 'المبلغ المدفوع',
+  'Mesures des agents': 'مؤشرات الوكلاء',
+  'Ce que les personnes ont gardé des propositions des agents, sur les dépenses soumises.':
+      'ما احتفظ به المستخدمون من اقتراحات الوكلاء في المصاريف المرسلة.',
+  'Aucune dépense soumise avec une proposition d’agent pour l’instant.':
+      'لا يوجد بعد أي مصروف مرسل يتضمن اقتراحاً من وكيل.',
+  'des champs proposés gardés tels quels':
+      'من الحقول المقترحة احتُفظ بها كما هي',
+  'champs corrigés sur {count}': 'حقلاً مصحَّحاً من أصل {count}',
+  'reçus sans aucune correction': 'وصلاً دون أي تصحيح',
+  'temps médian de déclaration avec lecture':
+      'الوقت الوسيط للتصريح مع القراءة الآلية',
+  'Par champ': 'حسب الحقل',
+  'Temps médian sans lecture automatique : {time}.':
+      'الوقت الوسيط دون قراءة آلية: {time}.',
+  'Cette action est réservée aux comptables et aux responsables.':
+      'هذا الإجراء مخصص للمحاسبين والمسؤولين.',
+  'Un compte comptable est fait de 3 à 10 chiffres.':
+      'يتكون الحساب المحاسبي من 3 إلى 10 أرقام.',
+  'Comptes enregistrés.': 'تم حفظ الحسابات.',
+  'Enregistrer les comptes': 'حفظ الحسابات',
+  'Comptes comptables': 'الحسابات المحاسبية',
+  'Le compte de chaque catégorie figure dans l’export.':
+      'يظهر حساب كل فئة في ملف التصدير.',
+  'Compte choisi par votre comptable': 'حساب يختاره محاسبك',
+  'Proposé : {code}': 'مقترح: {code}',
+  'Les comptes proposés suivent le plan comptable marocain (CGNC) : faites-les valider par votre comptable.': 'الحسابات المقترحة تتبع المدونة العامة للمحاسبة المغربية (CGNC): اطلب من محاسبك المصادقة عليها.',
+  'Agent d’export': 'وكيل التصدير',
+  'Total TTC': 'المجموع شامل الضريبة',
+  'Dont TVA': 'منها الضريبة',
+  'Total HT': 'المجموع دون الضريبة',
+  'Compte comptable manquant : {categories}': 'حساب محاسبي ناقص: {categories}',
+  'Renseigner les comptes': 'إدخال الحسابات',
+  'TVA non récupérable : ICE du fournisseur absent':
+      'الضريبة غير قابلة للاسترجاع: رقم ICE للمورد غير موجود',
+  'Sans justificatif': 'دون وثيقة إثبات',
+  'Payée en devise : conversion à reporter':
+      'مدفوع بعملة أجنبية: يجب نقل قيمة التحويل',
+  'Totaux contrôlés : le fichier contient exactement le nombre, le TTC et la TVA du lot enregistré.': 'تم التحقق من المجاميع: يتضمن الملف بالضبط عدد المصاريف والمبلغ شامل الضريبة والضريبة المسجلة في الدفعة.',
+  'Les totaux du lot diffèrent de ceux préparés.':
+      'مجاميع الدفعة تختلف عن المجاميع المُعدّة.',
+  'Ne l’importez pas : rechargez les dépenses et vérifiez le lot.':
+      'لا تستورده: أعد تحميل المصاريف وتحقق من الدفعة.',
+  'Impossible d’ouvrir vos fichiers sur cet appareil.':
+      'تعذر فتح ملفاتك على هذا الجهاز.',
+  'Ce PDF ne peut pas être lu. Essayez une photo.':
+      'تعذرت قراءة ملف PDF هذا. جرّب صورة.',
+  'Importer un justificatif': 'استيراد وثيقة إثبات',
+  'Une image de la galerie': 'صورة من المعرض',
+  'Une facture en PDF': 'فاتورة بصيغة PDF',
+  'Importer une image ou un PDF': 'استيراد صورة أو ملف PDF',
+  'PDF de {pages} pages : seule la première est gardée et lue.':
+      'ملف PDF من {pages} صفحات: تُحفظ الصفحة الأولى فقط وتُقرأ.',
+  'Le banc d’essai est introuvable.': 'تعذر العثور على منصة الاختبار.',
+  'Net': 'واضح',
+  'Flou': 'ضبابي',
+  'Délavé': 'باهت',
+  'Incliné': 'مائل',
+  'Froissé': 'مجعد',
+  'Ombre': 'مظلل',
+  'Basse résolution': 'دقة منخفضة',
+  'Manuscrit': 'مكتوب باليد',
+  'Banc d’essai OCR': 'منصة اختبار القراءة الآلية',
+  '30 reçus fictifs de qualités différentes, lus puis comparés champ par champ à ce qu’ils impriment.':
+      '30 وصلاً وهمياً بجودات مختلفة، تُقرأ ثم تُقارن حقلاً بحقل بما تطبعه.',
+  'Pas de lecteur sur cet appareil : lancez le banc sur un téléphone.':
+      'لا يوجد قارئ على هذا الجهاز: شغّل الاختبار على هاتف.',
+  'Lire avec le téléphone': 'القراءة بالهاتف',
+  'Lire avec le lecteur du serveur': 'القراءة بقارئ الخادم',
+  'Reçu {done} sur {total}': 'الوصل {done} من {total}',
+  'Résultat : {rate} des champs justes': 'النتيجة: {rate} من الحقول صحيحة',
+  'Par qualité de photo': 'حسب جودة الصورة',
+  'Partager le rapport (CSV)': 'مشاركة التقرير (CSV)',
+  'Rien n’est enregistré : le banc mesure seulement la lecture. Les reçus en arabe sont prévus pour le lecteur du serveur.': 'لا يُحفظ أي شيء: المنصة تقيس القراءة فقط. الوصولات بالعربية مخصصة لقارئ الخادم.',
+  'Montant hors taxes plus la TVA imprimés sur le ticket':
+      'المبلغ دون الضريبة مع الضريبة المطبوعين على الوصل',
+  'Tester sur une vraie photo': 'تجربة على صورة حقيقية',
+  'Texte lu sur la photo ({kb} Ko)': 'النص المقروء على الصورة ({kb} ك.ب)',
+  'Aucun texte reconnu sur cette photo.':
+      'لم يُتعرَّف على أي نص في هذه الصورة.',
 };

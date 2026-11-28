@@ -14,10 +14,58 @@ class ExceptionsTab extends StatelessWidget {
     FlagKind.duplicate => (Icons.content_copy_rounded, BadgeTone.info),
   };
 
+  Future<void> _confirmCompliant(BuildContext context) async {
+    final state = AppScope.read(context);
+    final compliant = state.compliantToConfirm;
+    final go = await showRemboSheet<bool>(
+      context,
+      title: tr('Valider les dépenses conformes'),
+      subtitle: tr(
+        'Le contrôle n’a relevé aucun écart sur ces dépenses. Votre '
+        'validation est enregistrée dans leur historique.',
+      ),
+      builder: (context) => Column(
+        children: [
+          for (final e in compliant)
+            Padding(
+              padding: const EdgeInsets.only(bottom: RemboSpace.sm),
+              child: ExpenseTile(e, title: e.employeeName, showStatus: false),
+            ),
+          const SizedBox(height: RemboSpace.md),
+          RemboPrimaryButton(
+            key: const ValueKey('compliant-confirm'),
+            label: tr('Valider {count}', {
+              'count': expenseCount(compliant.length),
+            }),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(tr('Annuler')),
+          ),
+        ],
+      ),
+    );
+    if (go != true || !context.mounted) return;
+    try {
+      final n = await state.approveCompliant([for (final e in compliant) e.id]);
+      if (!context.mounted) return;
+      showRemboSnackBar(
+        context,
+        tr('Validation enregistrée : {count}.', {'count': expenseCount(n)}),
+      );
+    } on RemboException catch (e) {
+      if (context.mounted) {
+        showRemboSnackBar(context, e.message, tone: MessageTone.error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    final pending = state.toReview;
+    final compliant = state.compliantToConfirm;
+    final pending = state.exceptions;
     int count(bool Function(FlagKind) test) =>
         pending.where((e) => e.flags.any((f) => test(f.kind))).length;
     final policy = count((k) => k == FlagKind.policy);
@@ -65,7 +113,41 @@ class ExceptionsTab extends StatelessWidget {
               child: Text(tr('Réessayer')),
             ),
           )
-        else if (pending.isEmpty)
+        else if (compliant.isNotEmpty) ...[
+          RemboCard(
+            key: const ValueKey('compliant-card'),
+            color: RemboColors.surface,
+            borderColor: RemboColors.surface,
+            child: Row(
+              children: [
+                const IconTile(Icons.verified_outlined),
+                const SizedBox(width: RemboSpace.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('Conformes aux règles'),
+                        style: RemboText.subtitle,
+                      ),
+                      Text(
+                        expenseCount(compliant.length),
+                        style: RemboText.caption,
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton(
+                  key: const ValueKey('compliant-all'),
+                  onPressed: () => _confirmCompliant(context),
+                  child: Text(tr('Tout valider')),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: RemboSpace.lg),
+        ],
+        if (state.loadError == null && pending.isEmpty && compliant.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: RemboSpace.xl),
             child: Column(
@@ -101,7 +183,14 @@ class ExceptionsTab extends StatelessWidget {
             ),
           ),
         const SizedBox(height: RemboSpace.sm),
-        InfoStrip(tr('Le reste est validé automatiquement.')),
+        InfoStrip(
+          state.autoApprove
+              ? tr('Le reste est validé automatiquement.')
+              : tr(
+                  'Les dépenses conformes attendent votre validation : '
+                  'réglage dans « Règles de remboursement ».',
+                ),
+        ),
       ],
     );
   }

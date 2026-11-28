@@ -21,6 +21,7 @@ Future<void> _start(
   Size size = const Size(420, 2600),
   double textScale = 1,
   ReceiptPicker receiptPicker = pickWithDevice,
+  bool autoApprove = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -30,7 +31,7 @@ Future<void> _start(
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  backend = DemoBackend(latency: Duration.zero);
+  backend = DemoBackend(latency: Duration.zero, autoApprove: autoApprove);
   state = AppState(backend);
   await tester.pumpWidget(
     RemboApp(state: state, initialRoute: route, receiptPicker: receiptPicker),
@@ -156,7 +157,7 @@ void main() {
   testWidgets('Collaborator: a compliant expense is validated automatically', (
     tester,
   ) async {
-    await _start(tester);
+    await _start(tester, autoApprove: true);
     await _signInAs(tester, UserRole.employee);
 
     await _tap(tester, 'home-add');
@@ -194,10 +195,13 @@ void main() {
   testWidgets(
     'Exception: manager rejects, collaborator corrects and resubmits',
     (tester) async {
-      await _start(tester);
+      await _start(tester, autoApprove: true);
       await _signInAs(tester, UserRole.employee);
-      // A meal without a receipt: the control sends it to a manager.
+      // A meal without a receipt: the control sends it to a manager. The
+      // compliance agent says so before anything is sent.
       await _declare(tester, amount: '120', category: 'Repas');
+      expect(find.byKey(const ValueKey('summary-preview')), findsOneWidget);
+      expect(find.textContaining('Justificatif manquant'), findsOneWidget);
       await _tap(tester, 'summary-submit');
       expect(find.text('Transmise à votre responsable'), findsOneWidget);
       expect(find.textContaining('Justificatif manquant'), findsOneWidget);
@@ -237,7 +241,171 @@ void main() {
     },
   );
 
-  testWidgets('A manager cannot decide on their own expense', (tester) async {
+  testWidgets(
+    'By default a manager confirms compliant expenses in one gesture',
+    (tester) async {
+      await _start(tester);
+      await _signInAs(tester, UserRole.employee);
+      // Fournitures needs no receipt: nothing to flag.
+      await _declare(tester, amount: '45,50', category: 'Fournitures');
+      expect(find.byKey(const ValueKey('summary-preview-ok')), findsOneWidget);
+      await _tap(tester, 'summary-submit');
+      expect(find.text('Conforme, en attente de validation'), findsOneWidget);
+      await _tap(tester, 'result-home');
+      final id = state.mine.first.id;
+      expect(state.byId(id)!.status, ExpenseStatus.needsReview);
+      await _signOut(tester);
+
+      await _signInAs(tester, UserRole.manager);
+      await _tap(tester, 'tab-exceptions');
+      expect(find.byKey(const ValueKey('compliant-card')), findsOneWidget);
+      // Not mixed with the exceptions that need a decision.
+      expect(find.byKey(ValueKey('exception-$id')), findsNothing);
+      await _tap(tester, 'compliant-all');
+      await _tap(tester, 'compliant-confirm');
+      expect(state.byId(id)!.status, ExpenseStatus.approved);
+      expect(state.byId(id)!.approvedByAgent, isFalse);
+      expect(find.byKey(const ValueKey('compliant-card')), findsNothing);
+    },
+  );
+
+  testWidgets('The manager lets the control approve compliant expenses', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-rules');
+    expect(state.autoApprove, isFalse);
+    await _tap(tester, 'rules-auto-approve');
+    expect(state.autoApprove, isTrue);
+    expect(await backend.fetchAutoApprove(), isTrue);
+  });
+
+  testWidgets('A receipt in euros keeps what was paid; a rate fills the VAT', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-manual');
+    await _type(tester, 'form-supplier', 'Café de Flore');
+    await _type(tester, 'form-amount', '220,00');
+    // Folded away for the usual receipt.
+    expect(find.byKey(const ValueKey('form-currency')), findsNothing);
+    await _tap(tester, 'form-details');
+    await _tap(tester, 'form-rate-10');
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('form-vat')))
+          .controller!
+          .text,
+      '20,00',
+    );
+    expect(find.text('Calculée'), findsOneWidget);
+    await _tap(tester, 'form-currency');
+    await tester.tap(find.text('EUR').last);
+    await tester.pumpAndSettle();
+    await _tap(tester, 'form-category');
+    await tester.tap(find.text('Repas').last);
+    await tester.pumpAndSettle();
+    await _type(tester, 'form-reason', 'Déjeuner à Paris');
+    await _tap(tester, 'form-continue');
+    expect(find.text('Saisissez le montant payé, ex. 85,00.'), findsOneWidget);
+    await _type(tester, 'form-foreign', '20,00');
+    await _tap(tester, 'form-continue');
+    expect(find.text('Montant payé (EUR)'), findsOneWidget);
+    final draft = state.mine.first;
+    expect(draft.currency, 'EUR');
+    expect(draft.foreignAmountCents, 2000);
+    expect(draft.amountCents, 22000);
+    expect(draft.vatRate, 10);
+    expect(draft.vatCents, 2000);
+  });
+
+  testWidgets('A captured receipt keeps what the agents proposed', (
+    tester,
+  ) async {
+    await _start(
+      tester,
+      receiptPicker: ({required bool camera}) async =>
+          PickedReceipt(Uint8List.fromList([1, 2, 3]), 'ticket.jpg'),
+    );
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-add');
+    await _tap(tester, 'capture-photo');
+    await tester.pumpAndSettle();
+    await _tap(tester, 'form-save-draft');
+    final saved = state.mine.firstWhere(
+      (e) => e.status == ExpenseStatus.draft && e.agentProposal != null,
+    );
+    final fields = saved.agentProposal!['fields'] as Map;
+    expect(saved.agentProposal!['engine'], 'demo');
+    expect((fields['amount'] as Map)['value'], '24000');
+    expect((fields['amount'] as Map)['confidence'], 'high');
+    expect((fields['category'] as Map)['agent'], 'classification');
+    expect(saved.captureStartedAt, isNotNull);
+  });
+
+  testWidgets('A PDF invoice is imported as the picture of its first page', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'home-add');
+    pdfPicker = () async => PickedReceipt(
+      Uint8List.fromList([1, 2, 3]),
+      'facture.png',
+      pdfPages: 3,
+    );
+    addTearDown(() => pdfPicker = pickPdfWithDevice);
+    await _tap(tester, 'capture-import');
+    await _tap(tester, 'import-pdf');
+    await tester.pumpAndSettle();
+    expect(find.text('Vérifier les informations'), findsOneWidget);
+    expect(find.byKey(const ValueKey('form-pdf-pages')), findsOneWidget);
+  });
+
+  testWidgets('The OCR bench lists its 30 receipts', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-bench');
+    expect(find.text('Banc d’essai OCR'), findsWidgets);
+    // No ML Kit in tests: the screen says to run it on a phone.
+    expect(
+      find.text(
+        'Pas de lecteur sur cet appareil : lancez le banc sur un téléphone.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('The accountant\'s profile stays short', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.accountant);
+    await _tap(tester, 'tab-profile');
+    expect(find.byKey(const ValueKey('profile-accounts')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-metrics')), findsNothing);
+  });
+
+  testWidgets('The manager reads the measures of the agents', (tester) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.manager);
+    await _tap(tester, 'tab-profile');
+    await _tap(tester, 'profile-metrics');
+    expect(find.text('Mesures des agents'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('metrics-empty')).evaluate().isNotEmpty ||
+          find
+              .byKey(const ValueKey('metrics-acceptance'))
+              .evaluate()
+              .isNotEmpty,
+      isTrue,
+    );
+  });
+
+  testWidgets('A manager decides on their own expense too', (tester) async {
     await _start(tester);
     await _signInAs(tester, UserRole.manager);
     await _declare(tester, amount: '900');
@@ -245,9 +413,9 @@ void main() {
     await _tap(tester, 'result-home');
     final own = state.mine.first;
     expect(own.status, ExpenseStatus.needsReview);
-    // Not offered in the list of exceptions to decide.
+    // Offered in the list of exceptions, like the others.
     await _tap(tester, 'tab-exceptions');
-    expect(find.byKey(ValueKey('exception-${own.id}')), findsNothing);
+    expect(find.byKey(ValueKey('exception-${own.id}')), findsOneWidget);
   });
 
   testWidgets('Duplicate: same day and amount is announced before submitting', (
@@ -328,8 +496,19 @@ void main() {
     );
 
     await _tap(tester, 'export-prepare');
+    // The export agent adds up the batch and asks for the missing accounts.
+    expect(find.byKey(const ValueKey('export-agent')), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-accounts')), findsOneWidget);
+    await _tap(tester, 'export-accounts');
+    await _type(tester, 'account-Transport', '6142');
+    await _tap(tester, 'accounts-save');
+    expect(state.accounts['Transport'], '6142');
+    // Let the confirmation message leave the button free.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
     await _tap(tester, 'export-generate');
     expect(find.text('Export prêt'), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-totals-ok')), findsOneWidget);
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('export-summary'))).data,
       allOf(contains('2 dépenses'), contains('445,00')),
@@ -372,7 +551,7 @@ void main() {
   testWidgets('WhatsApp: the author confirms what was understood', (
     tester,
   ) async {
-    await _start(tester);
+    await _start(tester, autoApprove: true);
     await _signInAs(tester, UserRole.employee);
     await _tap(tester, 'home-whatsapp');
     expect(find.text('Dépense reçue via WhatsApp'), findsOneWidget);
@@ -462,6 +641,24 @@ void main() {
     await _tap(tester, 'home-bell');
     expect(find.text('Correction demandée'), findsOneWidget);
     await _tap(tester, 'activity-read-all');
+    expect(state.unreadCount, 0);
+  });
+
+  testWidgets('What was read stays read after signing out and back in', (
+    tester,
+  ) async {
+    await _start(tester);
+    await _signInAs(tester, UserRole.employee);
+    expect(state.unreadCount, greaterThan(0));
+    state.markAllRead();
+    await tester.pumpAndSettle();
+    final email = state.user!.email;
+    await state.signOut();
+    await tester.pumpAndSettle();
+    final done = state.signIn(email, 'x');
+    await tester.pumpAndSettle();
+    await done;
+    await tester.pumpAndSettle();
     expect(state.unreadCount, 0);
   });
 
@@ -591,6 +788,14 @@ void main() {
       expect(field('form-supplier'), 'Café Atlas');
       expect(field('form-amount'), '240,00');
       expect(field('form-vat'), '21,82');
+      // The reading agent explains itself; the classification agent
+      // proposes a category, which the person can still change.
+      expect(find.byKey(const ValueKey('form-reading-report')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('form-proposed-category')),
+        findsOneWidget,
+      );
+      expect(find.text('10 %'), findsOneWidget);
 
       // A VAT above the amount is refused, with the reason.
       await _tap(tester, 'form-category');

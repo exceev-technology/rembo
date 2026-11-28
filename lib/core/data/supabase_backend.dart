@@ -79,8 +79,10 @@ class SupabaseBackend extends RemboBackend {
   static String _authMessage(AuthException e) => switch (e.code) {
     'invalid_credentials' => tr('E-mail ou mot de passe incorrect.'),
     'email_not_confirmed' => tr(
-      'Confirmez d’abord votre adresse avec le lien reçu par e-mail.',
+      'Confirmez d’abord votre adresse avec le code reçu par e-mail.',
     ),
+    'otp_expired' => tr('Code incorrect ou expiré. Demandez-en un nouveau.'),
+    'same_password' => tr('Choisissez un mot de passe différent de l’ancien.'),
     'user_already_exists' ||
     'email_exists' => tr('Un compte existe déjà pour cet e-mail.'),
     'weak_password' => tr('Mot de passe trop faible.'),
@@ -146,6 +148,18 @@ class SupabaseBackend extends RemboBackend {
       password: password,
       data: {'full_name': fullName},
     );
+    // An address already registered gets no e-mail (the server does not
+    // tell who has an account) and comes back without any identity: say so
+    // instead of waiting for a code that never comes.
+    if (response.session == null &&
+        (response.user?.identities?.isEmpty ?? false)) {
+      throw RemboException(
+        tr(
+          'Un compte existe déjà pour cet e-mail. Connectez-vous, ou '
+          'utilisez « Mot de passe oublié ».',
+        ),
+      );
+    }
     if (response.session == null) return null;
     return _loadUser();
   });
@@ -153,6 +167,38 @@ class SupabaseBackend extends RemboBackend {
   @override
   Future<void> sendPasswordReset(String email) =>
       _guard(() => _client.auth.resetPasswordForEmail(email));
+
+  @override
+  Future<AppUser> confirmSignUp({
+    required String email,
+    required String code,
+  }) => _guard(() async {
+    await _client.auth.verifyOTP(
+      type: OtpType.signup,
+      email: email,
+      token: code.trim(),
+    );
+    return (await _loadUser())!;
+  });
+
+  @override
+  Future<void> resendSignUpCode(String email) =>
+      _guard(() => _client.auth.resend(type: OtpType.signup, email: email));
+
+  @override
+  Future<AppUser> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) => _guard(() async {
+    await _client.auth.verifyOTP(
+      type: OtpType.recovery,
+      email: email,
+      token: code.trim(),
+    );
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+    return (await _loadUser())!;
+  });
 
   @override
   Future<void> signOut() async {
@@ -320,6 +366,15 @@ class SupabaseBackend extends RemboBackend {
         return _one(id);
       });
 
+  @override
+  Future<int> approveCompliant(List<String> ids) => _guard(() async {
+    final n = await _client.rpc<dynamic>(
+      'approve_compliant',
+      params: {'p_ids': ids},
+    );
+    return (n as num?)?.toInt() ?? 0;
+  });
+
   /// Contract of the optional `read-receipt` Edge Function:
   /// request  `{ "file_name": "...", "image_base64": "..." }`
   /// response `{ "unreadable": bool, "supplier": str?, "supplier_ice": str?,
@@ -334,10 +389,13 @@ class SupabaseBackend extends RemboBackend {
             'read-receipt',
             body: {'file_name': name, 'image_base64': base64Encode(bytes)},
           )
-          .timeout(const Duration(seconds: 30));
+          // Never longer: the server gives up at 14 s, and the form then
+          // opens with what the phone read.
+          .timeout(const Duration(seconds: 16));
       final data = response.data;
       if (data is! Map) return null;
-      return ReceiptReading(
+      const note = FieldNote(Confidence.medium, 'Lu par le lecteur du serveur');
+      final reading = ReceiptReading(
         unreadable: data['unreadable'] == true,
         supplier: data['supplier'] as String?,
         supplierIce: data['supplier_ice'] as String?,
@@ -346,6 +404,29 @@ class SupabaseBackend extends RemboBackend {
             : null,
         amountCents: (data['amount_cents'] as num?)?.toInt(),
         vatCents: (data['vat_cents'] as num?)?.toInt(),
+        vatRate: (data['vat_rate'] as num?)?.toInt(),
+        currency: data['currency'] as String?,
+        engine: 'server',
+      );
+      return ReceiptReading(
+        unreadable: reading.unreadable,
+        supplier: reading.supplier,
+        supplierIce: reading.supplierIce,
+        date: reading.date,
+        amountCents: reading.amountCents,
+        vatCents: reading.vatCents,
+        vatRate: vatRates.contains(reading.vatRate) ? reading.vatRate : null,
+        currency: receiptCurrencies.contains(reading.currency)
+            ? reading.currency
+            : null,
+        engine: 'server',
+        notes: {
+          if (reading.supplier != null) 'supplier': note,
+          if (reading.supplierIce != null) 'ice': note,
+          if (reading.date != null) 'date': note,
+          if (reading.amountCents != null) 'amount': note,
+          if (reading.vatCents != null) 'vat': note,
+        },
       );
     } catch (e, st) {
       logFailure('receipt reading', e, st);
@@ -452,6 +533,21 @@ class SupabaseBackend extends RemboBackend {
     }, onConflict: 'company_id,category'),
   );
 
+  @override
+  Future<bool> fetchAutoApprove() => _guard(() async {
+    final row = await _client
+        .from('companies')
+        .select('auto_approve')
+        .eq('id', _companyId)
+        .maybeSingle();
+    return row?['auto_approve'] == true;
+  });
+
+  @override
+  Future<void> setAutoApprove(bool on) => _guard(
+    () => _client.rpc<dynamic>('set_auto_approve', params: {'p_on': on}),
+  );
+
   // Exports ---------------------------------------------------------------
   @override
   Future<ExportBatch> createExport(
@@ -476,14 +572,42 @@ class SupabaseBackend extends RemboBackend {
         .select(_expenseColumns)
         .eq('export_batch_id', batch['id'] as String)
         .order('expense_date');
+    final accounts = await fetchAccounts();
     return ExportBatch.fromJson(
       batch,
       csv: CsvExport.build(
         [for (final r in rows) Expense.fromJson(r)],
         batchId: batch['id'] as String,
         delimiter: delimiter,
+        accounts: accounts,
       ),
     );
+  });
+
+  @override
+  Future<Map<String, String>> fetchAccounts() => _guard(() async {
+    final rows = await _client.from('category_accounts').select();
+    return {
+      for (final r in rows)
+        r['category'] as String: r['account_code'] as String,
+    };
+  });
+
+  @override
+  Future<void> saveAccount(String category, String code) => _guard(() async {
+    if (code.trim().isEmpty) {
+      await _client
+          .from('category_accounts')
+          .delete()
+          .eq('company_id', _companyId)
+          .eq('category', category);
+      return;
+    }
+    await _client.from('category_accounts').upsert({
+      'company_id': _companyId,
+      'category': category,
+      'account_code': code.trim(),
+    }, onConflict: 'company_id,category');
   });
 
   @override

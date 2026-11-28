@@ -3,11 +3,15 @@ part of 'local_backend.dart';
 /// The same engine with fictional people and expenses, kept in memory.
 /// Nothing is saved and any password is accepted.
 class DemoBackend extends LocalBackend {
+  /// [autoApprove] lets the control approve compliant expenses itself;
+  /// by default, as in a new company, a manager confirms them.
   DemoBackend({
     super.clock,
     super.latency = const Duration(milliseconds: 250),
+    bool autoApprove = false,
   }) {
     _users.addAll([marius, ahmed, salma, nadia]);
+    if (autoApprove) _autoApprove.add('c-atlas');
     _nextId = 1043;
     _seed();
   }
@@ -81,7 +85,23 @@ class DemoBackend extends LocalBackend {
       date: _day(1),
       amountCents: 24000,
       vatCents: 2182,
+      vatRate: 10,
+      currency: 'MAD',
       simulated: true,
+      notes: const {
+        'supplier': FieldNote(
+          Confidence.medium,
+          'Première ligne du ticket qui ressemble à un nom',
+        ),
+        'ice': FieldNote(Confidence.high, 'Lu après la mention « ICE »'),
+        'date': FieldNote(Confidence.high, 'Date imprimée sur le ticket'),
+        'amount': FieldNote(
+          Confidence.high,
+          'Lu sur la ligne du total TTC ou du net à payer',
+        ),
+        'vat': FieldNote(Confidence.high, 'Lu sur la ligne du total de TVA'),
+        'rate': FieldNote(Confidence.high, 'Taux imprimé sur le ticket'),
+      },
     );
   }
 

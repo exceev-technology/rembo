@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend.dart';
 import 'models.dart';
@@ -29,6 +30,12 @@ class AppState extends ChangeNotifier {
   /// an empty list then means an empty team, not a failed load.
   bool membersLoaded = false;
   List<ExportBatch> exports = const [];
+
+  /// The control approves compliant expenses itself (company setting).
+  bool autoApprove = false;
+
+  /// Accounting account of each category (company setting).
+  Map<String, String> accounts = const {};
   bool loading = false;
 
   /// The company that invited the person, while they belong to none: shown
@@ -38,6 +45,11 @@ class AppState extends ChangeNotifier {
   /// Last loading problem, shown by the tabs with a retry.
   RemboException? loadError;
   final _read = <String>{};
+
+  /// Everything that happened up to this moment is read: kept on the phone
+  /// for each person, so it survives a sign-out and a restart.
+  DateTime? _readUntil;
+  String? _readUntilOf;
 
   bool get isDemo => backend.isDemo;
   bool get isLocal => backend.isLocal;
@@ -101,6 +113,31 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
+  /// Signs in with the code that confirms a new account.
+  Future<void> confirmSignUp({
+    required String email,
+    required String code,
+  }) async {
+    user = await backend.confirmSignUp(email: email, code: code);
+    notifyListeners();
+    user!.companyId != null ? await refresh() : await _loadInvitation();
+  }
+
+  /// Sets a new password with the e-mailed code, and signs in.
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    user = await backend.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
+    notifyListeners();
+    user!.companyId != null ? await refresh() : await _loadInvitation();
+  }
+
   Future<void> createCompany({
     required String name,
     String ice = '',
@@ -121,8 +158,34 @@ class AppState extends ChangeNotifier {
     membersLoaded = false;
     exports = const [];
     policies = const [];
+    accounts = const {};
     _read.clear();
+    _readUntil = null;
+    _readUntilOf = null;
     notifyListeners();
+  }
+
+  String _readKey(String userId) => 'rembo.activity.read_until.$userId';
+
+  /// Reads the person's read mark once per session. Without storage (tests,
+  /// a blocked plug-in) everything simply stays unread.
+  Future<void> _loadReadMark() async {
+    final id = user?.id;
+    if (id == null || _readUntilOf == id) return;
+    _readUntilOf = id;
+    _readUntil = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_readKey(id));
+      _readUntil = saved == null ? null : DateTime.tryParse(saved);
+    } catch (_) {}
+  }
+
+  Future<void> _saveReadMark(String id, DateTime until) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_readKey(id), until.toUtc().toIso8601String());
+    } catch (_) {}
   }
 
   /// Reloads everything the current role can see.
@@ -131,14 +194,17 @@ class AppState extends ChangeNotifier {
     loading = true;
     loadError = null;
     notifyListeners();
+    await _loadReadMark();
     try {
       expenses = await backend.fetchExpenses();
       policies = await backend.fetchPolicies();
       if (role == UserRole.manager) {
         members = await backend.fetchMembers();
         membersLoaded = true;
+        autoApprove = await backend.fetchAutoApprove();
       }
       if (role == UserRole.accountant) exports = await backend.fetchExports();
+      if (role != UserRole.employee) accounts = await backend.fetchAccounts();
     } on RemboException catch (e) {
       loadError = e;
     } finally {
@@ -171,13 +237,19 @@ class AppState extends ChangeNotifier {
       .where((e) => e.fromWhatsApp && e.status == ExpenseStatus.draft)
       .toList();
 
-  /// Waiting for a manager, the manager's own expenses excluded.
-  List<Expense> get toReview => expenses
-      .where(
-        (e) =>
-            e.status == ExpenseStatus.needsReview && e.employeeId != user?.id,
-      )
-      .toList();
+  /// Waiting for a manager's decision, the manager's own expenses included:
+  /// the history names who decided.
+  List<Expense> get toReview => role != UserRole.manager
+      ? const []
+      : expenses.where((e) => e.status == ExpenseStatus.needsReview).toList();
+
+  /// Waiting only for a manager's confirmation: nothing was found.
+  List<Expense> get compliantToConfirm =>
+      toReview.where((e) => e.compliantToConfirm).toList();
+
+  /// Waiting for a decision because the control found something.
+  List<Expense> get exceptions =>
+      toReview.where((e) => !e.compliantToConfirm).toList();
 
   List<Expense> get toExport =>
       expenses.where((e) => e.status == ExpenseStatus.approved).toList();
@@ -240,6 +312,25 @@ class AppState extends ChangeNotifier {
     final result = await backend.decide(id, approve: approve, reason: reason);
     _put(result);
     return result;
+  }
+
+  /// Confirms the compliant expenses waiting for the manager.
+  Future<int> approveCompliant(List<String> ids) async {
+    final n = await backend.approveCompliant(ids);
+    await refresh();
+    return n;
+  }
+
+  Future<void> saveAccount(String category, String code) async {
+    await backend.saveAccount(category, code);
+    accounts = await backend.fetchAccounts();
+    notifyListeners();
+  }
+
+  Future<void> setAutoApprove(bool on) async {
+    await backend.setAutoApprove(on);
+    autoApprove = on;
+    notifyListeners();
   }
 
   Future<ExportBatch> createExport(
@@ -308,11 +399,24 @@ class AppState extends ChangeNotifier {
     return items..sort((a, b) => b.event.at.compareTo(a.event.at));
   }
 
-  bool isUnread(ActivityItem item) => !_read.contains(item.key);
+  bool isUnread(ActivityItem item) =>
+      !_read.contains(item.key) &&
+      (_readUntil == null || item.event.at.isAfter(_readUntil!));
   int get unreadCount => activity.where(isUnread).length;
 
   void markAllRead() {
-    _read.addAll(activity.map((a) => a.key));
+    final items = activity;
+    _read.addAll(items.map((a) => a.key));
+    final id = user?.id;
+    if (id != null && items.isNotEmpty) {
+      final latest = items
+          .map((a) => a.event.at)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
+      if (_readUntil == null || latest.isAfter(_readUntil!)) {
+        _readUntil = latest;
+        _saveReadMark(id, latest);
+      }
+    }
     notifyListeners();
   }
 }

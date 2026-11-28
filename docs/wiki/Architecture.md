@@ -43,7 +43,7 @@ flowchart LR
 |---|---|
 | **Postgres** | Expenses, categories, expense policies, clients/projects for allocation, export batches, audit log |
 | **Auth** | Employee, manager and accountant accounts, with a role **per company** |
-| **Row Level Security** | Everyone sees only their own expenses; a manager sees their team's; no self-approval |
+| **Row Level Security** | Everyone sees only their own expenses; a manager sees their team's; only a manager decides |
 | **Storage** | Receipts in a **private bucket**, accessed through short-lived **signed URLs** |
 | **Edge Functions** | OCR calls, CSV export generation, agent calls. API keys stay on the server |
 
@@ -53,24 +53,24 @@ The client/project reference data is managed directly in Supabase for the MVP.
 
 > **Agents prepare, a human decides.**
 
-| Agent responsibility | What it does |
-|---|---|
-| Read | Extracts date, supplier, amount, currency, VAT and ICE from the receipt, and keeps the source of each field |
-| Classify | Suggests the category and the client/project allocation |
-| Check policy | Compares the expense with the company's rules (required fields, limits) |
-| Spot duplicates | Flags a receipt that looks already declared |
+| Agent | Where it runs | What it does | What it cannot do |
+|---|---|---|---|
+| **Read** | Phone first (Google ML Kit, offline), server reader only when the phone finds nothing | Extracts date, supplier, amount, currency, VAT, VAT rate and ICE. Each field carries **how it was found** and a **confidence** (sure, probable, to check); what it could not read is listed | Submit the expense |
+| **Classify** | Phone, no model | Proposes the category and the client/project: first from the person's own history with the same supplier (or ICE), then from Moroccan supplier names (petit taxi, ONCF, Afriquia, riad…). Says why | Overwrite a choice the person made |
+| **Check policy** | Server (SQL `control_expense`), previewed on the phone | Limits, missing receipt, missing fields, duplicates, ambiguities. Writes its reasons on the expense | Approve or reject, unless the company switched automatic validation on |
+| **Prepare export** | Phone and server | Builds the batch of approved expenses and checks its totals | Run the accounting import |
 
-**Escalation rule.** Policy-compliant expenses move forward without human work. A manager is asked to decide in only two cases:
+**Escalation rule.** By default the control only **marks** a compliant expense; a manager confirms all the compliant ones in one gesture, and decides alone on the others. A company may let the control approve compliant expenses itself (« Validation automatique des dépenses conformes »). A manager decides in every case where the control found:
 
 1. **An inconsistency** between the expense and the reimbursement policy
 2. **An ambiguity** the agent cannot resolve on its own
 
 **Guardrails**
 
-- An employee can never approve their own expense, whether a human or an agent does the approving.
-- Every agent action is written to an audit log: who or what acted, when, on which expense, and why.
-- Agents run server side only (Edge Functions). They use **MCP** to reach tools such as the Supabase database or a company's accounting tools.
-- The MVP delivers the read and review flow first ([Roadmap](Roadmap)). The full multi-agent setup is part of the [post-MVP vision](Product-Vision#vision-after-the-mvp).
+- An employee can never approve an expense, their own included. A manager decides on their own expenses too; the history names who decided.
+- Every agent action is written down: status changes carry who or what acted (`actor_kind` human or agent), when and why.
+- The agents are explainable code, not models: they run without cost or key, on the phone or in SQL. Only the optional server reader calls a vision model, whose key stays in Edge Function secrets.
+- **MCP** and a conversational assistant are part of the [post-MVP vision](Product-Vision#vision-after-the-mvp).
 
 ## Security model
 
@@ -78,7 +78,7 @@ The client/project reference data is managed directly in Supabase for the MVP.
 |---|---|
 | A user only reads their own expenses and receipts | RLS on `expenses` and Storage policies on the receipts bucket |
 | A manager reads and decides on their team's expenses only | RLS based on company membership and role |
-| Nobody approves their own expense | RLS / check constraint on the decision (`decided_by <> employee_id`) |
+| Only a manager decides, their own expenses included, and the history names them | `decide_expense` and `approve_compliant` check the role; `status_events` keeps the actor |
 | The accountant reads approved expenses of their company and creates exports | RLS by role and company |
 | The `service_role` key and OCR / AI keys never leave the server | Edge Functions secrets; only the public `anon` key is in the app |
 
@@ -125,7 +125,7 @@ Expense status flow (draft): `draft` → `submitted` → `needs_review` (escalat
 > ⚠️ **Draft – to be validated in Sprint 6** with the accountants we interview.
 
 - One row per approved expense, UTF-8, header row, `;` separator, decimal point `.`, dates `YYYY-MM-DD`
-- The approved total must equal the exported total (checked in the [Testing Protocol](Testing-Protocol))
+- The approved total must equal the exported total (checked in the [Testing Protocol](Testing-Protocol)). The export agent adds the batch up before the export, the server records its count, total and VAT, and the app compares them after the export
 - The format is documented in the repository so any accounting software or ERP can map it
 
 | Column | Example | Notes |
@@ -136,11 +136,14 @@ Expense status flow (draft): `draft` → `submitted` → `needs_review` (escalat
 | `supplier_name` | `Café Atlas` | |
 | `supplier_ice` | `001234567000089` | When printed on the receipt |
 | `category` | `Meals` | |
+| `account` | `6143` | Accounting account of the category, set by the company's accountant (« Comptes comptables »); empty when not set |
 | `allocation` | `Client Atlas` | Client or project |
-| `amount_ttc_mad` | `380.00` | Amount including VAT, in MAD |
-| `vat_rate` | `10` | Percent |
+| `amount_ttc_mad` | `380.00` | Amount including VAT, in MAD: what is reimbursed |
+| `vat_rate` | `10` | Percent printed on the receipt (20, 14, 10, 7 or 0); empty when unknown |
 | `vat_amount_mad` | `34.55` | |
 | `amount_ht_mad` | `345.45` | Amount excluding VAT |
+| `currency` | `MAD` | Currency of the receipt (`MAD`, `EUR`, `USD`, `GBP`) |
+| `amount_paid` | `35.00` | Amount paid in that currency, when it is not MAD; empty otherwise |
 | `reason` | `Client lunch` | |
 | `approved_by` | `Manager name` | |
 | `approved_at` | `2026-11-13` | |

@@ -9,6 +9,10 @@ import '../../core/log.dart';
 /// build time (REMBO_WHATSAPP_NUMBER). Empty until the line exists.
 const remboWhatsAppNumber = String.fromEnvironment('REMBO_WHATSAPP_NUMBER');
 
+/// WhatsApp is offered only when there is a line to write to, or in the
+/// demo, which simulates it.
+bool whatsAppOffered(bool demo) => remboWhatsAppNumber.isNotEmpty || demo;
+
 Future<bool> _open(String url) async {
   try {
     return await launchUrl(

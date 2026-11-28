@@ -71,8 +71,6 @@ class _DecisionScreenState extends State<DecisionScreen> {
     final state = AppScope.of(context);
     final e = state.byId(widget.expenseId);
     if (e == null) return const RemboPage(children: []);
-    // Never shown for the manager's own expense: the lists that open this
-    // screen leave it out, and decide_expense refuses it on the server.
     final open = e.status == ExpenseStatus.needsReview;
     final rule = state.policyOf(e.category);
 
@@ -195,6 +193,20 @@ class _DecisionScreenState extends State<DecisionScreen> {
               ),
               if (e.project.isNotEmpty)
                 DetailRow(Icons.layers_outlined, tr('Projet'), e.project),
+              if (e.vatCents > 0)
+                DetailRow(
+                  Icons.percent_rounded,
+                  tr('TVA incluse'),
+                  formatVat(e.vatCents, e.vatRate),
+                  mono: true,
+                ),
+              if (e.foreignCurrency && e.foreignAmountCents != null)
+                DetailRow(
+                  Icons.currency_exchange_rounded,
+                  tr('Montant payé ({currency})', {'currency': e.currency}),
+                  formatMoney(e.foreignAmountCents!, e.currency),
+                  mono: true,
+                ),
             ],
           ),
         ),
