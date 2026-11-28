@@ -380,6 +380,16 @@ class AppUser {
   String get firstName => fullName.trim().split(RegExp(r'\s+')).first;
   String get initial =>
       fullName.trim().isEmpty ? '?' : fullName.trim()[0].toUpperCase();
+
+  /// « Marius Hounkpe » → « MH »: first and last name, as on the avatar.
+  String get initials {
+    final words = fullName.trim().split(RegExp(r'\s+'))
+      ..removeWhere((w) => w.isEmpty);
+    if (words.isEmpty) return '?';
+    final first = words.first[0];
+    final last = words.length > 1 ? words.last[0] : '';
+    return '$first$last'.toUpperCase();
+  }
 }
 
 /// A company waiting for the signed-in person to join it, with the role

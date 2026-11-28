@@ -343,9 +343,9 @@ class _Initial extends StatelessWidget {
     radius: radius,
     backgroundColor: Colors.white,
     child: Text(
-      user.initial,
+      user.initials,
       style: RemboText.display.copyWith(
-        fontSize: radius * 0.9,
+        fontSize: radius * 0.72,
         color: RemboColors.indigo,
       ),
     ),
@@ -433,9 +433,9 @@ Future<void> showProfileSheet(BuildContext context) {
               radius: 30,
               backgroundColor: RemboColors.night,
               child: Text(
-                user.initial,
+                user.initials,
                 style: RemboText.display.copyWith(
-                  fontSize: 26,
+                  fontSize: 22,
                   color: Colors.white,
                 ),
               ),
